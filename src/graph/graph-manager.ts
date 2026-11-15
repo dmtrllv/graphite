@@ -1,4 +1,4 @@
-import { Graph, ScalarNode, type GraphNode, type NodeEdge } from "../graph";
+import { Graph, ScalarNode, Vec2, VectorMathNode, type GraphNode, type NodeEdge } from "../graph";
 import { observable, registerStore } from "../reactive";
 
 @registerStore
@@ -10,7 +10,9 @@ export class GraphManager {
 
 	public constructor() {
 		const graph = this.add("Test");
-		graph.addNode(ScalarNode);
+		const a = graph.addNode(ScalarNode);
+		const b = graph.addNode(VectorMathNode, new Vec2(100, 100));
+		graph.addEdge(a, "value", b, "a");
 	}
 
 	public get(id: number): Graph;
@@ -21,14 +23,12 @@ export class GraphManager {
 		return this.graphs.values().find(graph => graph.name === idOrName);
 	}
 
-	public add(name: string): Graph;
-	public add(name: string, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>): Graph;
-	public add(name: string, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>) {
+	public add(name: string, offset: Vec2 = new Vec2(), nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>): Graph {
 		if (this.get(name))
 			throw new DuplicateGraphNameError(name);
 
 		const id = this.#idCounter++;
-		const graph = new Graph(id, name, nodes, edges);
+		const graph = new Graph(id, name, offset, nodes, edges);
 		this.graphs.set(id, graph);
 		return graph;
 	}

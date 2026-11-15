@@ -12,23 +12,30 @@ export class Graph {
 	public accessor name: string;
 
 	@observable
+	public accessor offset: Vec2;
+
+	@observable
+	public accessor scale: number = 1;
+
+	@observable
 	public accessor nodes: Map<number, GraphNode>;
 
 	@observable
 	public accessor edges: Map<number, NodeEdge>;
 
-	public constructor(id: number, name: string);
-	public constructor(id: number, name: string, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>);
-	public constructor(id: number, name: string, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
+	public constructor(id: number, name: string, offset: Vec2);
+	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>);
+	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
 		this.id = id;
 		this.name = name;
+		this.offset = offset;
 		this.nodes = nodes;
 		this.edges = edges;
 	}
 
-	public addNode<T extends GraphNode>(type: GraphNodeType<T>): T {
+	public addNode<T extends GraphNode>(type: GraphNodeType<T>, position: Vec2 = new Vec2()): T {
 		const id = this.#nodeIdCounter++;
-		const node = new type(id, this, new Vec2());
+		const node = new type(id, this, position);
 		this.nodes.set(id, node);
 		return node;
 	}
@@ -43,9 +50,9 @@ export class Graph {
 			this.nodes.delete(found[0]);
 	}
 
-	public addEdge(source: GraphNode, sourceOutput: keyof typeof source, target: GraphNode, targetInput: keyof typeof target): NodeEdge {
+	public addEdge<O2 extends GraphNode, I extends GraphNode>(source: O2, sourceOutput: keyof O2, target: I, targetInput: keyof I): NodeEdge {
 		const id = this.#edgeIdCounter++;
-		const edge = new NodeEdge(id, source, sourceOutput, target, targetInput);
+		const edge = new NodeEdge(id, source, sourceOutput as any, target, targetInput as any);
 		this.edges.set(id, edge);
 		return edge;
 	}
@@ -75,7 +82,6 @@ export class NodeEdge {
 
 	@observable
 	public accessor targetInput: string;
-
 
 	public constructor(id: number, source: GraphNode, sourceOutput: keyof typeof source, target: GraphNode, targetInput: keyof typeof target) {
 		this.id = id;

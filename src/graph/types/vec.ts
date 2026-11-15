@@ -13,6 +13,29 @@ export class Vec2 extends Type {
 		this.x = x;
 		this.y = y;
 	}
+
+	public clone() {
+		return new Vec2(this.x, this.y)
+	}
+
+	public add({ x, y }: Vec2) {
+		this.x += x;
+		this.y += y;
+		return this;
+	}
+
+	public sub({ x, y }: Vec2) {
+		this.x -= x;
+		this.y -= y;
+		return this;
+	}
+
+	public set({ x, y }: Partial<Vec2>){ 
+		if(x !== undefined)
+			this.x = x;
+		if(y !== undefined)
+			this.y = y;
+	}
 }
 
 export type Vec2Type = typeof Vec2;
@@ -30,6 +53,10 @@ export class Vec3 extends Type {
 		this.x = x;
 		this.y = y;
 		this.z = z;
+	}
+
+	public clone() {
+		return new Vec3(this.x, this.y, this.z);
 	}
 }
 
@@ -51,6 +78,10 @@ export class Vec4 extends Type {
 		this.y = y;
 		this.z = z;
 		this.w = w;
+	}
+
+	public clone() {
+		return new Vec4(this.x, this.y, this.z, this.w);
 	}
 }
 

@@ -41,15 +41,15 @@ type DescendantKeys<T, K extends RecursiveKey<T>> =
 
 export type RecursivePath<T, K extends RecursiveKey<T>> = K | DescendantKeys<T, K>;
 
-export type ChangeEvent<T extends object, K extends RecursiveKey<T>> = Immutable<{
-	readonly newValue: DeepImmutable<PathValue<T, K>>;
-	readonly oldValue: DeepImmutable<PathValue<T, K>>;
+export type ChangeEvent<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]> = Immutable<{
+	readonly newValue: K extends RecursiveKey<T>[] ? DeepImmutable<PathValue<T, K[number]>> : K extends RecursiveKey<T> ? DeepImmutable<PathValue<T, K>> : never;
+	readonly oldValue: K extends RecursiveKey<T>[] ? DeepImmutable<PathValue<T, K[number]>> : K extends RecursiveKey<T> ? DeepImmutable<PathValue<T, K>> : never;
 	readonly key: K;
 }>;
 
-export type RecursiveChangeEvent<T extends object, K extends RecursiveKey<T>> = ChangeEvent<T, RecursivePath<T, K> & RecursiveKey<T>>;
-export type Subscriber<T extends object, K extends RecursiveKey<T>> = (e: ChangeEvent<T, K>) => void;
-export type RecursiveSubscriber<T extends object, K extends RecursiveKey<T>> = (e: RecursiveChangeEvent<T, K>) => void;
+export type RecursiveChangeEvent<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]> = ChangeEvent<T, (K extends RecursiveKey<T>[] ? RecursivePath<T, K[number]>: K extends RecursiveKey<T> ? RecursivePath<T, K> : never) & RecursiveKey<T>>;
+export type Subscriber<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]> = (e: ChangeEvent<T, K>) => void;
+export type RecursiveSubscriber<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]> = (e: RecursiveChangeEvent<T, K>) => void;
 export type Interceptor<T extends object, K extends RecursiveKey<T>> = (e: ChangeEvent<T, K>) => boolean | void;
 export type RecursiveInterceptor<T extends object, K extends RecursiveKey<T>> = (e: RecursiveChangeEvent<T, K>) => boolean | void;
 
@@ -78,8 +78,8 @@ export interface InterceptorDecorator {
 }
 
 export interface SubscribeFn {
-	<T extends object, K extends RecursiveKey<T>>(obj: T, key: K, subscriber: Subscriber<T, K>): Unsubscriber;
-	<T extends object, K extends RecursiveKey<T>>(obj: T, key: K, options: SubscribeOptions & { recursive: true }, subscriber: RecursiveSubscriber<T, K>): Unsubscriber;
+	<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]>(obj: T, key: K, options: SubscribeOptions & { recursive: true }, subscriber: RecursiveSubscriber<T, K>): Unsubscriber;
+	<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]>(obj: T, key: K, subscriber: Subscriber<T, K>): Unsubscriber;
 }
 
 export interface InterceptFn {

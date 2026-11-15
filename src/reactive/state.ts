@@ -40,7 +40,12 @@ export const markObservable = (target: object, key: string): void => {
 	getState(target, true).observables.add(key);
 };
 
-export const assertObservable = (target: object, key: string): void => {
+export const assertObservable = (target: object, key: string | string[]): void => {
+	if (Array.isArray(key)) {
+		key.forEach((k) => assertObservable(target, k));
+		return;
+	}
+
 	const root = key.split(".")[0];
 
 	if (!root)
@@ -50,7 +55,12 @@ export const assertObservable = (target: object, key: string): void => {
 		throw new Error(`${target.constructor.name}.${root} is not observable!`);
 };
 
-export const register = (target: object, type: "subscribers" | "interceptors", key: string, recursive: boolean, handler: ChangeHandler): Unsubscriber => {
+export const register = (target: object, type: "subscribers" | "interceptors", key: string | string[], recursive: boolean, handler: ChangeHandler): Unsubscriber => {
+	if (Array.isArray(key)) {
+		const unsubscribers = key.map(k => register(target, type, k, recursive, handler));
+		return () => unsubscribers.forEach(fn => fn());
+	}
+	
 	const registrations = getState(target, true)[type];
 	const registration = { key, recursive, handler };
 
