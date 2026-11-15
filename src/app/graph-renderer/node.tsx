@@ -6,9 +6,10 @@ import { useMouseMove } from "../../hooks";
 
 export const GraphNodeView = ({ node }: { node: GraphNode }) => {
 	node = useObservable(node);
+	const graph = useObservable(node.graph);
 
-	const { onMouseDown } = useMouseMove(node.position, pos => node.position = pos, true);
-
+	const { onMouseDown } = useMouseMove(node.position, pos => node.position = pos, 1 / graph.scale, true);
+	
 	const inputs = GraphNode.getInputs(node.constructor);
 	const options = GraphNode.getOptions(node.constructor);
 	const outputs = GraphNode.getOutputs(node.constructor);

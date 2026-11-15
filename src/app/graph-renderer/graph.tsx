@@ -10,7 +10,7 @@ import "./graph.scss";
 export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	useObservable(graph);
 
-	const { onMouseDown } = useMouseMove(graph.offset, val => graph.offset.set(val), true);
+	const { onMouseDown } = useMouseMove(graph.offset, val => graph.offset.set(val), 1, true);
 
 	const style = useMemo<React.CSSProperties>(() => {
 		return {
@@ -23,8 +23,8 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	const { canvas } = useRenderer(graph);
 
 	const onWheel = (e: React.WheelEvent) => {
-		graph.scale += e.deltaY / 10000;
-	} 
+		graph.scale -= graph.scale * (e.deltaY / 1000) * 0.25;
+	}
 
 	return (
 		<div className="graph-renderer" onMouseDown={onMouseDown} onWheel={onWheel}>
@@ -58,9 +58,9 @@ const useRenderer = (graph: Graph) => {
 const render = (graph: Graph, canvas: HTMLCanvasElement) => {
 	canvas.width = canvas.parentElement!.clientWidth;
 	canvas.height = canvas.parentElement!.clientHeight;
-	
+
 	const ctx = assert.notNull(canvas.getContext("2d"));
-	
+
 	ctx.save();
 	ctx.translate(graph.offset.x + (canvas.width / 2), -graph.offset.y + (canvas.height / 2));
 	ctx.scale(graph.scale, graph.scale);

@@ -30,10 +30,23 @@ export class Vec2 extends Type {
 		return this;
 	}
 
-	public set({ x, y }: Partial<Vec2>){ 
-		if(x !== undefined)
+	public mul(scalar: number): this;
+	public mul({ x, y }: Vec2): this;
+	public mul(scalar: Vec2 | number) {
+		if (typeof scalar === "number") {
+			this.x *= scalar;
+			this.y *= scalar;
+		} else {
+			this.x *= scalar.x;
+			this.y *= scalar.y;
+		}
+		return this;
+	}
+
+	public set({ x, y }: Partial<Vec2>) {
+		if (x !== undefined)
 			this.x = x;
-		if(y !== undefined)
+		if (y !== undefined)
 			this.y = y;
 	}
 }
