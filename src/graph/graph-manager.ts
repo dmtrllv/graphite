@@ -5,7 +5,7 @@ import { observable, registerStore } from "../reactive";
 export class GraphManager {
 	#idCounter = 0;
 
-	@observable({ recursive: true })
+	@observable
 	public accessor graphs = new Map<number, Graph>();
 
 	public constructor() {

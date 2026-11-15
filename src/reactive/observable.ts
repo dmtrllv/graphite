@@ -1,5 +1,5 @@
 import type { ObservableOptions } from "./types";
-import { createEvent, runInterceptors, notify, trackDependency, getState } from "./state";
+import { createEvent, runInterceptors, notify, trackDependency, getState, markObservable } from "./state";
 import { createProxy, toRaw } from "./proxy";
 
 type ObservableDecorator = {
@@ -14,6 +14,7 @@ const decorate = <This extends object, Value>(value: ClassAccessorDecoratorTarge
 	return {
 		get(this: This) {
 			getState(this, true);
+			markObservable(this, key);
 			trackDependency(this, key);
 
 			const current = value.get.call(this);
@@ -32,6 +33,7 @@ const decorate = <This extends object, Value>(value: ClassAccessorDecoratorTarge
 		},
 		set(this: This, next: Value) {
 			getState(this, true);
+			markObservable(this, key);
 
 			const previous = value.get.call(this);
 			const current = toRaw(next);
@@ -55,9 +57,9 @@ const decorate = <This extends object, Value>(value: ClassAccessorDecoratorTarge
 
 export const observable: ObservableDecorator = ((valueOrOptions: any, context?: ClassAccessorDecoratorContext) => {
 	if (context)
-		return decorate(valueOrOptions, context, {});
+		return decorate(valueOrOptions, context, { recursive: true });
 
-	const options = valueOrOptions ?? {};
+	const options = valueOrOptions ?? { recursive: true };
 
 	return (value: any, context: ClassAccessorDecoratorContext) => decorate(value, context, options);
 }) as ObservableDecorator;

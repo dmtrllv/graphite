@@ -58,8 +58,8 @@ const NodeOptionView = ({ node, option }: { node: GraphNode, option: NodeOption 
 };
 
 const ScalarInput = ({ node, name, withInput }: { node: ScalarNode, name: string, withInput: boolean | undefined }) => {
-	node = useObservable(node, { recursive: true });
-	
+	useObservable(node.value);
+
 	const hasInput = !!node.getInputEdge(name);
 
 	const setValue = (value: string) => {
@@ -72,4 +72,4 @@ const ScalarInput = ({ node, name, withInput }: { node: ScalarNode, name: string
 			<input type="number" value={node.value.value} placeholder={name} disabled={hasInput} onChange={e => setValue(e.target.value)} />
 		</div>
 	);
-}
+};

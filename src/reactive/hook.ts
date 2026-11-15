@@ -28,14 +28,14 @@ const getStore = (target: object): Store => {
 	return store;
 };
 
-export const useObservable = <T extends object>(value: T, options: ObservableOptions = {}): T => {
+export const useObservable = <T extends object>(value: T, options: ObservableOptions = { recursive: true }): T => {
 	const [target] = useState(() => {
 		try {
 			if (getState(value).observables.size > 0)
 				return value;
 		} catch { }
 
-		return createProxy(value, value, "", "", new WeakMap(), options.recursive ?? false) as T;
+		return createProxy(value, value, "", "", new WeakMap(), options.recursive) as T;
 	});
 
 	const store = getStore(toRaw(target));

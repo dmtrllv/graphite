@@ -11,10 +11,10 @@ export class Graph {
 	@observable
 	public accessor name: string;
 
-	@observable({ recursive: true })
+	@observable
 	public accessor nodes: Map<number, GraphNode>;
 
-	@observable({ recursive: true })
+	@observable
 	public accessor edges: Map<number, NodeEdge>;
 
 	public constructor(id: number, name: string);
