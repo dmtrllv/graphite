@@ -1,0 +1,30 @@
+{
+	"name": "graphite",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc -b && vite build",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1"
+	},
+	"devDependencies": {
+		"@babel/plugin-proposal-decorators": "^8.0.2",
+		"@rolldown/plugin-babel": "^0.3.1",
+		"@tsconfig/strictest": "^2.0.8",
+		"@types/node": "^26.6.6",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"@vitejs/plugin-react": "^6.3.0",
+		"sass": "^1.108.2",
+		"typescript": "~7.0.2",
+		"vite": "^8.3.6"
+	},
+	"allowScripts": {
+		"@parcel/watcher@2.6.0": true
+	}
+}

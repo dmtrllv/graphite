@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" href="data:;base64,iVBORw0KGgo=">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Graphite</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				--bg-1: rgb(32, 32, 32);
+				--bg-2: rgb(54, 54, 54);
+				--bg-3: rgb(20, 20, 20);
+				--bg-4: rgb(42, 42, 42);
+				--fg-1: rgb(236, 236, 236);
+				--fg-2: rgb(184, 184, 184);
+				--border-1: rgb(73, 73, 73);
+			}
+
+			html,
+			body,
+			#root {
+				margin: 0;
+				padding: 0;
+				width: 100vw;
+				height: 100vh;
+				color: var(--fg-1);
+				overflow: hidden;
+				font-family: sans-serif;
+				background-color: black;
+				user-select: none;
+			}
+
+
+			::-webkit-scrollbar {
+				width: 8px;
+				margin: 2px;
+				border-radius: 4px;
+			}
+
+			::-webkit-scrollbar-track {
+				background-color: rgba(255, 255, 255, 0.01);
+				border-radius: 4px;
+
+				&:hover {
+					background-color: rgba(255, 255, 255, 0.2) !important;
+				}
+			}
+
+			::-webkit-scrollbar-thumb {
+				background-color: rgba(255, 255, 255, 0.05);
+				border-radius: 4px;
+
+				&:hover {
+					background-color: rgba(255, 255, 255, 0.5) !important;
+				}
+			}
+
+			*:hover {
+				>::-webkit-scrollbar-track {
+					background-color: rgba(255, 255, 255, 0.05);
+					border-radius: 4px;
+				}
+
+				>::-webkit-scrollbar-thumb {
+					background-color: rgba(255, 255, 255, 0.164);
+					border-radius: 4px;
+				}
+			}
+		</style>
+		<script>
+			// polyfills :/
+			Symbol.metadata ??= Symbol.for("Symbol.metadata");
+		</script>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/index.tsx"></script>
+	</body>
+</html>
