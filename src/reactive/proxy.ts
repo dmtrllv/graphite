@@ -1,8 +1,24 @@
 
 import { createEvent, getState, markObservable, notify, runInterceptors, trackDependency } from "./state";
 
+type ProxyRoute = {
+	path: string;
+	ancestors: Set<object>;
+};
+
+type ProxyAssociation = {
+	owner: object;
+	routes: ProxyRoute[];
+	recursive: boolean;
+};
+
+type ProxyEntry = {
+	proxy: object;
+	associations: ProxyAssociation[];
+};
+
 const PROXY_TARGETS = new WeakMap<object, object>();
-const PROXY_CACHE = new WeakMap<object, WeakMap<object, object>>();
+const PROXY_CACHE = new WeakMap<object, ProxyEntry>();
 
 export const toRaw = <T>(value: T): T => (value !== null && typeof value === "object" ? PROXY_TARGETS.get(value as object) ?? value : value) as T;
 
@@ -12,24 +28,34 @@ const isObservableObject = (value: unknown): value is object => {
 
 const joinPath = (base: string, key: string): string => base ? key ? `${base}.${key}` : base : key;
 
-export const createProxy = (target: object, owner: object, path: string, recursive: boolean = true): object => {
+const getAssociation = (entry: ProxyEntry, owner: object, recursive: boolean): ProxyAssociation => {
+	let association = entry.associations.find(value => value.owner === owner);
+
+	if (!association) {
+		association = {
+			owner,
+			routes: [],
+			recursive
+		};
+
+		entry.associations.push(association);
+	} else {
+		association.recursive ||= recursive;
+	}
+
+	return association;
+};
+
+const addRoute = (association: ProxyAssociation, path: string, ancestors: Set<object>): void => {
+	if (association.routes.some(route => route.path === path))
+		return;
+
+	association.routes.push({ path, ancestors });
+};
+
+const createProxyInternal = (target: object, owner: object, path: string, recursive: boolean, ancestors: Set<object>): object => {
 	target = toRaw(target);
-
-	let cache = PROXY_CACHE.get(owner);
-
-	if (!cache) {
-		cache = new WeakMap();
-		PROXY_CACHE.set(owner, cache);
-	}
-
-	const cached = cache.get(target) as any;
-	
-	if (cached) {
-		cached.paths.add(path);
-		return cached.proxy;
-	}
-
-	const paths = new Set<string>([path]);
+	owner = toRaw(owner);
 
 	if (!path) {
 		getState(owner, true);
@@ -38,41 +64,83 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 			markObservable(owner, key);
 	}
 
-	const getPaths = (key: string): string[] => {
-		return [...paths].map(path => joinPath(path, key));
+	let entry = PROXY_CACHE.get(target);
+
+	if (entry) {
+		addRoute(getAssociation(entry, owner, recursive), path, ancestors);
+		return entry.proxy;
+	}
+
+	entry = {
+		proxy: null as any,
+		associations: []
 	};
 
-	const wrap = (value: any, keys: string[]): any => {
-		if (!recursive || !isObservableObject(value))
+	addRoute(getAssociation(entry, owner, recursive), path, ancestors);
+	PROXY_CACHE.set(target, entry);
+
+	const getPaths = (key: string): { owner: object; key: string }[] => {
+		return entry!.associations.flatMap(association =>
+			association.routes.map(route => ({
+				owner: association.owner,
+				key: joinPath(route.path, key)
+			}))
+		);
+	};
+
+	const wrap = (value: any, key: string, samePath: boolean = false): any => {
+		if (!isObservableObject(value))
 			return value;
 
+		const raw = toRaw(value);
 		let proxy: object | undefined;
 
-		for (const key of keys)
-			proxy = createProxy(value, owner, key, recursive);
+		for (const association of [...entry!.associations]) {
+			if (!association.recursive)
+				continue;
 
-		return proxy;
+			for (const route of [...association.routes]) {
+				if (route.ancestors.has(raw))
+					continue;
+
+				const nextAncestors = new Set(route.ancestors);
+				nextAncestors.add(raw);
+
+				proxy = createProxyInternal(
+					raw,
+					association.owner,
+					samePath ? route.path : joinPath(route.path, key),
+					association.recursive,
+					nextAncestors
+				);
+			}
+		}
+
+		return proxy ?? PROXY_CACHE.get(raw)?.proxy ?? value;
 	};
 
 	const emit = (key: string, previous: any, value: any, mutate: () => any): any => {
-		const events = getPaths(key).map(key => createEvent(key, previous, value));
+		const events = getPaths(key).map(({ owner, key }) => ({
+			owner,
+			event: createEvent(key, previous, value)
+		}));
 
-		for (const event of events) {
+		for (const { owner, event } of events) {
 			if (!runInterceptors(owner, event))
 				return false;
 		}
 
 		const result = mutate();
 
-		for (const event of events)
+		for (const { owner, event } of events)
 			notify(owner, event);
 
 		return result;
 	};
 
-	const track = (key: string) => {
-		for (const path of getPaths(key))
-			trackDependency(owner, path);
+	const track = (k: string) => {
+		for (const { owner, key } of getPaths(k))
+			trackDependency(owner, key);
 	};
 
 	const wrapIterator = <T, R>(iterator: IterableIterator<T>, mapper: (value: T) => R): IterableIterator<R> => {
@@ -97,7 +165,7 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 
 						track(key);
 
-						return wrap(target.get(rawKey), getPaths(key));
+						return wrap(target.get(rawKey), key);
 					};
 
 				if (property === "has")
@@ -119,9 +187,9 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 						if (target.has(rawKey) && Object.is(previous, value))
 							return receiver;
 
-						const result = emit(key, previous, value, () => target.set(rawKey, value));
+						emit(key, previous, value, () => target.set(rawKey, value));
 
-						return result === false ? receiver : receiver;
+						return receiver;
 					};
 
 				if (property === "delete")
@@ -157,7 +225,7 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 
 						return wrapIterator(
 							target.entries(),
-							([key, value]) => wrap(value, getPaths(String(key)))
+							([key, value]) => wrap(value, String(key))
 						);
 					};
 
@@ -167,7 +235,7 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 
 						return wrapIterator(
 							target.entries(),
-							([key, value]) => [key, wrap(value, getPaths(String(key)))] as [any, any]
+							([key, value]) => [key, wrap(value, String(key))] as [any, any]
 						);
 					};
 
@@ -176,7 +244,7 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 						track("");
 
 						target.forEach((value, key) => {
-							callback.call(thisArg, wrap(value, getPaths(String(key))), key, receiver);
+							callback.call(thisArg, wrap(value, String(key)), key, receiver);
 						});
 					};
 
@@ -231,7 +299,7 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 
 						return wrapIterator(
 							target.values(),
-							value => wrap(value, [...paths])
+							value => wrap(value, "", true)
 						);
 					};
 
@@ -242,7 +310,7 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 						return wrapIterator(
 							target.entries(),
 							([value]) => {
-								const wrapped = wrap(value, [...paths]);
+								const wrapped = wrap(value, "", true);
 								return [wrapped, wrapped] as [any, any];
 							}
 						);
@@ -253,7 +321,7 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 						track("");
 
 						target.forEach(value => {
-							const wrapped = wrap(value, [...paths]);
+							const wrapped = wrap(value, "", true);
 							callback.call(thisArg, wrapped, wrapped, receiver);
 						});
 					};
@@ -268,7 +336,7 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 
 			track(key);
 
-			return wrap(Reflect.get(target, property, target), getPaths(key));
+			return wrap(Reflect.get(target, property, target), key);
 		},
 
 		set(target, property, next) {
@@ -282,8 +350,10 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 			if (Object.is(previous, value))
 				return true;
 
-			if (paths.has("") && !getState(owner).observables.has(key))
-				markObservable(owner, key);
+			for (const association of entry!.associations) {
+				if (association.routes.some(route => !route.path) && !getState(association.owner, true).observables.has(key))
+					markObservable(association.owner, key);
+			}
 
 			return emit(key, previous, value, () => Reflect.set(target, property, value, target)) !== false;
 		},
@@ -299,8 +369,14 @@ export const createProxy = (target: object, owner: object, path: string, recursi
 		}
 	});
 
+	entry.proxy = proxy;
 	PROXY_TARGETS.set(proxy, target);
-	cache.set(target, { proxy, paths } as any);
 
 	return proxy;
+};
+
+export const createProxy = (target: object, owner: object, path: string, recursive: boolean = true): object => {
+	target = toRaw(target);
+
+	return createProxyInternal(target, owner, path, recursive, new Set([target]));
 };
