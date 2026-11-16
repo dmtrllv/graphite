@@ -147,8 +147,6 @@ const renderEdge = (graph: Graph, edge: NodeEdge, ctx: CanvasRenderingContext2D)
 	const canvas = ctx.canvas;
 	const output = edge.source.outputElements[edge.sourceOutput];
 	const input = edge.target.inputElements[edge.targetInput];
-
-	console.log(edge.source.outputElements)
 	
 	if (!output || !input) {
 		return console.error(`missing io elements`);

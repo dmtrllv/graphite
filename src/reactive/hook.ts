@@ -36,7 +36,7 @@ export const useObservable = <T extends object>(value: T | (() => T), options: O
 				return value;
 		} catch { }
 
-		return createProxy(value, value, "", "", new WeakMap(), options.recursive) as T;
+		return createProxy(value, value, "", "", options.recursive) as T;
 	});
 
 	const store = getStore(toRaw(target));

@@ -9,7 +9,6 @@ type ObservableDecorator = {
 
 const decorate = <This extends object, Value>(value: ClassAccessorDecoratorTarget<This, Value>, context: ClassAccessorDecoratorContext<This, Value>, options: ObservableOptions) => {
 	const key = context.name.toString();
-	const caches = new WeakMap<object, WeakMap<object, Map<string, object>>>();
 
 	return {
 		get(this: This) {
@@ -22,14 +21,7 @@ const decorate = <This extends object, Value>(value: ClassAccessorDecoratorTarge
 			if (!options.recursive || current === null || typeof current !== "object")
 				return current;
 
-			let cache = caches.get(this);
-
-			if (!cache) {
-				cache = new WeakMap();
-				caches.set(this, cache);
-			}
-
-			return createProxy(current, this, key, key, cache);
+			return createProxy(current, this, key, key);
 		},
 		set(this: This, next: Value) {
 			getState(this, true);

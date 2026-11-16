@@ -2,6 +2,7 @@
 import { createEvent, getState, markObservable, notify, runInterceptors, trackDependency } from "./state";
 
 const PROXY_TARGETS = new WeakMap<object, object>();
+const PROXY_CACHE = new WeakMap<object, WeakMap<object, object>>();
 
 export const toRaw = <T>(value: T): T => (value !== null && typeof value === "object" ? PROXY_TARGETS.get(value as object) ?? value : value) as T;
 
@@ -9,18 +10,17 @@ const isObservableObject = (value: unknown): value is object => {
 	return value !== null && typeof value === "object" && (Object.prototype.toString.call(value) === "[object Object]" || Array.isArray(value) || value instanceof Map || value instanceof Set);
 };
 
-export const createProxy = (target: object, owner: object, root: string, path: string, cache: WeakMap<object, Map<string, object>>, recursive: boolean = true): object => {
-	if (PROXY_TARGETS.has(target))
-		return target;
-	
-	let paths = cache.get(target);
+export const createProxy = (target: object, owner: object, root: string, path: string, recursive: boolean = true): object => {
+	target = toRaw(target);
 
-	if (!paths) {
-		paths = new Map();
-		cache.set(target, paths);
+	let cache = PROXY_CACHE.get(owner);
+
+	if (!cache) {
+		cache = new WeakMap();
+		PROXY_CACHE.set(owner, cache);
 	}
 
-	const cached = paths.get(path);
+	const cached = cache.get(target);
 
 	if (cached)
 		return cached;
@@ -36,7 +36,7 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 		if (!recursive || !isObservableObject(value))
 			return value;
 
-		return createProxy(value, owner, root || key, key, cache, recursive);
+		return createProxy(value, owner, root || key, key, recursive);
 	};
 
 	const emit = (key: string, previous: any, value: any, mutate: () => any): any => {
@@ -298,7 +298,7 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 	});
 
 	PROXY_TARGETS.set(proxy, target);
-	paths.set(path, proxy);
+	cache.set(target, proxy);
 
 	return proxy;
 };

@@ -36,6 +36,20 @@ export class Graph {
 		this.edges = edges;
 	}
 
+	public getEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge | undefined {
+		return this.edges.values().find(v => {
+			if(v.source !== source)
+				return false;
+			if(v.sourceOutput !== sourceOutput)
+				return false;
+			if(v.target !== target)
+				return false;
+			if(v.targetInput !== targetInput)
+				return false;
+			return true;
+		});
+	}
+
 	public addNode<T extends GraphNode>(type: GraphNodeType<T>, position: Vec2 = new Vec2()): T {
 		const id = this._nodeIdCounter++;
 		const node = new type(id, this, position);
@@ -54,9 +68,13 @@ export class Graph {
 	}
 
 	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge {
+		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
+		if(foundEdge)
+			return foundEdge;
 		const id = this._edgeIdCounter++;
 		const edge = new NodeEdge(id, source, sourceOutput as any, target, targetInput as any);
 		this.edges.set(id, edge);
+		console.log("added edge");
 		return edge;
 	}
 
@@ -70,14 +88,16 @@ export class Graph {
 			this.edges.delete(found[0]);
 	}
 
-	public connectDraggingEdge<T extends GraphNode>(from: "input" | "output", node: T, name: keyof T) {
+	public connectDraggingEdge<T extends GraphNode>(node: T, name: keyof T) {
 		if (!this.draggingEdge)
 			return;
-		
-		if (from === "output") {
-			this.addEdge(this.draggingEdge.node, this.draggingEdge.key, node, name);
+
+		const edge = this.draggingEdge;
+
+		if (edge.from === "output") {
+			this.addEdge(edge.node, edge.key, node, name);
 		} else {
-			this.addEdge(node, name, this.draggingEdge.node, this.draggingEdge.key);
+			this.addEdge(node, name, edge.node, edge.key);
 		}
 	}
 }

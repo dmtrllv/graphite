@@ -84,19 +84,17 @@ export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsVie
 		node.graph.draggingEdge = null;
 	});
 
-	const endDraggingEdge = (from: "input" | "output") => {
-		return () => {
-			if (node.graph.draggingEdge && prop.isKeyOf(node))
-				node.graph.connectDraggingEdge(from, node, prop.name);
-		}
+	const endDraggingEdge = () => {
+		if (node.graph.draggingEdge && prop.isKeyOf(node))
+			node.graph.connectDraggingEdge(node, prop.name);
 	};
 
 	return (
 		<div className="option">
-			{withInput && <div className="input-point" ref={inputRef} onMouseDown={startDraggingEdge("input")} onMouseUp={endDraggingEdge("input")} />}
+			{withInput && <div className="input-point" ref={inputRef} onMouseDown={startDraggingEdge("input")} onMouseUp={endDraggingEdge} />}
 			<label>{prop.name}</label>
 			<Input name={prop.name} disabled={(!withInput && !withOutput) || hasInput} prop={p} />
-			{withOutput && <div className="output-point" ref={outputRef} onMouseDown={startDraggingEdge("output")} onMouseUp={endDraggingEdge("output")} />}
+			{withOutput && <div className="output-point" ref={outputRef} onMouseDown={startDraggingEdge("output")} onMouseUp={endDraggingEdge} />}
 		</div>
 	);
 };
