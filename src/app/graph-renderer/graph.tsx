@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { subscribe, useObservable } from "../../reactive";
 
 import "./graph.scss";
+import { useResizeObserver } from "../../hooks/resize";
 
 export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	useObservable(graph);
@@ -53,7 +54,7 @@ const useRenderer = (graph: Graph) => {
 			return;
 
 		const c = canvas.current;
-		
+
 		render(graph, c);
 
 		return subscribe(graph, ["nodes", "edges", "offset", "scale"], { recursive: true }, () => render(graph, c));
@@ -65,6 +66,11 @@ const useRenderer = (graph: Graph) => {
 			render(graph, canvas.current);
 		}
 	});
+
+	useResizeObserver(() => {
+		if (canvas.current)
+			render(graph, canvas.current);
+	}, canvas);
 
 	return {
 		canvas
@@ -90,9 +96,7 @@ const getCanvasMousePosition = (graph: Graph, position: Vec2, canvas: HTMLCanvas
 	);
 };
 
-const render = (graph: Graph, canvas: HTMLCanvasElement) => requestAnimationFrame(() => {
-	draw(graph, canvas);
-});
+const render = (graph: Graph, canvas: HTMLCanvasElement) => requestAnimationFrame(() => draw(graph, canvas));
 
 const draw = (graph: Graph, canvas: HTMLCanvasElement) => {
 	canvas.width = canvas.parentElement!.clientWidth;
@@ -104,7 +108,6 @@ const draw = (graph: Graph, canvas: HTMLCanvasElement) => {
 	ctx.translate(graph.offset.x + (canvas.width / 2), -graph.offset.y + (canvas.height / 2));
 	ctx.fillStyle = "white";
 	ctx.strokeStyle = "white";
-	ctx.fillRect(0, 0, 100, 100);
 	ctx.stroke();
 
 	if (graph.draggingEdge) {
@@ -147,7 +150,7 @@ const renderEdge = (graph: Graph, edge: NodeEdge, ctx: CanvasRenderingContext2D)
 	const canvas = ctx.canvas;
 	const output = edge.source.outputElements[edge.sourceOutput];
 	const input = edge.target.inputElements[edge.targetInput];
-	
+
 	if (!output || !input) {
 		return console.error(`missing io elements`);
 	}

@@ -1,10 +1,12 @@
 import react from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
-import { defineConfig, type ModuleNode } from "vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
 	plugins: [
-		react(),
+		react({
+			include: "**/*.{tsx,jsx}",
+		}),
 		babel({
 			presets: [{
 				preset: () => ({
@@ -19,16 +21,5 @@ export default defineConfig({
 				}
 			}]
 		}),
-		{
-			name: "full-reload",
-			handleHotUpdate({ server, modules, timestamp }) {
-				const invalidatedModules = new Set<ModuleNode>();
-				for (const mod of modules) {
-					server.moduleGraph.invalidateModule(mod, invalidatedModules, timestamp, true);
-				}
-				server.ws.send({ type: "full-reload" });
-				return [];
-			}
-		}
 	],
 })

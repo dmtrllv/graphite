@@ -74,7 +74,6 @@ export class Graph {
 		const id = this._edgeIdCounter++;
 		const edge = new NodeEdge(id, source, sourceOutput as any, target, targetInput as any);
 		this.edges.set(id, edge);
-		console.log("added edge");
 		return edge;
 	}
 
