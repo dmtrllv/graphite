@@ -1,8 +1,8 @@
 import { F32, Scalar } from "../types";
-import { GraphNode, option } from "./node";
+import { GraphNode, output } from "./node";
 
 @GraphNode.register("Value")
 export class ScalarNode extends GraphNode {
-	@option()
+	@output()
 	accessor value: Scalar = new F32(0);
 }

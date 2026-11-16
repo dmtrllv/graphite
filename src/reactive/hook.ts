@@ -30,7 +30,7 @@ const getStore = (target: object): Store => {
 
 export const useObservable = <T extends object>(value: T | (() => T), options: ObservableOptions = { recursive: true }): T => {
 	const [target] = useState(() => {
-		value = typeof value==="function" ? value() : value;
+		value = typeof value === "function" ? value() : value;
 		try {
 			if (getState(value).observables.size > 0)
 				return value;

@@ -3,3 +3,4 @@ export * from "./immutable";
 export * from "./assert";
 export * from "./decorators";
 export * from "./react";
+export * from "./fn";

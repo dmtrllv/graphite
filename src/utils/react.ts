@@ -22,3 +22,11 @@ interface MapChildrenFn {
 	<V>(arr: Array<V>, mapper: (value: V, index: number) => JSX.Element): JSX.Element[];
 	<T extends object>(object: T, mapper: <K extends keyof T>(key: K, value: T[K], index: number) => JSX.Element): JSX.Element[];
 }
+
+export const stopPropagation = (e: React.UIEvent) => {
+	e.stopPropagation();
+};
+
+export const stopDefault = (e: React.UIEvent) => {
+	e.preventDefault();
+};

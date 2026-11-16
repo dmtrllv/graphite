@@ -3,8 +3,8 @@ import type { GraphNode, GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 
 export class Graph {
-	#nodeIdCounter = 0;
-	#edgeIdCounter = 0;
+	private _nodeIdCounter = 0;
+	private _edgeIdCounter = 0;
 
 	public readonly id: number;
 
@@ -23,6 +23,9 @@ export class Graph {
 	@observable
 	public accessor edges: Map<number, NodeEdge>;
 
+	@observable
+	public accessor draggingEdge: DraggingEdge<any> | null = null;
+
 	public constructor(id: number, name: string, offset: Vec2);
 	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>);
 	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
@@ -34,7 +37,7 @@ export class Graph {
 	}
 
 	public addNode<T extends GraphNode>(type: GraphNodeType<T>, position: Vec2 = new Vec2()): T {
-		const id = this.#nodeIdCounter++;
+		const id = this._nodeIdCounter++;
 		const node = new type(id, this, position);
 		this.nodes.set(id, node);
 		return node;
@@ -50,8 +53,8 @@ export class Graph {
 			this.nodes.delete(found[0]);
 	}
 
-	public addEdge<O2 extends GraphNode, I extends GraphNode>(source: O2, sourceOutput: keyof O2, target: I, targetInput: keyof I): NodeEdge {
-		const id = this.#edgeIdCounter++;
+	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge {
+		const id = this._edgeIdCounter++;
 		const edge = new NodeEdge(id, source, sourceOutput as any, target, targetInput as any);
 		this.edges.set(id, edge);
 		return edge;
@@ -66,6 +69,24 @@ export class Graph {
 		if (found)
 			this.edges.delete(found[0]);
 	}
+
+	public connectDraggingEdge<T extends GraphNode>(from: "input" | "output", node: T, name: keyof T) {
+		if (!this.draggingEdge)
+			return;
+		
+		if (from === "output") {
+			this.addEdge(this.draggingEdge.node, this.draggingEdge.key, node, name);
+		} else {
+			this.addEdge(node, name, this.draggingEdge.node, this.draggingEdge.key);
+		}
+	}
+}
+
+export type DraggingEdge<T extends GraphNode> = {
+	readonly from: "input" | "output";
+	readonly node: T;
+	readonly key: keyof T;
+	readonly mousePosition: Vec2;
 }
 
 export class NodeEdge {

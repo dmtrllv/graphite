@@ -1,15 +1,15 @@
-import React, { useMemo } from "react";
-import { GraphNode, NodeProp, ScalarNode, type NodeOption } from "../../graph";
+import React, { useEffect, useMemo, useRef } from "react";
+import { F16, F32, GraphNode, I32, NodeProp, Type, U32, Vec2, Vec3, Vec4, type TypeCtor } from "../../graph";
 import { useObservable } from "../../reactive/hook";
-import { mapChildren } from "../../utils";
-import { useMouseMove } from "../../hooks";
+import { mapChildren, stopPropagation } from "../../utils";
+import { useEvent, useMouseMove } from "../../hooks";
 
 export const GraphNodeView = ({ node }: { node: GraphNode }) => {
 	node = useObservable(node);
 	const graph = useObservable(node.graph);
 
 	const { onMouseDown } = useMouseMove(node.position, pos => node.position = pos, 1 / graph.scale, true);
-	
+
 	const inputs = GraphNode.getInputs(node.constructor);
 	const options = GraphNode.getOptions(node.constructor);
 	const outputs = GraphNode.getOutputs(node.constructor);
@@ -23,55 +23,136 @@ export const GraphNodeView = ({ node }: { node: GraphNode }) => {
 	}, [node.position.x, node.position.y]);
 
 	return (
-		<div className="graph-node" style={style}>
+		<div className="graph-node" style={style} onMouseDown={stopPropagation}>
 			<div className="name" onMouseDown={onMouseDown}>{node.name}</div>
 			<div className="body">
-				{outputs && <div className="outputs">{mapChildren(outputs, (k, v) => <NodeOutputView key={k} node={node} output={v} />)}</div>}
-				{options && <div className="options">{mapChildren(options, (k, v) => <NodeOptionView key={k} node={node} option={v} />)}</div>}
-				{inputs && <div className="inputs">{mapChildren(inputs, (k, v) => <NodeInputView key={k} node={node} input={v} />)}</div>}
+				{outputs && (
+					mapChildren(outputs, (k, v) => <NodePropView key={k} node={node} prop={v} withOutput={true} />)
+				)}
+				{options && (
+					mapChildren(options, (k, v) => <NodePropView key={k} node={node} prop={v} withInput={v.withInput} />)
+				)}
+				{inputs && (
+					mapChildren(inputs, (k, v) => <NodePropView key={k} node={node} prop={v} withInput={true} />)
+				)}
 			</div>
 		</div>
 	);
 };
 
-const NodeInputView = ({ }: { node: GraphNode, input: NodeProp }) => {
-	return (
-		<div className="input">
+export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsViewProps) => {
+	useObservable(node);
 
-		</div>
-	);
-};
+	const inputRef = useRef<HTMLDivElement>(null);
+	const outputRef = useRef<HTMLDivElement>(null);
 
-const NodeOutputView = ({ node }: { node: GraphNode, output: NodeProp }) => {
-	return (
-		<div className={`output ${node}`}>
-			<div className="name">{node.name}</div>
-			<div className="point"></div>
-		</div>
-	);
-};
+	const p = node[prop.name as keyof typeof node];
 
-const NodeOptionView = ({ node, option }: { node: GraphNode, option: NodeOption }) => {
-	if (node instanceof ScalarNode)
-		return <ScalarInput node={node} withInput={option.withInput} name={option.name} />;
+	const hasInput = !!node.getInputEdge(prop.name);
 
-	return null;
-};
+	const Input = NodePropInputs.get(p.constructor as any);
 
-const ScalarInput = ({ node, name, withInput }: { node: ScalarNode, name: string, withInput: boolean | undefined }) => {
-	useObservable(node.value);
+	if (!Input) {
+		console.warn(`Missing node prop view for ${p.constructor.name}!`);
+		return null;
+	}
 
-	const hasInput = !!node.getInputEdge(name);
+	useEffect(() => {
+		node.inputElements[prop.name] = inputRef.current;
+		node.outputElements[prop.name] = outputRef.current;
 
-	const setValue = (value: string) => {
-		node.value.value = +value;
+		return () => {
+			if (node.inputElements[prop.name])
+				delete node.inputElements[prop.name];
+			if (node.outputElements[prop.name])
+				delete node.outputElements[prop.name];
+		};
+	}, []);
+
+	const startDraggingEdge = (from: "input" | "output") => {
+		return (e: React.MouseEvent) => {
+			node.graph.draggingEdge = {
+				from,
+				key: prop.name,
+				node,
+				mousePosition: new Vec2(e.clientX, e.clientY)
+			}
+		}
+	};
+
+	useEvent("mouseup", () => {
+		node.graph.draggingEdge = null;
+	});
+
+	const endDraggingEdge = (from: "input" | "output") => {
+		return () => {
+			if (node.graph.draggingEdge && prop.isKeyOf(node))
+				node.graph.connectDraggingEdge(from, node, prop.name);
+		}
 	};
 
 	return (
 		<div className="option">
-			{withInput && <div className="input-point" />}
-			<label>{name}</label>
-			<input type="number" value={node.value.value} placeholder={name} disabled={hasInput} onChange={e => setValue(e.target.value)} />
+			{withInput && <div className="input-point" ref={inputRef} onMouseDown={startDraggingEdge("input")} onMouseUp={endDraggingEdge("input")} />}
+			<label>{prop.name}</label>
+			<Input name={prop.name} disabled={(!withInput && !withOutput) || hasInput} prop={p} />
+			{withOutput && <div className="output-point" ref={outputRef} onMouseDown={startDraggingEdge("output")} onMouseUp={endDraggingEdge("output")} />}
 		</div>
 	);
 };
+
+type NodePropsViewProps = {
+	node: GraphNode;
+	prop: NodeProp;
+	withInput?: boolean;
+	withOutput?: boolean;
+};
+
+const NodePropInputs = new Map<TypeCtor<any>, React.FC<NodeInputProps<any>>>();
+
+export const registerNodePropInput = <T extends Type>(type: TypeCtor<T> | TypeCtor<T>[], component: React.FC<NodeInputProps<T>>) => {
+	if (Array.isArray(type))
+		return type.forEach(type => registerNodePropInput(type, component));
+
+	NodePropInputs.set(type, component);
+};
+
+type NodeInputProps<T extends Type> = {
+	readonly name: string;
+	readonly prop: T;
+	readonly disabled: boolean;
+};
+
+registerNodePropInput([F32, F16, U32, I32], ({ prop, name, disabled }) => {
+	return <input type="number" value={prop.value} placeholder={name} disabled={disabled} onChange={e => prop.value = +e.target.value} />
+});
+
+registerNodePropInput(Vec2, ({ prop, disabled }) => {
+	return (
+		<div className="vec2">
+			<input type="number" value={prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
+			<input type="number" value={prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
+		</div>
+	);
+});
+
+registerNodePropInput(Vec3, ({ prop, disabled }) => {
+	return (
+		<div className="vec3">
+			<input type="number" value={prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
+			<input type="number" value={prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
+			<input type="number" value={prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
+		</div>
+	);
+});
+
+registerNodePropInput(Vec4, ({ prop, disabled }) => {
+	return (
+		<div className="vec4">
+			<input type="number" value={prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
+			<input type="number" value={prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
+			<input type="number" value={prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
+			<input type="number" value={prop.w} placeholder="w" disabled={disabled} onChange={e => prop.w = +e.target.value} />
+		</div>
+	);
+});

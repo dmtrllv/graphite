@@ -56,6 +56,9 @@ export abstract class GraphNode {
 	@observable
 	public accessor position: Vec2;
 
+	public readonly inputElements: Record<string, HTMLDivElement | null> = {};
+	public readonly outputElements: Record<string, HTMLDivElement | null> = {};
+
 	public get name(): string {
 		return assert.notNull(GraphNode.#registry.entries().find(([_, type]) => type === this.constructor)?.[0]);
 	}
@@ -65,7 +68,7 @@ export abstract class GraphNode {
 		this.graph = graph;
 		this.position = position;
 	}
-	
+
 	public getInputEdge(inputKey: string): NodeEdge | undefined {
 		return this.graph.edges.values().find(e => e.target === this && e.targetInput === inputKey);
 	}
@@ -86,7 +89,6 @@ export type IOType<Node> = (typeof Type) | readonly (typeof Type)[] | ((node: No
 export class NodeProp {
 	public readonly name: string;
 
-
 	public constructor(name: string) {
 		this.name = name;
 	}
@@ -99,6 +101,14 @@ export class NodeProp {
 		}
 		throw new Error(`Property ${this.name} of ${node.constructor.name} is not a "Type"!`);
 	}
+
+	public isKeyOf<T extends GraphNode>(node: T): this is KeyedNodeProp<T> {
+		return this.name in node;
+	}
+}
+
+export type KeyedNodeProp<T extends GraphNode> = NodeProp & {
+	readonly name: keyof T;
 }
 
 export class NodeOption extends NodeProp {

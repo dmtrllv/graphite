@@ -10,6 +10,9 @@ const isObservableObject = (value: unknown): value is object => {
 };
 
 export const createProxy = (target: object, owner: object, root: string, path: string, cache: WeakMap<object, Map<string, object>>, recursive: boolean = true): object => {
+	if (PROXY_TARGETS.has(target))
+		return target;
+	
 	let paths = cache.get(target);
 
 	if (!paths) {

@@ -10,7 +10,6 @@ export const useMouseMove = (startPosition: Vec2, onMove: (newPosition: Vec2) =>
 	}));
 
 	const onMouseDown = (e: React.MouseEvent) => {
-		e.preventDefault();
 		e.stopPropagation();
 		moveState.isDown = true;
 		moveState.startOffset = startPosition.clone();
