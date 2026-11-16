@@ -21,7 +21,7 @@ const decorate = <This extends object, Value>(value: ClassAccessorDecoratorTarge
 			if (!options.recursive || current === null || typeof current !== "object")
 				return current;
 
-			return createProxy(current, this, key, key);
+			return createProxy(current, this, key);
 		},
 		set(this: This, next: Value) {
 			getState(this, true);

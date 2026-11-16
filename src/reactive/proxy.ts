@@ -10,7 +10,9 @@ const isObservableObject = (value: unknown): value is object => {
 	return value !== null && typeof value === "object" && (Object.prototype.toString.call(value) === "[object Object]" || Array.isArray(value) || value instanceof Map || value instanceof Set);
 };
 
-export const createProxy = (target: object, owner: object, root: string, path: string, recursive: boolean = true): object => {
+const joinPath = (base: string, key: string): string => base ? key ? `${base}.${key}` : base : key;
+
+export const createProxy = (target: object, owner: object, path: string, recursive: boolean = true): object => {
 	target = toRaw(target);
 
 	let cache = PROXY_CACHE.get(owner);
@@ -20,10 +22,14 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 		PROXY_CACHE.set(owner, cache);
 	}
 
-	const cached = cache.get(target);
+	const cached = cache.get(target) as any;
+	
+	if (cached) {
+		cached.paths.add(path);
+		return cached.proxy;
+	}
 
-	if (cached)
-		return cached;
+	const paths = new Set<string>([path]);
 
 	if (!path) {
 		getState(owner, true);
@@ -32,27 +38,42 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 			markObservable(owner, key);
 	}
 
-	const wrap = (value: any, key: string): any => {
+	const getPaths = (key: string): string[] => {
+		return [...paths].map(path => joinPath(path, key));
+	};
+
+	const wrap = (value: any, keys: string[]): any => {
 		if (!recursive || !isObservableObject(value))
 			return value;
 
-		return createProxy(value, owner, root || key, key, recursive);
+		let proxy: object | undefined;
+
+		for (const key of keys)
+			proxy = createProxy(value, owner, key, recursive);
+
+		return proxy;
 	};
 
 	const emit = (key: string, previous: any, value: any, mutate: () => any): any => {
-		const event = createEvent(key, previous, value);
+		const events = getPaths(key).map(key => createEvent(key, previous, value));
 
-		if (!runInterceptors(owner, event))
-			return false;
+		for (const event of events) {
+			if (!runInterceptors(owner, event))
+				return false;
+		}
 
 		const result = mutate();
 
-		notify(owner, event);
+		for (const event of events)
+			notify(owner, event);
 
 		return result;
 	};
 
-	const track = (key: string) => trackDependency(owner, key);
+	const track = (key: string) => {
+		for (const path of getPaths(key))
+			trackDependency(owner, path);
+	};
 
 	const wrapIterator = <T, R>(iterator: IterableIterator<T>, mapper: (value: T) => R): IterableIterator<R> => {
 		return (function* () {
@@ -65,25 +86,25 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 		get(target, property, receiver) {
 			if (target instanceof Map) {
 				if (property === "size") {
-					track(path);
+					track("");
 					return target.size;
 				}
 
 				if (property === "get")
 					return (mapKey: any) => {
 						const rawKey = toRaw(mapKey);
-						const key = `${path}.${String(rawKey)}`;
+						const key = String(rawKey);
 
 						track(key);
 
-						return wrap(target.get(rawKey), key);
+						return wrap(target.get(rawKey), getPaths(key));
 					};
 
 				if (property === "has")
 					return (mapKey: any) => {
 						const rawKey = toRaw(mapKey);
 
-						track(`${path}.${String(rawKey)}`);
+						track(String(rawKey));
 
 						return target.has(rawKey);
 					};
@@ -92,7 +113,7 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 					return (mapKey: any, next: any) => {
 						const rawKey = toRaw(mapKey);
 						const value = toRaw(next);
-						const key = `${path}.${String(rawKey)}`;
+						const key = String(rawKey);
 						const previous = target.get(rawKey);
 
 						if (target.has(rawKey) && Object.is(previous, value))
@@ -110,7 +131,7 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 						if (!target.has(rawKey))
 							return false;
 
-						const key = `${path}.${String(rawKey)}`;
+						const key = String(rawKey);
 						const previous = target.get(rawKey);
 
 						return emit(key, previous, undefined, () => target.delete(rawKey)) !== false;
@@ -121,41 +142,41 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 						if (!target.size)
 							return;
 
-						emit(path, new Map(target), undefined, () => target.clear());
+						emit("", new Map(target), undefined, () => target.clear());
 					};
 
 				if (property === "keys")
 					return () => {
-						track(path);
+						track("");
 						return target.keys();
 					};
 
 				if (property === "values")
 					return () => {
-						track(path);
+						track("");
 
 						return wrapIterator(
 							target.entries(),
-							([key, value]) => wrap(value, `${path}.${String(key)}`)
+							([key, value]) => wrap(value, getPaths(String(key)))
 						);
 					};
 
 				if (property === "entries" || property === Symbol.iterator)
 					return () => {
-						track(path);
+						track("");
 
 						return wrapIterator(
 							target.entries(),
-							([key, value]) => [key, wrap(value, `${path}.${String(key)}`)] as [any, any]
+							([key, value]) => [key, wrap(value, getPaths(String(key)))] as [any, any]
 						);
 					};
 
 				if (property === "forEach")
 					return (callback: Function, thisArg?: any) => {
-						track(path);
+						track("");
 
 						target.forEach((value, key) => {
-							callback.call(thisArg, wrap(value, `${path}.${String(key)}`), key, receiver);
+							callback.call(thisArg, wrap(value, getPaths(String(key))), key, receiver);
 						});
 					};
 
@@ -164,13 +185,13 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 
 			if (target instanceof Set) {
 				if (property === "size") {
-					track(path);
+					track("");
 					return target.size;
 				}
 
 				if (property === "has")
 					return (next: any) => {
-						track(path);
+						track("");
 						return target.has(toRaw(next));
 					};
 
@@ -181,7 +202,7 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 						if (target.has(value))
 							return receiver;
 
-						emit(path, undefined, value, () => target.add(value));
+						emit("", undefined, value, () => target.add(value));
 
 						return receiver;
 					};
@@ -193,7 +214,7 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 						if (!target.has(value))
 							return false;
 
-						return emit(path, value, undefined, () => target.delete(value)) !== false;
+						return emit("", value, undefined, () => target.delete(value)) !== false;
 					};
 
 				if (property === "clear")
@@ -201,27 +222,27 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 						if (!target.size)
 							return;
 
-						emit(path, new Set(target), undefined, () => target.clear());
+						emit("", new Set(target), undefined, () => target.clear());
 					};
 
 				if (property === "keys" || property === "values" || property === Symbol.iterator)
 					return () => {
-						track(path);
+						track("");
 
 						return wrapIterator(
 							target.values(),
-							value => wrap(value, path)
+							value => wrap(value, [...paths])
 						);
 					};
 
 				if (property === "entries")
 					return () => {
-						track(path);
+						track("");
 
 						return wrapIterator(
 							target.entries(),
 							([value]) => {
-								const wrapped = wrap(value, path);
+								const wrapped = wrap(value, [...paths]);
 								return [wrapped, wrapped] as [any, any];
 							}
 						);
@@ -229,10 +250,10 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 
 				if (property === "forEach")
 					return (callback: Function, thisArg?: any) => {
-						track(path);
+						track("");
 
 						target.forEach(value => {
-							const wrapped = wrap(value, path);
+							const wrapped = wrap(value, [...paths]);
 							callback.call(thisArg, wrapped, wrapped, receiver);
 						});
 					};
@@ -243,62 +264,43 @@ export const createProxy = (target: object, owner: object, root: string, path: s
 			if (typeof property === "symbol")
 				return Reflect.get(target, property, target);
 
-			const key = path ? `${path}.${String(property)}` : String(property);
+			const key = String(property);
 
 			track(key);
 
-			return wrap(Reflect.get(target, property, target), key);
+			return wrap(Reflect.get(target, property, target), getPaths(key));
 		},
 
 		set(target, property, next) {
 			if (typeof property === "symbol")
 				return Reflect.set(target, property, toRaw(next), target);
 
-			const key = path ? `${path}.${String(property)}` : String(property);
+			const key = String(property);
 			const previous = Reflect.get(target, property, target);
 			const value = toRaw(next);
 
 			if (Object.is(previous, value))
 				return true;
 
-			if (!path && !getState(owner).observables.has(key))
+			if (paths.has("") && !getState(owner).observables.has(key))
 				markObservable(owner, key);
 
-			const event = createEvent(key, previous, value);
-
-			if (!runInterceptors(owner, event))
-				return true;
-
-			const result = Reflect.set(target, property, value, target);
-
-			if (result)
-				notify(owner, event);
-
-			return result;
+			return emit(key, previous, value, () => Reflect.set(target, property, value, target)) !== false;
 		},
 
 		deleteProperty(target, property) {
 			if (!Reflect.has(target, property))
 				return true;
 
-			const key = path ? `${path}.${String(property)}` : String(property);
+			const key = String(property);
 			const previous = Reflect.get(target, property, target);
-			const event = createEvent(key, previous, undefined);
 
-			if (!runInterceptors(owner, event))
-				return true;
-
-			const result = Reflect.deleteProperty(target, property);
-
-			if (result)
-				notify(owner, event);
-
-			return result;
+			return emit(key, previous, undefined, () => Reflect.deleteProperty(target, property)) !== false;
 		}
 	});
 
 	PROXY_TARGETS.set(proxy, target);
-	cache.set(target, proxy);
+	cache.set(target, { proxy, paths } as any);
 
 	return proxy;
 };
