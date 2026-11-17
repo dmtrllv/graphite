@@ -1,5 +1,6 @@
 import { Graph, ScalarNode, Vec2, VectorMathNode, type GraphNode, type NodeEdge } from "../graph";
 import { observable, registerStore } from "../reactive";
+import type { GraphEditor } from "./editor";
 
 @registerStore
 export class GraphManager {
@@ -7,6 +8,9 @@ export class GraphManager {
 
 	@observable
 	public accessor graphs = new Map<number, Graph>();
+
+	@observable
+	public accessor editors = new Map<Graph, GraphEditor>();
 
 	public constructor() {
 		const graph = this.add("Test");

@@ -1,4 +1,3 @@
-
 import { Graph, GraphNode, Selection, EdgeSlice, Vec2 } from "../../graph";
 import { mapChildren, stopPropagation } from "../../utils";
 import { GraphNodeView } from "./node";
@@ -79,10 +78,7 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	const selectionStyle = getSelectionStyle(graph);
 
 	useEffect(() => {
-		const unsubscriber = subscribe(graph, { recursive: true }, () => {
-			graph.reconcileEdges();
-			invalidate();
-		});
+		const unsubscriber = subscribe(graph, { recursive: true }, invalidate);
 
 		invalidate();
 

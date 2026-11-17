@@ -1,6 +1,6 @@
 import { GraphManager } from "../graph";
 import { useStore } from "../reactive";
-import { GraphRenderer } from "./graph-renderer";
+import { GraphRenderer } from "./graph";
 
 export const App = () => {
 	const graphManager = useStore(GraphManager);
