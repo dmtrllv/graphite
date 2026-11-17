@@ -42,6 +42,7 @@ const decorate = <This extends object, Value>(value: ClassAccessorDecoratorTarge
 			notify(this, event);
 		},
 		init(this: This, initial: Value) {
+			markObservable(this, key);
 			return toRaw(initial);
 		}
 	};

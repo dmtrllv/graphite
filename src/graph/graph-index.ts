@@ -2,24 +2,24 @@ import type { GraphNode } from "./nodes/node";
 import type { NodeEdge } from "./graph";
 
 export class GraphIndex {
-	private incoming = new Map<GraphNode, Map<string, NodeEdge>>();
-	private outgoing = new Map<GraphNode, Map<string, Set<NodeEdge>>>();
+	private incoming = new Map<number, Map<string, NodeEdge>>();
+	private outgoing = new Map<number, Map<string, Set<NodeEdge>>>();
 
 	public add(edge: NodeEdge): void {
-		let incoming = this.incoming.get(edge.target);
+		let incoming = this.incoming.get(edge.target.id);
 
 		if (!incoming) {
 			incoming = new Map();
-			this.incoming.set(edge.target, incoming);
+			this.incoming.set(edge.target.id, incoming);
 		}
 
 		incoming.set(edge.targetInput, edge);
 
-		let outputs = this.outgoing.get(edge.source);
+		let outputs = this.outgoing.get(edge.source.id);
 
 		if (!outputs) {
 			outputs = new Map();
-			this.outgoing.set(edge.source, outputs);
+			this.outgoing.set(edge.source.id, outputs);
 		}
 
 		let edges = outputs.get(edge.sourceOutput);
@@ -33,16 +33,16 @@ export class GraphIndex {
 	}
 
 	public remove(edge: NodeEdge): void {
-		const incoming = this.incoming.get(edge.target);
+		const incoming = this.incoming.get(edge.target.id);
 
 		if (incoming?.get(edge.targetInput) === edge) {
 			incoming.delete(edge.targetInput);
 
 			if (incoming.size === 0)
-				this.incoming.delete(edge.target);
+				this.incoming.delete(edge.target.id);
 		}
 
-		const outputs = this.outgoing.get(edge.source);
+		const outputs = this.outgoing.get(edge.source.id);
 		const edges = outputs?.get(edge.sourceOutput);
 
 		if (edges) {
@@ -52,25 +52,25 @@ export class GraphIndex {
 				outputs!.delete(edge.sourceOutput);
 
 			if (outputs!.size === 0)
-				this.outgoing.delete(edge.source);
+				this.outgoing.delete(edge.source.id);
 		}
 	}
 
 	public getInputEdge(node: GraphNode, input: string): NodeEdge | undefined {
-		return this.incoming.get(node)?.get(input);
+		return this.incoming.get(node.id)?.get(input);
 	}
 
 	public getOutputEdges(node: GraphNode, output: string): NodeEdge[] {
-		return [...(this.outgoing.get(node)?.get(output) ?? [])];
+		return [...(this.outgoing.get(node.id)?.get(output) ?? [])];
 	}
 
 	public getConnectedEdges(node: GraphNode): NodeEdge[] {
 		const edges = new Set<NodeEdge>();
 
-		for (const edge of this.incoming.get(node)?.values() ?? [])
+		for (const edge of this.incoming.get(node.id)?.values() ?? [])
 			edges.add(edge);
 
-		for (const outputs of this.outgoing.get(node)?.values() ?? []) {
+		for (const outputs of this.outgoing.get(node.id)?.values() ?? []) {
 			for (const edge of outputs)
 				edges.add(edge);
 		}
