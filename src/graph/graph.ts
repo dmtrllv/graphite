@@ -2,6 +2,7 @@ import { observable } from "../reactive";
 import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 import { GraphIndex } from "./graph-index";
+import type { EdgeSlice } from "./editor-state";
 
 const RECONCILING_GRAPHS = new WeakSet<Graph>();
 export class Graph {
@@ -120,6 +121,15 @@ export class Graph {
 
 		this.edges.delete(edge.id);
 		this.index.remove(edge);
+	}
+
+	public restoreEdge(edge: NodeEdge): void {
+		if (this.edges.has(edge.id))
+			return;
+
+		this.edges.set(edge.id, edge);
+		this.index.add(edge);
+		this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
 	}
 
 	public connectDraggingEdge(node: GraphNode, name: string) {
@@ -241,24 +251,6 @@ export class Graph {
 	}
 }
 
-export class DraggingEdge<T extends GraphNode> {
-	@observable
-	public accessor from: "input" | "output";
-	@observable
-	public accessor node: T;
-	@observable
-	public accessor key: string;
-	@observable
-	public accessor mousePosition: Vec2;
-
-	public constructor(from: "input" | "output", node: T, key: string, mousePosition: Vec2) {
-		this.from = from;
-		this.node = node;
-		this.key = key;
-		this.mousePosition = mousePosition;
-	}
-}
-
 export class NodeEdge {
 	public readonly id: number;
 
@@ -283,28 +275,3 @@ export class NodeEdge {
 	}
 }
 
-export class Selection {
-	@observable
-	public accessor downPos: Vec2;
-
-	@observable
-	public accessor mousePos: Vec2;
-
-	public constructor(downPos: Vec2, mousePos: Vec2) {
-		this.downPos = downPos;
-		this.mousePos = mousePos;
-	}
-}
-
-export class EdgeSlice {
-	@observable
-	public accessor downPos: Vec2;
-
-	@observable
-	public accessor mousePos: Vec2;
-
-	public constructor(downPos: Vec2, mousePos: Vec2) {
-		this.downPos = downPos;
-		this.mousePos = mousePos;
-	}
-}

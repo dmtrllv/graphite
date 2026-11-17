@@ -9,6 +9,7 @@ type PortPosition = {
 
 export class GraphLayout {
 	private ports = new Map<string, PortPosition>();
+	private elements = new Map<string, HTMLDivElement>();
 
 	private getKey(node: GraphNode, direction: PortDirection, key: string): string {
 		return `${node.id}:${direction}:${key}`;
@@ -17,11 +18,14 @@ export class GraphLayout {
 	public updateNode(node: GraphNode, graph: Graph, canvas: HTMLCanvasElement): void {
 		const canvasRect = canvas.getBoundingClientRect();
 
-		const update = (elements: Record<string, HTMLDivElement | null>, direction: PortDirection) => {
-			for (const [key, element] of Object.entries(elements)) {
-				if (!element)
+		const update = (direction: PortDirection) => {
+			const prefix = `${node.id}:${direction}:`;
+
+			for (const [id, element] of this.elements) {
+				if (!id.startsWith(prefix))
 					continue;
 
+				const key = id.slice(prefix.length);
 				const rect = element.getBoundingClientRect();
 				const offset = direction === "input" ? 0.8 : 0.2;
 
@@ -37,14 +41,23 @@ export class GraphLayout {
 		if (graph.scale <= 0)
 			return;
 
-		update(node.inputElements, "input");
-		update(node.outputElements, "output");
+		update("input");
+		update("output");
+	}
+
+	public setPortElement(node: GraphNode, direction: PortDirection, key: string, element: HTMLDivElement | null): void {
+		const id = this.getKey(node, direction, key);
+
+		if (element)
+			this.elements.set(id, element);
+		else
+			this.elements.delete(id);
 	}
 
 	private updatePort(node: GraphNode, direction: PortDirection, key: string, position: Vec2): void {
 		const id = this.getKey(node, direction, key);
 		const port = this.ports.get(id);
-		
+
 		if (port && port.position.distance(position) < 0.01)
 			return;
 
