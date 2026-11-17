@@ -6,9 +6,20 @@ import { useEvent, useMouseMove } from "../../hooks";
 
 export const GraphNodeView = ({ node }: { node: GraphNode }) => {
 	node = useObservable(node);
+
 	const graph = useObservable(node.graph);
 
-	const { onMouseDown } = useMouseMove(node.position, pos => node.position = pos, 1 / graph.scale, true);
+	const selectedNodePositions = useRef<Vec2[]>([]);
+
+	const { onMouseDown } = useMouseMove(node.position, (pos, offset) => {
+		if (node.graph.isSelected(node) && (node.graph.selectedNodes.length > 0)) {
+			node.graph.selectedNodes.forEach((n, i) => {
+				n.position = selectedNodePositions.current[i]!.clone().add(offset);
+			});
+		} else {
+			node.position = pos;
+		}
+	}, 1 / graph.scale, true);
 
 	const inputs = GraphNode.getInputs(node.constructor);
 	const options = GraphNode.getOptions(node.constructor);
@@ -22,9 +33,18 @@ export const GraphNodeView = ({ node }: { node: GraphNode }) => {
 		}
 	}, [node.position.x, node.position.y]);
 
+	const mouseDown = (e: React.MouseEvent) => {
+		if (node.graph.isSelected(node) && (node.graph.selectedNodes.length > 0)) {
+			e.stopPropagation();
+			selectedNodePositions.current = node.graph.selectedNodes.map(n => n.position.clone());
+		}
+
+		onMouseDown(e);
+	};
+
 	return (
-		<div className="graph-node" style={style} onMouseDown={stopPropagation}>
-			<div className="name" onMouseDown={onMouseDown}>{node.name}</div>
+		<div className={`graph-node ${node.graph.isSelected(node) ? "selected" : ""}`} style={style} onMouseDown={stopPropagation}>
+			<div className="name" onMouseDown={mouseDown}>{node.name}</div>
 			<div className="body">
 				{outputs && (
 					mapChildren(outputs, (k, v) => <NodePropView key={k} node={node} prop={v} withOutput={true} />)

@@ -49,6 +49,10 @@ export class Vec2 extends Type {
 		if (y !== undefined)
 			this.y = y;
 	}
+
+	public distance({ x, y }: Vec2) {
+		return Math.sqrt(Math.pow(this.x - x, 2) + Math.pow(this.y - y, 2))
+	}
 }
 
 export type Vec2Type = typeof Vec2;

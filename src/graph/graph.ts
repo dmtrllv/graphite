@@ -26,6 +26,13 @@ export class Graph {
 	@observable
 	public accessor draggingEdge: DraggingEdge<any> | null = null;
 
+
+	@observable
+	public accessor selection: Selection | null = null;
+
+	@observable
+	public accessor selectedNodes: GraphNode[] = [];
+
 	public constructor(id: number, name: string, offset: Vec2);
 	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>);
 	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
@@ -38,13 +45,13 @@ export class Graph {
 
 	public getEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge | undefined {
 		return this.edges.values().find(v => {
-			if(v.source !== source)
+			if (v.source !== source)
 				return false;
-			if(v.sourceOutput !== sourceOutput)
+			if (v.sourceOutput !== sourceOutput)
 				return false;
-			if(v.target !== target)
+			if (v.target !== target)
 				return false;
-			if(v.targetInput !== targetInput)
+			if (v.targetInput !== targetInput)
 				return false;
 			return true;
 		});
@@ -68,18 +75,18 @@ export class Graph {
 	}
 
 	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge | null {
-		if(source === target as GraphNode)
+		if (source === target as GraphNode)
 			return null;
-		
-		if(!GraphNode.hasOutput(source, sourceOutput.toString()))
+
+		if (!GraphNode.hasOutput(source, sourceOutput.toString()))
 			return null;
-		if(!GraphNode.hasInput(target, targetInput.toString()))
+		if (!GraphNode.hasInput(target, targetInput.toString()))
 			return null;
-		
+
 		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
-		if(foundEdge)
+		if (foundEdge)
 			return foundEdge;
-		
+
 		const id = this._edgeIdCounter++;
 		const edge = new NodeEdge(id, source, sourceOutput as any, target, targetInput as any);
 		this.edges.set(id, edge);
@@ -107,6 +114,47 @@ export class Graph {
 		} else {
 			this.addEdge(node, name, edge.node, edge.key);
 		}
+	}
+
+	public getCanvasMousePosition = (position: Vec2, canvas: HTMLCanvasElement) => {
+		const c = canvas.getBoundingClientRect();
+
+		return new Vec2(
+			(position.x - c.x - c.width / 2 - this.offset.x) / this.scale,
+			(c.height / 2 - (position.y - c.y) - this.offset.y) / this.scale,
+		);
+	};
+
+	public isSelected(node: GraphNode): boolean {
+		return this.selectedNodes.includes(node);
+	}
+
+	public updateSelection(pos: Vec2, canvas: HTMLCanvasElement) {
+		if (!this.selection)
+			return;
+
+		const d = this.getCanvasMousePosition(this.selection.downPos, canvas);
+		const m = this.getCanvasMousePosition(pos, canvas);
+
+		const left = Math.min(d.x, m.x);
+		const right = Math.max(d.x, m.x);
+		const bottom = Math.min(d.y, m.y);
+		const top = Math.max(d.y, m.y);
+
+		const selected: GraphNode[] = [];
+
+		this.nodes.values().forEach(node => {
+			if (node.position.x < left || node.position.x > right)
+				return;
+
+			if (node.position.y < bottom || node.position.y > top)
+				return;
+
+			selected.push(node);
+		});
+
+		this.selectedNodes = selected;
+		this.selection.mousePos = pos;
 	}
 }
 
@@ -138,5 +186,18 @@ export class NodeEdge {
 		this.sourceOutput = sourceOutput;
 		this.target = target;
 		this.targetInput = targetInput;
+	}
+}
+
+export class Selection {
+	@observable
+	public accessor downPos: Vec2;
+
+	@observable
+	public accessor mousePos: Vec2;
+
+	public constructor(downPos: Vec2, mousePos: Vec2) {
+		this.downPos = downPos;
+		this.mousePos = mousePos;
 	}
 }

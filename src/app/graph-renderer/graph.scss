@@ -19,6 +19,15 @@
 			min-width: 140px;
 			background-color: transparent;
 
+			&.selected {
+				.name, .body {
+					border-color: rgb(172, 59, 59) !important;
+				}
+				.name {
+					border-bottom: 1px solid var(--border-1);
+				}
+			}
+
 			.name {
 				padding: 5px 10px;
 				background-color: var(--bg-2);
@@ -77,6 +86,8 @@
 					
 					&:disabled {
 						opacity: 0.2;
+						user-select: none;
+						pointer-events: none;
 					}
 
 					&::-webkit-outer-spin-button,

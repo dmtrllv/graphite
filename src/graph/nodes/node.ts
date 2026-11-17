@@ -1,4 +1,4 @@
-import { observable } from "../../reactive";
+import { computed, observable } from "../../reactive";
 import { assert, type AccessorDecorator, type WrappedAccessorDecorator } from "../../utils";
 import type { Graph, NodeEdge } from "../graph";
 import { Type, Vec2 } from "../types";

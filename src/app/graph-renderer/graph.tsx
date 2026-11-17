@@ -1,4 +1,4 @@
-import { Graph, GraphNode, NodeEdge, NodeOption, NodeProp, Vec2, type DraggingEdge } from "../../graph";
+import { Graph, GraphNode, NodeEdge, Selection, Vec2, type DraggingEdge } from "../../graph";
 import { assert, mapChildren } from "../../utils";
 import { GraphNodeView } from "./node";
 import { useEvent, useMouseMove } from "../../hooks";
@@ -8,10 +8,30 @@ import { useResizeObserver } from "../../hooks/resize";
 
 import "./graph.scss";
 
-export const GraphRenderer = ({ graph }: { graph: Graph }) => {
-	useObservable(graph);
+const getSelectionStyle = (graph: Graph): React.CSSProperties => {
+	const style: React.CSSProperties = {};
 
-	const { onMouseDown } = useMouseMove(graph.offset, val => graph.offset.set(val), 1, true);
+	if (!graph.selection)
+		return style;
+
+	const d = graph.selection.downPos;
+	const m = graph.selection.mousePos;
+
+	style.left = Math.min(d.x, m.x);
+	style.top = Math.min(d.y, m.y);
+	style.width = Math.max(d.x, m.x) - Math.min(d.x, m.x);
+	style.height = Math.max(d.y, m.y) - Math.min(d.y, m.y);
+	style.border = `1px solid red`;
+	style.backgroundColor = `rgba(255, 0, 0, 0.3)`;
+	style.position = "absolute";
+
+	return style;
+}
+
+export const GraphRenderer = ({ graph }: { graph: Graph }) => {
+	useObservable(graph, { recursive: true });
+
+	const mouseMove = useMouseMove(graph.offset, val => graph.offset.set(val), 1, true, 1);
 
 	const style = useMemo<React.CSSProperties>(() => {
 		return {
@@ -20,6 +40,8 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 			transform: `translate(-50%, -50%) scale(${graph.scale})`
 		}
 	}, [graph.offset.x, graph.offset.y, graph.scale]);
+
+	const selectionStyle = getSelectionStyle(graph)
 
 	const { canvas } = useRenderer(graph);
 
@@ -36,12 +58,40 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 		graph.scale = nextScale;
 	};
 
+	const onMouseDown = (e: React.MouseEvent) => {
+		mouseMove.onMouseDown(e);
+		if (e.button !== 0)
+			return;
+		graph.selection = new Selection(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
+	};
+
+	useEvent("mousemove", (e) => {
+		if (e.button !== 0 || !graph.selection || !canvas.current)
+			return;
+		graph.updateSelection(new Vec2(e.clientX, e.clientY), canvas.current);
+	});
+
+	useEvent("mouseup", (e) => {
+		if (e.button !== 0 || !graph.selection)
+			return;
+
+		const a = graph.selection.mousePos;
+		const b = graph.selection.downPos;
+		
+		if (a.distance(b) === 0)
+			graph.selectedNodes = [];
+
+
+		graph.selection = null;
+	});
+
 	return (
 		<div className="graph-renderer" onMouseDown={onMouseDown} onWheel={onWheel}>
 			<canvas ref={canvas} />
 			<div className="graph" style={style}>
 				{mapChildren(graph.nodes, (k, v) => <GraphNodeView key={k} node={v} />)}
 			</div>
+			<div className="selection" style={selectionStyle} />
 		</div>
 	);
 };
@@ -57,7 +107,7 @@ const useRenderer = (graph: Graph) => {
 
 		render(graph, c);
 
-		return subscribe(graph, ["nodes", "edges", "offset", "scale"], { recursive: true }, () => render(graph, c));
+		return subscribe(graph as any, ["nodes", "edges", "offset", "scale"], { recursive: true }, () => render(graph, c));
 	}, []);
 
 	useEvent("mousemove", (e) => {
@@ -86,15 +136,6 @@ const getIOPointPosition = (graph: Graph, el: HTMLElement, canvas: HTMLCanvasEle
 	return new Vec2(
 		(e.x - c.x - graph.offset.x - (c.width / 2)) + (POINT_OFFSETS[pointOffset]! * graph.scale),
 		((e.y - c.y) + graph.offset.y - (c.height / 2)) + (7.5 * graph.scale),
-	);
-};
-
-const getCanvasMousePosition = (graph: Graph, position: Vec2, canvas: HTMLCanvasElement) => {
-	const c = canvas.getBoundingClientRect();
-
-	return new Vec2(
-		position.x - c.x - graph.offset.x - (c.width / 2),
-		-(-(position.y - c.y) - graph.offset.y + (c.height / 2)),
 	);
 };
 
@@ -140,7 +181,7 @@ const renderDraggingEdge = (graph: Graph, edge: DraggingEdge<GraphNode>, ctx: Ca
 	}
 
 	const position = getIOPointPosition(graph, target, canvas, edge.from === "input" ? 0 : 1);
-	const mousePos = getCanvasMousePosition(graph, edge.mousePosition, canvas);
+	const mousePos = graph.getCanvasMousePosition(edge.mousePosition, canvas);
 
 	const kind = edge.node.getPropKind(edge.key);
 	ctx.strokeStyle = kind ? getEdgeColor(kind) : "white";
