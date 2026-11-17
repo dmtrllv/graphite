@@ -79,17 +79,12 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	const selectionStyle = getSelectionStyle(graph);
 
 	useEffect(() => {
-		const unsubscribers = [
-			subscribe(graph as any, ["edges"], invalidate),
-			subscribe(graph, ["scale"], invalidate),
-			subscribe(graph, ["offset"], { recursive: true }, invalidate),
-			subscribe(graph, ["draggingEdge", "slice"], { recursive: true }, invalidate)
-		];
+		const unsubscriber = subscribe(graph, { recursive: true }, invalidate);
 
 		invalidate();
 
 		return () => {
-			unsubscribers.forEach(unsubscribe => unsubscribe());
+			unsubscriber();
 			scheduler.dispose();
 			renderer.clear();
 		};

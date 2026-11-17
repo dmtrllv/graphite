@@ -21,6 +21,25 @@ const PROXY_CACHE = new WeakMap<object, ProxyEntry>();
 
 export const toRaw = <T>(value: T): T => (value !== null && typeof value === "object" ? PROXY_TARGETS.get(value as object) ?? value : value) as T;
 
+export const getProxyRoutes = (value: object): { owner: object; path: string }[] | undefined => {
+	const target = PROXY_TARGETS.get(value);
+
+	if (!target)
+		return;
+
+	const entry = PROXY_CACHE.get(target);
+
+	if (!entry)
+		return;
+
+	return entry.associations.flatMap(association =>
+		association.routes.map(route => ({
+			owner: association.owner,
+			path: route.path
+		}))
+	);
+};
+
 const isObservableObject = (value: unknown): value is object => {
 	return value !== null && typeof value === "object" && (Object.prototype.toString.call(value) === "[object Object]" || Array.isArray(value) || value instanceof Map || value instanceof Set);
 };

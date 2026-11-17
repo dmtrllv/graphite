@@ -47,7 +47,7 @@ export type ChangeEvent<T extends object, K extends RecursiveKey<T> | RecursiveK
 	readonly key: K;
 }>;
 
-export type RecursiveChangeEvent<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]> = ChangeEvent<T, (K extends RecursiveKey<T>[] ? RecursivePath<T, K[number]>: K extends RecursiveKey<T> ? RecursivePath<T, K> : never) & RecursiveKey<T>>;
+export type RecursiveChangeEvent<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]> = ChangeEvent<T, (K extends RecursiveKey<T>[] ? RecursivePath<T, K[number]> : K extends RecursiveKey<T> ? RecursivePath<T, K> : never) & RecursiveKey<T>>;
 export type Subscriber<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]> = (e: ChangeEvent<T, K>) => void;
 export type RecursiveSubscriber<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]> = (e: RecursiveChangeEvent<T, K>) => void;
 export type Interceptor<T extends object, K extends RecursiveKey<T>> = (e: ChangeEvent<T, K>) => boolean | void;
@@ -78,6 +78,8 @@ export interface InterceptorDecorator {
 }
 
 export interface SubscribeFn {
+	<T extends object>(obj: T, subscriber: ObjectSubscriber): Unsubscriber;
+	<T extends object>(obj: T, options: SubscribeOptions & { recursive: true }, subscriber: ObjectSubscriber): Unsubscriber;
 	<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]>(obj: T, key: K, options: SubscribeOptions & { recursive: true }, subscriber: RecursiveSubscriber<T, K>): Unsubscriber;
 	<T extends object, K extends RecursiveKey<T> | RecursiveKey<T>[]>(obj: T, key: K, subscriber: Subscriber<T, K>): Unsubscriber;
 }
@@ -91,3 +93,11 @@ export interface InterceptFn {
 export type ComputedOptions = {
 	eager?: boolean;
 };
+
+export type ObjectChangeEvent = Immutable<{
+	readonly newValue: unknown;
+	readonly oldValue: unknown;
+	readonly key: string;
+}>;
+
+export type ObjectSubscriber = (event: ObjectChangeEvent) => void;
