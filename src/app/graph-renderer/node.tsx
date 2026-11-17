@@ -1,13 +1,18 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { F16, F32, GraphNode, I32, NodeOption, NodeProp, SelectOption, Type, U32, Vec2, Vec3, Vec4, type NodeOptionType, type TypeCtor } from "../../graph";
 import { useObservable } from "../../reactive/hook";
 import { mapChildren, stopPropagation } from "../../utils";
 import { useEvent, useMouseMove } from "../../hooks";
 
-export const GraphNodeView = ({ node }: { node: GraphNode }) => {
+export const GraphNodeView = ({ node, onLayoutChange, onLayoutRemove }: {
+	node: GraphNode;
+	onLayoutChange: (node: GraphNode) => void;
+	onLayoutRemove: (node: GraphNode) => void;
+}) => {
 	node = useObservable(node);
 
 	const graph = useObservable(node.graph);
+	const root = useRef<HTMLDivElement>(null);
 
 	const selectedNodePositions = useRef<Vec2[]>([]);
 
@@ -33,6 +38,24 @@ export const GraphNodeView = ({ node }: { node: GraphNode }) => {
 		}
 	}, [node.position.x, node.position.y]);
 
+	useLayoutEffect(() => {
+		onLayoutChange(node);
+
+		return () => {
+			onLayoutRemove(node);
+		};
+	}, [node, node.position.x, node.position.y, onLayoutChange, onLayoutRemove]);
+
+	useEffect(() => {
+		if (!root.current)
+			return;
+
+		const observer = new ResizeObserver(() => onLayoutChange(node));
+		observer.observe(root.current);
+
+		return () => observer.disconnect();
+	}, [node, onLayoutChange]);
+
 	const mouseDown = (e: React.MouseEvent) => {
 		if (node.graph.isSelected(node) && (node.graph.selectedNodes.length > 0)) {
 			e.stopPropagation();
@@ -43,7 +66,7 @@ export const GraphNodeView = ({ node }: { node: GraphNode }) => {
 	};
 
 	return (
-		<div className={`graph-node ${node.graph.isSelected(node) ? "selected" : ""}`} style={style} onMouseDown={stopPropagation}>
+		<div ref={root} className={`graph-node ${node.graph.isSelected(node) ? "selected" : ""}`} style={style} onMouseDown={stopPropagation}>
 			<div className="name" onMouseDown={mouseDown}>{node.name}</div>
 			<div className="body">
 				{outputs && (
@@ -77,7 +100,7 @@ export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsVie
 		return null;
 	}
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		node.inputElements[prop.name] = inputRef.current;
 		node.outputElements[prop.name] = outputRef.current;
 

@@ -71,11 +71,17 @@ export class Graph {
 	public removeNode(id: number): void;
 	public removeNode(node: GraphNode): void;
 	public removeNode(idOrNode: number | GraphNode) {
-		if (typeof idOrNode === "number")
-			this.nodes.delete(idOrNode);
-		const found = this.nodes.entries().find(([_, edge]) => idOrNode === edge);
-		if (found)
-			this.nodes.delete(found[0]);
+		const node = typeof idOrNode === "number" ? this.nodes.get(idOrNode) : idOrNode;
+
+		if (!node)
+			return;
+
+		for (const edge of [...this.edges.values()]) {
+			if (edge.source === node || edge.target === node)
+				this.removeEdge(edge);
+		}
+
+		this.nodes.delete(node.id);
 	}
 
 	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: (keyof Output) & string, target: Input, targetInput: (keyof Input) & string): NodeEdge | null {
@@ -106,11 +112,8 @@ export class Graph {
 	public removeEdge(id: number): void;
 	public removeEdge(edge: NodeEdge): void;
 	public removeEdge(idOrEdge: number | NodeEdge) {
-		if (typeof idOrEdge === "number")
-			this.edges.delete(idOrEdge);
-		const found = this.edges.entries().find(([_, edge]) => idOrEdge === edge);
-		if (found)
-			this.edges.delete(found[0]);
+		const id = typeof idOrEdge === "number" ? idOrEdge : idOrEdge.id;
+		this.edges.delete(id);
 	}
 
 	public connectDraggingEdge<T extends GraphNode>(node: T, name: keyof T & string) {
@@ -207,7 +210,7 @@ export class Graph {
 			const end = new Vec2(targetRect.left, targetRect.top + targetRect.height / 2);
 
 			if (intersects(sliceStart, sliceEnd, start, end))
-				this.edges.delete(id);
+				this.removeEdge(id);
 		}
 
 		this.slice = null;
