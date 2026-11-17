@@ -9,13 +9,13 @@ type GraphNodeViewProps = {
 	node: GraphNode;
 	editor: GraphEditor;
 	layout: GraphLayout;
+	selected: boolean;
 	onNodePointerDown: (event: React.PointerEvent, node: GraphNode) => void;
 	onLayoutChange: (node: GraphNode) => void;
 };
 
-export const GraphNodeView = ({ node, editor, layout, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
+export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
-	useObservable(editor, { recursive: false });
 
 	const root = useRef<HTMLDivElement>(null);
 	const { inputs, options, outputs } = GraphNode.getInterface(node);
@@ -55,7 +55,7 @@ export const GraphNodeView = ({ node, editor, layout, onNodePointerDown, onLayou
 	}, [node, layout, onLayoutChange]);
 
 	return (
-		<div ref={root} className={`graph-node ${editor.isSelected(node) ? "selected" : ""}`} style={style}>
+		<div ref={root} className={`graph-node ${selected ? "selected" : ""}`} style={style}>
 			<div className="name" onPointerDown={event => onNodePointerDown(event, node)}>{node.name}</div>
 			<div className="body">
 				{options.map(option => (

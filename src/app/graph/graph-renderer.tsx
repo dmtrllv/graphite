@@ -210,6 +210,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 						node={node}
 						editor={editor}
 						layout={layout}
+						selected={editor.isSelected(node)}
 						onNodePointerDown={onNodePointerDown}
 						onLayoutChange={updateNodeLayout}
 					/>

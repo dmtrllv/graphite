@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from "react";
-import { F16, F32, GraphNode, I32, NodeOption, SelectOption, Type, U32, Vec2, Vec3, Vec4, type NodeOptionType, type TypeCtor } from "../../graph";
+import { F16, F32, GraphNode, I32, SelectOption, Type, U32, Vec2, Vec3, Vec4, type NodeOption, type NodeOptionType, type TypeCtor } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { useObservable } from "../../reactive/hook";
 import type { GraphLayout } from "./rendering";
@@ -39,17 +39,16 @@ export const NodePropView = ({ node, editor, layout, name, withInput, withOutput
 		return ref;
 	};
 
-	const startDraggingEdge = (from: "input" | "output", key: string) => {
-		return (event: React.PointerEvent) => {
-			event.stopPropagation();
-			event.preventDefault();
-			editor.beginEdgeDrag(from, node, key, new Vec2(event.clientX, event.clientY));
-		};
-	};
-
-	const endDraggingEdge = (key: string) => (event: React.PointerEvent) => {
+	const startDraggingEdge = (from: "input" | "output", key: string) => (event: React.PointerEvent) => {
+		event.preventDefault();
 		event.stopPropagation();
-		editor.connectDraggingEdge(node, key);
+
+		const root = event.currentTarget.closest(".graph-renderer");
+
+		if (root instanceof HTMLElement)
+			root.setPointerCapture(event.pointerId);
+
+		editor.beginEdgeDrag(from, node, key, new Vec2(event.clientX, event.clientY));
 	};
 
 	if (!Input) {
@@ -60,12 +59,12 @@ export const NodePropView = ({ node, editor, layout, name, withInput, withOutput
 	return (
 		<div className={`option ${node.getPropKind(name)}`}>
 			{withInput && (
-				<div className={`input-point ${node.getPropKind(name)}`} ref={inputRef} onPointerDown={startDraggingEdge("input", name)} onPointerUp={endDraggingEdge(name)} />
+				<div className={`input-point ${node.getPropKind(name)}`} ref={inputRef} onPointerDown={startDraggingEdge("input", name)} />
 			)}
 			<label>{name}</label>
 			<Input node={node} name={name} disabled={!!hasInput} prop={prop} />
 			{exposedOutputs.map(outputName => (
-				<div key={outputName} className={`output-point ${node.getPropKind(outputName)}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} onPointerUp={endDraggingEdge(outputName)} />
+				<div key={outputName} className={`output-point ${node.getPropKind(outputName)}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
 			))}
 		</div>
 	);

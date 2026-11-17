@@ -1,4 +1,3 @@
-
 import { subscribe } from "../../../reactive";
 import type { Graph } from "../../../graph";
 import type { GraphEditor } from "../../../graph/editor";
@@ -24,10 +23,10 @@ export class GraphRendererStore {
 	}
 
 	public attach(canvas: HTMLCanvasElement): void {
+		this.detach();
 		this.canvas = canvas;
 
 		this.unsubscribers = [
-			subscribe(this.graph, { recursive: false } as any, this.invalidate),
 			subscribe(this.graph, "offset", { recursive: true }, this.invalidate),
 			subscribe(this.graph, "scale", this.invalidate),
 			subscribe(this.graph, "structureVersion", this.onStructureChange),
@@ -63,8 +62,8 @@ export class GraphRendererStore {
 		if (!this.canvas)
 			return;
 
-		this.layout.updateNode(node, this.graph, this.canvas);
-		this.invalidate();
+		if (this.layout.updateNode(node, this.graph, this.canvas))
+			this.invalidate();
 	}
 
 	public removeNode(node: GraphNode): void {
