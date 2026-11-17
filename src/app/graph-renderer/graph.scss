@@ -20,7 +20,8 @@
 			background-color: transparent;
 
 			&.selected {
-				.name, .body {
+				.name,
+				.body {
 					border-color: rgb(172, 59, 59) !important;
 				}
 				.name {
@@ -83,7 +84,7 @@
 					padding: 5px;
 					width: 100px;
 					display: inline-block;
-					
+
 					&:disabled {
 						opacity: 0.2;
 						user-select: none;
@@ -109,18 +110,14 @@
 						margin-bottom: 5px;
 					}
 
-					&.scalar {
-						.input-point, 
-						.output-point {
-							--color: #E5A45B;
-						}
+					.input-point.scalar,
+					.output-point.scalar {
+						--color: #e5a45b;
 					}
 
-					&.vector {
-						.input-point, 
-						.output-point {
-							--color: #56B6C2;
-						}
+					.input-point.vector,
+					.output-point.vector {
+						--color: #56b6c2;
 					}
 
 					.input-point {
@@ -184,7 +181,7 @@
 		z-index: 10;
 		position: absolute;
 		//display: none;
-		
+
 		&.show {
 			display: block;
 		}
