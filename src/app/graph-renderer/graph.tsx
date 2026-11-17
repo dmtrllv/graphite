@@ -1,5 +1,5 @@
 import { Graph, GraphNode, NodeEdge, Selection, Slice, Vec2, type DraggingEdge } from "../../graph";
-import { assert, mapChildren } from "../../utils";
+import { assert, mapChildren, stopPropagation } from "../../utils";
 import { GraphNodeView } from "./node";
 import { useEvent, useMouseMove } from "../../hooks";
 import { useEffect, useMemo, useRef } from "react";
@@ -31,6 +31,19 @@ const getSelectionStyle = (graph: Graph): React.CSSProperties => {
 export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	useObservable(graph, { recursive: true });
 
+	const animationFrame = useRef<any>(null);
+
+	const renderGraph = () => {
+		if (animationFrame.current)
+			cancelAnimationFrame(animationFrame.current);
+		if (canvas.current)
+			render(graph, canvas.current);
+	}
+
+	const { showContextMenu } = useObservable({
+		showContextMenu: false
+	});
+
 	const mouseMove = useMouseMove(graph.offset, val => graph.offset.set(val), 1, true, 1);
 
 	const style = useMemo<React.CSSProperties>(() => {
@@ -43,7 +56,34 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 
 	const selectionStyle = getSelectionStyle(graph)
 
-	const { canvas } = useRenderer(graph);
+	const canvas = useRef<HTMLCanvasElement>(null);
+
+	useEffect(() => {
+		if (!canvas.current)
+			return;
+
+		const c = canvas.current;
+
+		renderGraph();
+
+		return subscribe(graph as any, ["nodes", "edges", "offset", "scale"], { recursive: true }, renderGraph);
+	}, []);
+
+	useEvent("mousemove", (e) => {
+		if (canvas.current) {
+			if (graph.draggingEdge) {
+				graph.draggingEdge.mousePosition.set({ x: e.clientX, y: e.clientY });
+				renderGraph();
+			} else if (graph.slice) {
+				graph.slice.mousePos = new Vec2(e.clientX, e.clientY);
+				renderGraph();
+			}
+		}
+	});
+
+	useResizeObserver(() => {
+		renderGraph();
+	}, canvas);
 
 	const onWheel = (e: React.WheelEvent) => {
 		const rect = e.currentTarget.getBoundingClientRect();
@@ -67,7 +107,7 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	};
 
 	useEvent("mousemove", (e) => {
-			e.preventDefault();
+		e.preventDefault();
 		if (e.button === 0) {
 			if (!graph.selection || !canvas.current)
 				return;
@@ -100,44 +140,18 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 				{mapChildren(graph.nodes, (k, v) => <GraphNodeView key={k} node={v} />)}
 			</div>
 			<div className="selection" style={selectionStyle} />
+			<div className={`context-menu ${showContextMenu && "show"}`} onMouseDown={stopPropagation}>
+				<input type="text" placeholder="Add" />
+				{mapChildren(GraphNode.getRegisteredNodes(), (key, val) => {
+					return (
+						<button className="node-option" style={{ pointerEvents: "auto" }} key={key} onClick={() => graph.addNode(val)}>
+							{key}
+						</button>
+					);
+				})}
+			</div>
 		</div>
 	);
-};
-
-const useRenderer = (graph: Graph) => {
-	const canvas = useRef<HTMLCanvasElement>(null);
-
-	useEffect(() => {
-		if (!canvas.current)
-			return;
-
-		const c = canvas.current;
-
-		render(graph, c);
-
-		return subscribe(graph as any, ["nodes", "edges", "offset", "scale"], { recursive: true }, () => render(graph, c));
-	}, []);
-
-	useEvent("mousemove", (e) => {
-		if (canvas.current) {
-			if (graph.draggingEdge) {
-				graph.draggingEdge.mousePosition.set({ x: e.clientX, y: e.clientY });
-				render(graph, canvas.current);
-			} else if (graph.slice) {
-				graph.slice.mousePos = new Vec2(e.clientX, e.clientY);
-				render(graph, canvas.current);
-			}
-		}
-	});
-
-	useResizeObserver(() => {
-		if (canvas.current)
-			render(graph, canvas.current);
-	}, canvas);
-
-	return {
-		canvas
-	};
 };
 
 const POINT_OFFSETS = [8, 2] as const;

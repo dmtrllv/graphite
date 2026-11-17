@@ -61,6 +61,7 @@ export class Graph {
 	}
 
 	public addNode<T extends GraphNode>(type: GraphNodeType<T>, position: Vec2 = new Vec2()): T {
+		console.log("add node");
 		const id = this._nodeIdCounter++;
 		const node = new type(id, this, position);
 		this.nodes.set(id, node);

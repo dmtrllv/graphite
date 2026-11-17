@@ -14,6 +14,10 @@ export abstract class GraphNode {
 
 	static readonly #registry = new Map<string, GraphNodeType<any>>();
 
+	public static getRegisteredNodes = (): ReadonlyMap<string, GraphNodeType<any>> => {
+		return this.#registry;
+	}
+
 	public static register = (name: string) => (target: GraphNodeType<any>, _: ClassDecoratorContext) => {
 		if (GraphNode.#registry.has(name))
 			throw new Error(`GraphNode with name ${name} is already registered!`);
