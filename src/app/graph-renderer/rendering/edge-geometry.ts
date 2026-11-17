@@ -26,9 +26,7 @@ export class EdgeGeometryCache {
 
 		const cached = this.cache.get(edge.id);
 
-		if (cached &&
-			cached.sourceVersion === source.version &&
-			cached.targetVersion === target.version)
+		if (cached && cached.sourceVersion === source.version && cached.targetVersion === target.version)
 			return cached.geometry;
 
 		const distance = Math.abs(target.position.x - source.position.x);
