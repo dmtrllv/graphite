@@ -4,9 +4,9 @@ import { GraphNodeView } from "./node";
 import { useEvent, useMouseMove } from "../../hooks";
 import { useEffect, useMemo, useRef } from "react";
 import { subscribe, useObservable } from "../../reactive";
+import { useResizeObserver } from "../../hooks/resize";
 
 import "./graph.scss";
-import { useResizeObserver } from "../../hooks/resize";
 
 export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	useObservable(graph);
@@ -77,13 +77,15 @@ const useRenderer = (graph: Graph) => {
 	};
 };
 
-const getCanvasPosition = (graph: Graph, el: HTMLElement, canvas: HTMLCanvasElement) => {
+const POINT_OFFSETS = [8, 2] as const;
+
+const getIOPointPosition = (graph: Graph, el: HTMLElement, canvas: HTMLCanvasElement, pointOffset: 0 | 1) => {
 	const c = canvas.getBoundingClientRect();
 	const e = el.getBoundingClientRect();
 
 	return new Vec2(
-		(e.x - c.x - graph.offset.x - (c.width / 2)),
-		((e.y - c.y) + graph.offset.y - (c.height / 2)) + (5 * graph.scale),
+		(e.x - c.x - graph.offset.x - (c.width / 2)) + (POINT_OFFSETS[pointOffset]! * graph.scale),
+		((e.y - c.y) + graph.offset.y - (c.height / 2)) + (7.5 * graph.scale),
 	);
 };
 
@@ -109,6 +111,7 @@ const draw = (graph: Graph, canvas: HTMLCanvasElement) => {
 	ctx.fillStyle = "white";
 	ctx.strokeStyle = "white";
 	ctx.stroke();
+	ctx.lineWidth = graph.scale;
 
 	if (graph.draggingEdge) {
 		renderDraggingEdge(graph, graph.draggingEdge, ctx);
@@ -137,7 +140,7 @@ const renderDraggingEdge = (graph: Graph, edge: DraggingEdge<any>, ctx: CanvasRe
 		return;
 	}
 
-	const position = getCanvasPosition(graph, target, canvas);
+	const position = getIOPointPosition(graph, target, canvas, edge.from === "input" ? 0 : 1);
 	const mousePos = getCanvasMousePosition(graph, edge.mousePosition, canvas);
 
 	ctx.beginPath();
@@ -155,9 +158,45 @@ const renderEdge = (graph: Graph, edge: NodeEdge, ctx: CanvasRenderingContext2D)
 		return console.error(`missing io elements`);
 	}
 
-	const inPos = getCanvasPosition(graph, output, canvas);
-	const outPos = getCanvasPosition(graph, input, canvas);
+	const inPos = getIOPointPosition(graph, output, canvas, 1);
+	const outPos = getIOPointPosition(graph, input, canvas, 0);
 
+	const sourceProp = edge.source[edge.sourceOutput as keyof typeof edge.source] as any;
+	const targetProp = edge.target[edge.targetInput as keyof typeof edge.target] as any;
+
+	const grad = ctx.createLinearGradient(inPos.x, inPos.y, outPos.x, outPos.y);
+
+	switch (sourceProp.kind) {
+		case "vector":
+			grad.addColorStop(0, "#56B6C2");
+			break;
+		case "scalar":
+			grad.addColorStop(0, "#E5A45B");
+			break;
+		case "texture":
+			grad.addColorStop(1, "#62b64d");
+			break;
+		case "sampler":
+			grad.addColorStop(1, "#d46363");
+			break;
+	}
+
+	switch (targetProp.kind) {
+		case "vector":
+			grad.addColorStop(1, "#56B6C2");
+			break;
+		case "scalar":
+			grad.addColorStop(1, "#E5A45B");
+			break;
+		case "texture":
+			grad.addColorStop(1, "#62b64d");
+			break;
+		case "sampler":
+			grad.addColorStop(1, "#d46363");
+			break;
+	}
+
+	ctx.strokeStyle = grad;
 	ctx.beginPath();
 	ctx.moveTo(inPos.x, inPos.y);
 	ctx.lineTo(outPos.x, outPos.y);

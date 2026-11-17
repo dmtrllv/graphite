@@ -67,7 +67,9 @@ export class Graph {
 			this.nodes.delete(found[0]);
 	}
 
-	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge {
+	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge | null {
+		if(source === target as GraphNode)
+			return null;
 		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
 		if(foundEdge)
 			return foundEdge;

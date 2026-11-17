@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { F16, F32, GraphNode, I32, NodeProp, Type, U32, Vec2, Vec3, Vec4, type TypeCtor } from "../../graph";
+import { F16, F32, GraphNode, I32, NodeOption, NodeProp, Type, U32, Vec2, Vec3, Vec4, type NodeOptionType, type TypeCtor } from "../../graph";
 import { useObservable } from "../../reactive/hook";
 import { mapChildren, stopPropagation } from "../../utils";
 import { useEvent, useMouseMove } from "../../hooks";
@@ -50,7 +50,7 @@ export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsVie
 
 	const hasInput = !!node.getInputEdge(prop.name);
 
-	const Input = NodePropInputs.get(p.constructor as any);
+	const Input =  NodePropInputs.get(p.constructor as any);
 
 	if (!Input) {
 		console.warn(`Missing node prop view for ${p.constructor.name}!`);
@@ -90,10 +90,10 @@ export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsVie
 	};
 
 	return (
-		<div className="option">
+		<div className={`option ${prop.getKind(node)}`}>
 			{withInput && <div className="input-point" ref={inputRef} onMouseDown={startDraggingEdge("input")} onMouseUp={endDraggingEdge} />}
 			<label>{prop.name}</label>
-			<Input name={prop.name} disabled={(!withInput && !withOutput) || hasInput} prop={p} />
+			<Input node={node} name={prop.name} disabled={(!withInput && !withOutput) || hasInput} prop={p} />
 			{withOutput && <div className="output-point" ref={outputRef} onMouseDown={startDraggingEdge("output")} onMouseUp={endDraggingEdge} />}
 		</div>
 	);
@@ -106,19 +106,22 @@ type NodePropsViewProps = {
 	withOutput?: boolean;
 };
 
-const NodePropInputs = new Map<TypeCtor<any>, React.FC<NodeInputProps<any>>>();
+const NodePropInputs = new Map<TypeCtor<any> | NodeOptionType<any, any>, React.FC<NodeInputProps<any>>>();
 
-export const registerNodePropInput = <T extends Type>(type: TypeCtor<T> | TypeCtor<T>[], component: React.FC<NodeInputProps<T>>) => {
+export function registerNodePropInput<T extends Type>(type: TypeCtor<T> | TypeCtor<T>[], component: React.FC<NodeInputProps<T>>): void;
+export function registerNodePropInput<T extends NodeOption<any>>(type: NodeOptionType<T, any> | NodeOptionType<T, any>[], component: React.FC<NodeInputProps<T>>): void;
+export function registerNodePropInput<T extends Type>(type: TypeCtor<T> | TypeCtor<T>[], component: React.FC<NodeInputProps<T>>) {
 	if (Array.isArray(type))
 		return type.forEach(type => registerNodePropInput(type, component));
 
 	NodePropInputs.set(type, component);
 };
 
-type NodeInputProps<T extends Type> = {
+type NodeInputProps<T extends Type | NodeOption<any>> = {
 	readonly name: string;
 	readonly prop: T;
 	readonly disabled: boolean;
+	readonly node: GraphNode;
 };
 
 registerNodePropInput([F32, F16, U32, I32], ({ prop, name, disabled }) => {
@@ -152,5 +155,24 @@ registerNodePropInput(Vec4, ({ prop, disabled }) => {
 			<input type="number" value={prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
 			<input type="number" value={prop.w} placeholder="w" disabled={disabled} onChange={e => prop.w = +e.target.value} />
 		</div>
+	);
+});
+
+registerNodePropInput(Vec4, ({ prop, disabled }) => {
+	return (
+		<div className="vec4">
+			<input type="number" value={prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
+			<input type="number" value={prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
+			<input type="number" value={prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
+			<input type="number" value={prop.w} placeholder="w" disabled={disabled} onChange={e => prop.w = +e.target.value} />
+		</div>
+	);
+});
+
+registerNodePropInput(NodeOption, ({ prop }) => {
+	return (
+		<select value={prop.value} onChange={e => prop.value = e.target.value}>
+			{prop.options.map(option => <option key={option} value={option}>{option}</option>)}
+		</select>
 	);
 });

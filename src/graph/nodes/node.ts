@@ -28,8 +28,8 @@ export abstract class GraphNode {
 		return (target[Symbol.metadata]?.[OUTPUTS] ?? {}) as Record<string, NodeProp>;
 	}
 
-	public static getOptions<T extends typeof GraphNode | Function>(target: T): Record<string, NodeOption> {
-		return (target[Symbol.metadata]?.[OPTIONS] ?? {}) as Record<string, NodeOption>;
+	public static getOptions<T extends typeof GraphNode | Function>(target: T): Record<string, NodeOptionProp> {
+		return (target[Symbol.metadata]?.[OPTIONS] ?? {}) as Record<string, NodeOptionProp>;
 	}
 
 	public static readonly input: AccessorDecorator = (val, context): any => {
@@ -45,8 +45,8 @@ export abstract class GraphNode {
 	};
 
 	public static readonly option = <T, Node extends GraphNode>(withInput?: boolean): WrappedAccessorDecorator<Node, T> => (val, context) => {
-		const options = (context.metadata![OPTIONS] ??= {}) as Record<string, NodeOption>;
-		options[context.name.toString()] = new NodeOption(context.name.toString(), withInput)
+		const options = (context.metadata![OPTIONS] ??= {}) as Record<string, NodeOptionProp>;
+		options[context.name.toString()] = new NodeOptionProp(context.name.toString(), withInput)
 		return observable({ recursive: true })(val, context);
 	};
 
@@ -93,7 +93,7 @@ export class NodeProp {
 		this.name = name;
 	}
 
-	public getKind(node: GraphNode) {
+	public getKind(node: GraphNode): string {
 		if (this.name in node) {
 			const prop = node[this.name as keyof typeof node]!;
 			if (prop instanceof Type)
@@ -111,11 +111,29 @@ export type KeyedNodeProp<T extends GraphNode> = NodeProp & {
 	readonly name: keyof T;
 }
 
-export class NodeOption extends NodeProp {
+export class NodeOptionProp extends NodeProp {
 	public readonly withInput: boolean;
+
+	public override getKind(node: GraphNode) {
+		return "option";
+	}
 
 	public constructor(name: string, withInput: boolean = false) {
 		super(name);
 		this.withInput = withInput;
 	}
 };
+
+export class NodeOption<T extends readonly string[]> {
+	public readonly options: T;
+
+	@observable
+	public accessor value: T[number];
+
+	public constructor(options: T) {
+		this.options = options;
+		this.value = options[0]!;
+	}
+};
+
+export type NodeOptionType<T extends NodeOption<R>, R extends readonly string[]> = new (options: R) => T;
