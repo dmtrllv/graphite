@@ -1,4 +1,6 @@
 import type { GraphEditor } from "../editor";
+import type { GraphNode } from "../nodes";
+import type { Vec2 } from "../types";
 
 export type GraphPointerEvent = {
 	clientX: number;
@@ -6,6 +8,8 @@ export type GraphPointerEvent = {
 	button: number;
 	shiftKey: boolean;
 	ctrlKey: boolean;
+	graphPosition: Vec2;
+	node?: GraphNode;
 };
 
 export interface GraphEditorTool {

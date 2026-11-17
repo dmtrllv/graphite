@@ -1,36 +1,24 @@
-
-import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { GraphNode, NodeOption, Vec2 } from "../../graph";
+import React, { useEffect, useMemo, useRef } from "react";
+import { GraphNode, NodeOption } from "../../graph";
+import type { GraphEditor } from "../../graph/editor";
 import { useObservable } from "../../reactive/hook";
-import { stopPropagation } from "../../utils";
-import { useMouseMove } from "../../hooks";
+import { GraphLayout } from "./rendering";
 import { NodePropView } from "./node-prop-view";
 
 type GraphNodeViewProps = {
 	node: GraphNode;
+	editor: GraphEditor;
+	layout: GraphLayout;
+	onNodePointerDown: (event: React.PointerEvent, node: GraphNode) => void;
 	onLayoutChange: (node: GraphNode) => void;
-	onLayoutRemove: (node: GraphNode) => void;
 };
 
-export const GraphNodeView = ({ node, onLayoutChange, onLayoutRemove }: GraphNodeViewProps) => {
+export const GraphNodeView = ({ node, editor, layout, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
+	useObservable(editor, { recursive: false });
 
-	const graph = useObservable(node.graph);
 	const root = useRef<HTMLDivElement>(null);
-	const selectedNodePositions = useRef<Vec2[]>([]);
-
-	const { onMouseDown } = useMouseMove(node.position, (pos, offset) => {
-		if (node.graph.isSelected(node) && node.graph.selectedNodes.length > 0) {
-			node.graph.selectedNodes.forEach((n, i) => {
-				n.position = selectedNodePositions.current[i]!.clone().add(offset);
-			});
-		} else {
-			node.position = pos;
-		}
-	}, 1 / graph.scale, true);
-
 	const { inputs, options, outputs } = GraphNode.getInterface(node);
-
 	const optionOutputNames = new Map<string, readonly string[]>();
 	const attachedOutputs = new Set<string>();
 
@@ -42,51 +30,42 @@ export const GraphNodeView = ({ node, onLayoutChange, onLayoutRemove }: GraphNod
 		names.forEach(name => attachedOutputs.add(name));
 	}
 
-	const style = useMemo<React.CSSProperties>(() => {
-		return {
-			left: `calc(50% + ${node.position.x}px)`,
-			top: `calc(50% + ${-node.position.y}px)`,
-			transform: "translate(-50%, -50%)"
-		};
-	}, [node.position.x, node.position.y]);
-
-	useLayoutEffect(() => {
-		onLayoutChange(node);
-	}, [node, node.position.x, node.position.y, onLayoutChange]);
-
-	useLayoutEffect(() => () => onLayoutRemove(node), [node, onLayoutRemove]);
+	const style = useMemo<React.CSSProperties>(() => ({
+		left: `calc(50% + ${node.position.x}px)`,
+		top: `calc(50% + ${-node.position.y}px)`,
+		transform: "translate(-50%, -50%)"
+	}), [node.position.x, node.position.y]);
 
 	useEffect(() => {
-		if (!root.current)
+		const element = root.current;
+
+		if (!element)
 			return;
 
+		layout.setNodeElement(node, element);
+		onLayoutChange(node);
+
 		const observer = new ResizeObserver(() => onLayoutChange(node));
-		observer.observe(root.current);
+		observer.observe(element);
 
-		return () => observer.disconnect();
-	}, [node, onLayoutChange]);
-
-	const mouseDown = (e: React.MouseEvent) => {
-		if (node.graph.isSelected(node) && node.graph.selectedNodes.length > 0) {
-			e.stopPropagation();
-			selectedNodePositions.current = node.graph.selectedNodes.map(n => n.position.clone());
-		}
-
-		onMouseDown(e);
-	};
+		return () => {
+			observer.disconnect();
+			layout.setNodeElement(node, null);
+		};
+	}, [node, layout, onLayoutChange]);
 
 	return (
-		<div ref={root} className={`graph-node ${node.graph.isSelected(node) ? "selected" : ""}`} style={style} onMouseDown={stopPropagation}>
-			<div className="name" onMouseDown={mouseDown}>{node.name}</div>
+		<div ref={root} className={`graph-node ${editor.isSelected(node) ? "selected" : ""}`} style={style}>
+			<div className="name" onPointerDown={event => onNodePointerDown(event, node)}>{node.name}</div>
 			<div className="body">
 				{options.map(option => (
-					<NodePropView key={option.name} node={node} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} />
+					<NodePropView key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} />
 				))}
 				{outputs.filter(port => !attachedOutputs.has(port.name)).map(port => (
-					<NodePropView key={port.name} node={node} name={port.name} withOutput />
+					<NodePropView key={port.name} node={node} editor={editor} layout={layout} name={port.name} withOutput />
 				))}
 				{inputs.map(port => (
-					<NodePropView key={port.name} node={node} name={port.name} withInput />
+					<NodePropView key={port.name} node={node} editor={editor} layout={layout} name={port.name} withInput />
 				))}
 			</div>
 		</div>

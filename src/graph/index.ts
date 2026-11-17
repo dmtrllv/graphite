@@ -3,3 +3,7 @@ export * from "./nodes";
 export * from "./types";
 export * from "./graph-manager";
 export * from "./graph-index";
+export * from "./editor";
+export * from "./editor-state";
+export * from "./actions";
+export * from "./tools";

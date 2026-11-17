@@ -3,3 +3,4 @@ export * from "./edge-geometry";
 export * from "./edge-renderer";
 export * from "./renderer";
 export * from "./render-scheduler";
+export * from "./graph-renderer-store";

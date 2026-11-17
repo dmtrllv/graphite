@@ -139,9 +139,6 @@ export abstract class GraphNode {
 	@observable
 	public accessor position: Vec2;
 
-	public readonly inputElements: Record<string, HTMLDivElement | null> = {};
-	public readonly outputElements: Record<string, HTMLDivElement | null> = {};
-
 	public get name(): string {
 		return assert.notNull(GraphNode.#registry.entries().find(([_, type]) => type === this.constructor)?.[0]);
 	}

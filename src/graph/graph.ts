@@ -2,9 +2,9 @@ import { observable } from "../reactive";
 import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 import { GraphIndex } from "./graph-index";
-import type { EdgeSlice } from "./editor-state";
 
 const RECONCILING_GRAPHS = new WeakSet<Graph>();
+
 export class Graph {
 	private _nodeIdCounter = 0;
 	private _edgeIdCounter = 0;
@@ -27,16 +27,7 @@ export class Graph {
 	public accessor edges: Map<number, NodeEdge>;
 
 	@observable
-	public accessor draggingEdge: DraggingEdge<any> | null = null;
-
-	@observable
-	public accessor selection: Selection | null = null;
-
-	@observable
-	public accessor selectedNodes: GraphNode[] = [];
-
-	@observable
-	public accessor slice: EdgeSlice | null = null;
+	public accessor structureVersion = 0;
 
 	public readonly index = new GraphIndex();
 
@@ -49,37 +40,48 @@ export class Graph {
 		this.nodes = nodes;
 		this.edges = edges;
 
-		for (const edge of this.edges.values())
+		for (const node of this.nodes.values())
+			this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
+
+		for (const edge of this.edges.values()) {
 			this.index.add(edge);
+			this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
+		}
 	}
 
-	public getEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: (keyof Output) & string, target: Input, targetInput: (keyof Input) & string): NodeEdge | undefined {
-		return this.index.getOutputEdges(source, sourceOutput).find(edge =>
-			edge.target === target && edge.targetInput === targetInput
-		);
+	public getEdge(source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string): NodeEdge | undefined {
+		return this.index.getOutputEdges(source, sourceOutput).find(edge => edge.target === target && edge.targetInput === targetInput);
 	}
 
 	public addNode<T extends GraphNode>(type: GraphNodeType<T>, position: Vec2 = new Vec2()): T {
-		const id = this._nodeIdCounter++;
-		const node = new type(id, this, position);
-		this.nodes.set(id, node);
+		const node = new type(this._nodeIdCounter++, this, position);
+		this.nodes.set(node.id, node);
+		this.structureVersion++;
 		return node;
+	}
+
+	public restoreNode(node: GraphNode): void {
+		if (this.nodes.has(node.id))
+			return;
+
+		this.nodes.set(node.id, node);
+		this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
+		this.structureVersion++;
 	}
 
 	public removeNode(id: number): void;
 	public removeNode(node: GraphNode): void;
-	public removeNode(idOrNode: number | GraphNode) {
+	public removeNode(idOrNode: number | GraphNode): void {
 		const node = typeof idOrNode === "number" ? this.nodes.get(idOrNode) : idOrNode;
 
-		if (!node)
+		if (!node || !this.nodes.has(node.id))
 			return;
 
-		for (const edge of [...this.edges.values()]) {
-			if (edge.source === node || edge.target === node)
-				this.removeEdge(edge);
-		}
+		for (const edge of this.index.getConnectedEdges(node))
+			this.removeEdge(edge);
 
 		this.nodes.delete(node.id);
+		this.structureVersion++;
 	}
 
 	public addEdge(source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string): NodeEdge | null {
@@ -92,7 +94,7 @@ export class Graph {
 		if (!sourcePort || !targetPort || !GraphNode.canConnect(sourcePort, targetPort))
 			return null;
 
-		const foundEdge = this.getEdge(source, sourceOutput as any, target, targetInput as any);
+		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
 
 		if (foundEdge)
 			return foundEdge;
@@ -102,136 +104,53 @@ export class Graph {
 		if (inputEdge)
 			this.removeEdge(inputEdge);
 
-		const id = this._edgeIdCounter++;
-		const edge = new NodeEdge(id, source, sourceOutput, target, targetInput);
+		const edge = new NodeEdge(this._edgeIdCounter++, source, sourceOutput, target, targetInput);
 
-		this.edges.set(id, edge);
+		this.edges.set(edge.id, edge);
 		this.index.add(edge);
+		this.structureVersion++;
 
 		return edge;
 	}
 
 	public removeEdge(id: number): void;
 	public removeEdge(edge: NodeEdge): void;
-	public removeEdge(idOrEdge: number | NodeEdge) {
+	public removeEdge(idOrEdge: number | NodeEdge): void {
 		const edge = typeof idOrEdge === "number" ? this.edges.get(idOrEdge) : idOrEdge;
 
-		if (!edge)
+		if (!edge || !this.edges.has(edge.id))
 			return;
 
 		this.edges.delete(edge.id);
 		this.index.remove(edge);
+		this.structureVersion++;
 	}
 
 	public restoreEdge(edge: NodeEdge): void {
 		if (this.edges.has(edge.id))
 			return;
 
+		const inputEdge = this.index.getInputEdge(edge.target, edge.targetInput);
+
+		if (inputEdge)
+			this.removeEdge(inputEdge);
+
 		this.edges.set(edge.id, edge);
 		this.index.add(edge);
 		this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
+		this.structureVersion++;
 	}
 
-	public connectDraggingEdge(node: GraphNode, name: string) {
-		if (!this.draggingEdge)
-			return;
-
-		const edge = this.draggingEdge;
-
-		if (edge.from === "output")
-			this.addEdge(edge.node, edge.key.toString(), node, name);
-		else
-			this.addEdge(node, name, edge.node, edge.key.toString());
-	}
-
-	public getCanvasMousePosition = (position: Vec2, canvas: HTMLCanvasElement) => {
-		const c = canvas.getBoundingClientRect();
+	public getCanvasMousePosition(position: Vec2, canvas: HTMLCanvasElement): Vec2 {
+		const rect = canvas.getBoundingClientRect();
 
 		return new Vec2(
-			(position.x - c.x - c.width / 2 - this.offset.x) / this.scale,
-			(c.height / 2 - (position.y - c.y) - this.offset.y) / this.scale,
+			(position.x - rect.left - rect.width / 2 - this.offset.x) / this.scale,
+			(rect.height / 2 - (position.y - rect.top) - this.offset.y) / this.scale
 		);
-	};
-
-	public isSelected(node: GraphNode): boolean {
-		return this.selectedNodes.includes(node);
 	}
 
-	public updateSelection(pos: Vec2, canvas: HTMLCanvasElement) {
-		if (!this.selection)
-			return;
-
-		const d = this.getCanvasMousePosition(this.selection.downPos, canvas);
-		const m = this.getCanvasMousePosition(pos, canvas);
-
-		const left = Math.min(d.x, m.x);
-		const right = Math.max(d.x, m.x);
-		const bottom = Math.min(d.y, m.y);
-		const top = Math.max(d.y, m.y);
-
-		const selected: GraphNode[] = [];
-
-		this.nodes.values().forEach(node => {
-			if (node.position.x < left || node.position.x > right)
-				return;
-
-			if (node.position.y < bottom || node.position.y > top)
-				return;
-
-			selected.push(node);
-		});
-
-		this.selectedNodes = selected;
-		this.selection.mousePos = pos;
-	}
-
-	public cutEdges() {
-		if (!this.slice)
-			return;
-
-		const { downPos, mousePos } = this.slice;
-
-		const minX = Math.min(downPos.x, mousePos.x);
-		const maxX = Math.max(downPos.x, mousePos.x);
-		const minY = Math.min(downPos.y, mousePos.y);
-		const maxY = Math.max(downPos.y, mousePos.y);
-
-		const intersects = (a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean => {
-			const cross = (p: Vec2, q: Vec2, r: Vec2) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
-
-			const abC = cross(a, b, c);
-			const abD = cross(a, b, d);
-			const cdA = cross(c, d, a);
-			const cdB = cross(c, d, b);
-
-			return abC * abD <= 0 && cdA * cdB <= 0;
-		};
-
-		const sliceStart = new Vec2(minX, minY);
-		const sliceEnd = new Vec2(maxX, maxY);
-
-		for (const [id, edge] of this.edges) {
-			const source = edge.source.outputElements[edge.sourceOutput];
-			const target = edge.target.inputElements[edge.targetInput];
-
-			if (!source || !target)
-				continue;
-
-			const sourceRect = source.getBoundingClientRect();
-			const targetRect = target.getBoundingClientRect();
-
-			const start = new Vec2(sourceRect.right, sourceRect.top + sourceRect.height / 2);
-
-			const end = new Vec2(targetRect.left, targetRect.top + targetRect.height / 2);
-
-			if (intersects(sliceStart, sliceEnd, start, end))
-				this.removeEdge(id);
-		}
-
-		this.slice = null;
-	}
-
-	public reconcileEdges() {
+	public reconcileEdges(): void {
 		if (RECONCILING_GRAPHS.has(this))
 			return;
 
@@ -274,4 +193,3 @@ export class NodeEdge {
 		this.targetInput = targetInput;
 	}
 }
-

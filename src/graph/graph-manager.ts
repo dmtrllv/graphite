@@ -1,6 +1,6 @@
 import { Graph, ScalarNode, Vec2, VectorMathNode, type GraphNode, type NodeEdge } from "../graph";
 import { observable, registerStore } from "../reactive";
-import type { GraphEditor } from "./editor";
+import { GraphEditor } from "./editor";
 
 @registerStore
 export class GraphManager {
@@ -21,12 +21,24 @@ export class GraphManager {
 		graph.addEdge(b, "value", c, "b");
 	}
 
-	public get(id: number): Graph;
-	public get(name: string): Graph;
+	public get(id: number): Graph | undefined;
+	public get(name: string): Graph | undefined;
 	public get(idOrName: number | string): Graph | undefined {
 		if (typeof idOrName === "number")
 			return this.graphs.get(idOrName);
+
 		return this.graphs.values().find(graph => graph.name === idOrName);
+	}
+
+	public openEditor(graph: Graph): GraphEditor {
+		let editor = this.editors.get(graph);
+
+		if (!editor) {
+			editor = new GraphEditor(graph);
+			this.editors.set(graph, editor);
+		}
+
+		return editor;
 	}
 
 	public add(name: string, offset: Vec2 = new Vec2(), nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>): Graph {

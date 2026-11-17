@@ -1,117 +1,168 @@
-import { Graph, GraphNode, Selection, EdgeSlice, Vec2 } from "../../graph";
-import { mapChildren, stopPropagation } from "../../utils";
+import { GraphNode, Vec2 } from "../../graph";
+import type { GraphEditor } from "../../graph/editor";
+import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
+import { mapChildren } from "../../utils";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { subscribe } from "../../reactive";
 import { GraphNodeView } from "./node";
-import { useEvent, useMouseMove } from "../../hooks";
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { subscribe, useObservable } from "../../reactive";
-import { useResizeObserver } from "../../hooks/resize";
-import { GraphCanvasRenderer, GraphLayout, RenderScheduler } from "./rendering";
+import { GraphRendererStore } from "./rendering";
 
 import "./graph.scss";
 
-const getSelectionStyle = (graph: Graph): React.CSSProperties => {
+const getSelectionStyle = (editor: GraphEditor): React.CSSProperties => {
 	const style: React.CSSProperties = {};
+	const selection = editor.selection;
 
-	if (!graph.selection)
+	if (!selection)
 		return style;
 
-	const d = graph.selection.downPos;
-	const m = graph.selection.mousePos;
+	const d = selection.downPos;
+	const m = selection.mousePos;
 
 	style.left = Math.min(d.x, m.x);
 	style.top = Math.min(d.y, m.y);
-	style.width = Math.max(d.x, m.x) - Math.min(d.x, m.x);
-	style.height = Math.max(d.y, m.y) - Math.min(d.y, m.y);
-	style.border = `1px solid red`;
-	style.backgroundColor = `rgba(255, 0, 0, 0.3)`;
+	style.width = Math.abs(d.x - m.x);
+	style.height = Math.abs(d.y - m.y);
+	style.border = "1px solid red";
+	style.backgroundColor = "rgba(255, 0, 0, 0.3)";
 	style.position = "absolute";
+	style.pointerEvents = "none";
 
 	return style;
-}
+};
 
-export const GraphRenderer = ({ graph }: { graph: Graph }) => {
-	useObservable(graph, { recursive: true });
-
+export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
+	const graph = editor.graph;
+	const root = useRef<HTMLDivElement>(null);
 	const canvas = useRef<HTMLCanvasElement>(null);
+	const [structureVersion, setStructureVersion] = useState(graph.structureVersion);
+	const [editorVersion, setEditorVersion] = useState(0);
+	const store = useMemo(() => new GraphRendererStore(editor), [editor]);
+	const layout = store.layout;
 
-	const layout = useMemo(() => new GraphLayout(), [graph]);
-	const renderer = useMemo(() => new GraphCanvasRenderer(), [graph]);
-
-	const scheduler = useMemo(() => {
-		return new RenderScheduler(() => {
-			if (canvas.current)
-				renderer.render(graph, canvas.current, layout);
-		});
-	}, [graph, layout, renderer]);
-
-	const invalidate = useCallback(() => {
-		scheduler.invalidate();
-	}, [scheduler]);
+	const invalidate = useCallback(() => store.invalidate(), [store]);
 
 	const updateNodeLayout = useCallback((node: GraphNode) => {
-		if (!canvas.current)
-			return;
+		store.updateNode(node);
+	}, [store]);
 
-		layout.updateNode(node, graph, canvas.current);
-		invalidate();
-	}, [graph, layout, invalidate]);
+	const selectTool = useMemo(() => new SelectTool(editor, layout), [editor, layout]);
 
-	const removeNodeLayout = useCallback((node: GraphNode) => {
-		layout.removeNode(node);
-		invalidate();
-	}, [layout, invalidate]);
+	const cutTool = useMemo(() => new CutEdgesTool(editor, (start, end) => {
+		const canvasElement = canvas.current;
 
-	const { showContextMenu } = useObservable({
-		showContextMenu: false
-	});
+		if (!canvasElement)
+			return [];
 
-	const mouseMove = useMouseMove(graph.offset, val => graph.offset.set(val), 1, true, 1);
+		return store.renderer.getIntersectingEdges(graph, layout, canvasElement, start, end);
+	}), [editor, graph, layout, store]);
 
-	const style = useMemo<React.CSSProperties>(() => {
-		return {
-			left: `calc(50% + ${graph.offset.x}px)`,
-			top: `calc(50% + ${-graph.offset.y}px)`,
-			transform: `translate(-50%, -50%) scale(${graph.scale})`
-		}
-	}, [graph.offset.x, graph.offset.y, graph.scale]);
+	const style = useMemo<React.CSSProperties>(() => ({
+		left: `calc(50% + ${graph.offset.x}px)`,
+		top: `calc(50% + ${-graph.offset.y}px)`,
+		transform: `translate(-50%, -50%) scale(${graph.scale})`
+	}), [graph.offset.x, graph.offset.y, graph.scale]);
 
-	const selectionStyle = getSelectionStyle(graph);
+	const selectionStyle = getSelectionStyle(editor);
 
 	useEffect(() => {
-		const unsubscriber = subscribe(graph, { recursive: true }, invalidate);
+		const element = canvas.current;
 
-		invalidate();
+		if (!element)
+			return;
+
+		store.attach(element);
+
+		return () => store.detach();
+	}, [store]);
+
+	useEffect(() => {
+		const unsubscribers = [
+			subscribe(graph, "structureVersion", () => {
+				setStructureVersion(graph.structureVersion);
+			}),
+			subscribe(graph, "offset", { recursive: true }, invalidate),
+			subscribe(graph, "scale", invalidate),
+			subscribe(editor, "selectedNodes", { recursive: true }, () => setEditorVersion(version => version + 1)),
+			subscribe(editor, "selection", { recursive: true }, () => {
+				setEditorVersion(version => version + 1);
+				invalidate();
+			})
+		];
 
 		return () => {
-			unsubscriber();
-			scheduler.dispose();
-			renderer.clear();
+			for (const unsubscribe of unsubscribers)
+				unsubscribe();
 		};
-	}, [graph, invalidate, scheduler, renderer]);
+	}, [graph, editor, invalidate]);
 
-	useEvent("mousemove", (e) => {
-		if (graph.draggingEdge) {
-			graph.draggingEdge.mousePosition.set({ x: e.clientX, y: e.clientY });
-			invalidate();
-		} else if (graph.slice) {
-			graph.slice.mousePos = new Vec2(e.clientX, e.clientY);
-			invalidate();
+	useEffect(() => {
+		editor.setTool(selectTool);
+		return () => editor.setTool(null);
+	}, [editor, selectTool]);
+
+	const getPointerEvent = (event: React.PointerEvent, node?: GraphNode) => ({
+		clientX: event.clientX,
+		clientY: event.clientY,
+		button: event.button,
+		shiftKey: event.shiftKey,
+		ctrlKey: event.ctrlKey,
+		graphPosition: graph.getCanvasMousePosition(new Vec2(event.clientX, event.clientY), canvas.current!),
+		node
+	}) as GraphPointerEvent;
+
+	const onPointerDown = (event: React.PointerEvent) => {
+		if ((event.target as HTMLElement).closest(".graph-node"))
+			return;
+
+		if (event.button === 2) {
+			event.preventDefault();
+			editor.setTool(cutTool);
+		} else if (event.button !== 0) {
+			return;
 		}
-	});
 
-	useResizeObserver(() => {
-		invalidate();
-	}, canvas);
+		root.current?.setPointerCapture(event.pointerId);
+		editor.activeTool?.pointerDown(getPointerEvent(event));
+	};
 
-	const onWheel = (e: React.WheelEvent) => {
-		const rect = e.currentTarget.getBoundingClientRect();
+	const onNodePointerDown = (event: React.PointerEvent, node: GraphNode) => {
+		event.preventDefault();
+		event.stopPropagation();
+		root.current?.setPointerCapture(event.pointerId);
+		editor.setTool(selectTool);
+		editor.activeTool?.pointerDown(getPointerEvent(event, node));
+	};
+
+	const onPointerMove = (event: React.PointerEvent) => {
+		if (editor.draggingEdge)
+			editor.updateEdgeDrag(new Vec2(event.clientX, event.clientY));
+
+		editor.activeTool?.pointerMove(getPointerEvent(event));
+	};
+
+	const onPointerUp = (event: React.PointerEvent) => {
+		const port = layout.getPortAt(event.clientX, event.clientY);
+
+		if (editor.draggingEdge && port)
+			editor.connectDraggingEdge(port.node, port.key);
+
+		editor.activeTool?.pointerUp(getPointerEvent(event));
+		editor.cancelEdgeDrag();
+
+		if (event.button === 2)
+			editor.setTool(selectTool);
+	};
+
+	const onWheel = (event: React.WheelEvent) => {
+		const rect = event.currentTarget.getBoundingClientRect();
 		const mouse = new Vec2(
-			e.clientX - rect.left - rect.width / 2,
-			-(e.clientY - rect.top - rect.height / 2)
+			event.clientX - rect.left - rect.width / 2,
+			-(event.clientY - rect.top - rect.height / 2)
 		);
 
 		const scale = graph.scale;
-		const nextScale = scale - scale * (e.deltaY / 1000) * 0.25;
+		const nextScale = Math.max(0.1, Math.min(4, scale - scale * (event.deltaY / 1000) * 0.25));
 		const ratio = nextScale / scale;
 
 		graph.offset.x = mouse.x - (mouse.x - graph.offset.x) * ratio;
@@ -119,68 +170,52 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 		graph.scale = nextScale;
 	};
 
-	const onMouseDown = (e: React.MouseEvent) => {
-		mouseMove.onMouseDown(e);
+	useEffect(() => {
+		const element = canvas.current;
 
-		if (e.button === 0)
-			graph.selection = new Selection(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
+		if (!element)
+			return;
 
-		if (e.button === 2)
-			graph.slice = new EdgeSlice(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
-	};
+		const observer = new ResizeObserver(() => {
+			for (const node of graph.nodes.values())
+				updateNodeLayout(node);
 
-	useEvent("mousemove", (e) => {
-		e.preventDefault();
+			invalidate();
+		});
 
-		if (e.button === 0) {
-			if (!graph.selection || !canvas.current)
-				return;
-
-			graph.updateSelection(new Vec2(e.clientX, e.clientY), canvas.current);
-		}
-	});
-
-	useEvent("mouseup", (e) => {
-		if (e.button === 0) {
-			if (!graph.selection)
-				return;
-
-			const a = graph.selection.mousePos;
-			const b = graph.selection.downPos;
-
-			if (a.distance(b) === 0)
-				graph.selectedNodes = [];
-
-			graph.selection = null;
-		} else if (e.button === 2) {
-			graph.cutEdges();
-		}
-	});
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, [graph, updateNodeLayout, invalidate]);
 
 	return (
-		<div className="graph-renderer" onMouseDown={onMouseDown} onWheel={onWheel} onContextMenu={e => e.preventDefault()}>
+		<div
+			ref={root}
+			className="graph-renderer"
+			onPointerDown={onPointerDown}
+			onPointerMove={onPointerMove}
+			onPointerUp={onPointerUp}
+			onPointerCancel={() => {
+				editor.activeTool?.cancel();
+				editor.cancelEdgeDrag();
+				editor.setTool(selectTool);
+			}}
+			onWheel={onWheel}
+			onContextMenu={event => event.preventDefault()}
+		>
 			<canvas ref={canvas} />
 			<div className="graph" style={style}>
-				{mapChildren(graph.nodes, (k, v) => (
+				{mapChildren(graph.nodes, (key, node) => (
 					<GraphNodeView
-						key={k}
-						node={v}
+						key={key}
+						node={node}
+						editor={editor}
+						layout={layout}
+						onNodePointerDown={onNodePointerDown}
 						onLayoutChange={updateNodeLayout}
-						onLayoutRemove={removeNodeLayout}
 					/>
 				))}
 			</div>
-			<div className="selection" style={selectionStyle} />
-			<div className={`context-menu ${showContextMenu && "show"}`} onMouseDown={stopPropagation}>
-				<input type="text" placeholder="Add" />
-				{mapChildren(GraphNode.getRegisteredNodes(), (key, val) => {
-					return (
-						<button className="node-option" style={{ pointerEvents: "auto" }} key={key} onClick={() => graph.addNode(val)}>
-							{key}
-						</button>
-					);
-				})}
-			</div>
+			<div className="selection" style={selectionStyle} data-version={editorVersion} />
 		</div>
 	);
 };
