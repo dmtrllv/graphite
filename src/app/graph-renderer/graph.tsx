@@ -1,4 +1,4 @@
-import { Graph, GraphNode, NodeEdge, Selection, Vec2, type DraggingEdge } from "../../graph";
+import { Graph, GraphNode, NodeEdge, Selection, Slice, Vec2, type DraggingEdge } from "../../graph";
 import { assert, mapChildren } from "../../utils";
 import { GraphNodeView } from "./node";
 import { useEvent, useMouseMove } from "../../hooks";
@@ -60,33 +60,41 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 
 	const onMouseDown = (e: React.MouseEvent) => {
 		mouseMove.onMouseDown(e);
-		if (e.button !== 0)
-			return;
-		graph.selection = new Selection(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
+		if (e.button === 0)
+			graph.selection = new Selection(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
+		if (e.button === 2)
+			graph.slice = new Slice(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
 	};
 
 	useEvent("mousemove", (e) => {
-		if (e.button !== 0 || !graph.selection || !canvas.current)
-			return;
-		graph.updateSelection(new Vec2(e.clientX, e.clientY), canvas.current);
+			e.preventDefault();
+		if (e.button === 0) {
+			if (!graph.selection || !canvas.current)
+				return;
+			graph.updateSelection(new Vec2(e.clientX, e.clientY), canvas.current);
+		}
 	});
 
 	useEvent("mouseup", (e) => {
-		if (e.button !== 0 || !graph.selection)
-			return;
+		if (e.button === 0) {
+			if (!graph.selection)
+				return;
 
-		const a = graph.selection.mousePos;
-		const b = graph.selection.downPos;
-		
-		if (a.distance(b) === 0)
-			graph.selectedNodes = [];
+			const a = graph.selection.mousePos;
+			const b = graph.selection.downPos;
+
+			if (a.distance(b) === 0)
+				graph.selectedNodes = [];
 
 
-		graph.selection = null;
+			graph.selection = null;
+		} else if (e.button === 2) {
+			graph.cutEdges();
+		}
 	});
 
 	return (
-		<div className="graph-renderer" onMouseDown={onMouseDown} onWheel={onWheel}>
+		<div className="graph-renderer" onMouseDown={onMouseDown} onWheel={onWheel} onContextMenu={e => e.preventDefault()} >
 			<canvas ref={canvas} />
 			<div className="graph" style={style}>
 				{mapChildren(graph.nodes, (k, v) => <GraphNodeView key={k} node={v} />)}
@@ -111,9 +119,14 @@ const useRenderer = (graph: Graph) => {
 	}, []);
 
 	useEvent("mousemove", (e) => {
-		if (canvas.current && graph.draggingEdge) {
-			graph.draggingEdge.mousePosition.set({ x: e.clientX, y: e.clientY });
-			render(graph, canvas.current);
+		if (canvas.current) {
+			if (graph.draggingEdge) {
+				graph.draggingEdge.mousePosition.set({ x: e.clientX, y: e.clientY });
+				render(graph, canvas.current);
+			} else if (graph.slice) {
+				graph.slice.mousePos = new Vec2(e.clientX, e.clientY);
+				render(graph, canvas.current);
+			}
 		}
 	});
 
@@ -151,7 +164,6 @@ const draw = (graph: Graph, canvas: HTMLCanvasElement) => {
 	ctx.translate(graph.offset.x + (canvas.width / 2), -graph.offset.y + (canvas.height / 2));
 	ctx.fillStyle = "white";
 	ctx.strokeStyle = "white";
-	ctx.stroke();
 	ctx.lineWidth = graph.scale;
 
 	if (graph.draggingEdge) {
@@ -160,6 +172,16 @@ const draw = (graph: Graph, canvas: HTMLCanvasElement) => {
 
 	for (const [, edge] of graph.edges) {
 		renderEdge(graph, edge, ctx);
+	}
+
+	if (graph.slice) {
+		ctx.strokeStyle = "red";
+		ctx.beginPath();
+		const d = graph.getCanvasMousePosition(graph.slice.downPos, canvas);
+		const m = graph.getCanvasMousePosition(graph.slice.mousePos, canvas);
+		ctx.moveTo(d.x, -d.y);
+		ctx.lineTo(m.x, -m.y);
+		ctx.stroke();
 	}
 
 	ctx.scale(graph.scale, graph.scale);
@@ -187,7 +209,7 @@ const renderDraggingEdge = (graph: Graph, edge: DraggingEdge<GraphNode>, ctx: Ca
 	ctx.strokeStyle = kind ? getEdgeColor(kind) : "white";
 	ctx.beginPath();
 	ctx.moveTo(position.x, position.y);
-	ctx.lineTo(mousePos.x, mousePos.y);
+	ctx.lineTo(mousePos.x, -mousePos.y);
 	ctx.stroke();
 };
 
@@ -204,7 +226,6 @@ const getEdgeColor = (kind: string) => {
 	}
 	return "white";
 }
-
 
 const renderEdge = (graph: Graph, edge: NodeEdge, ctx: CanvasRenderingContext2D) => {
 	const canvas = ctx.canvas;

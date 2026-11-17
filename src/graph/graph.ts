@@ -33,6 +33,9 @@ export class Graph {
 	@observable
 	public accessor selectedNodes: GraphNode[] = [];
 
+	@observable
+	public accessor slice: Slice | null = null;
+
 	public constructor(id: number, name: string, offset: Vec2);
 	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>);
 	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
@@ -43,7 +46,7 @@ export class Graph {
 		this.edges = edges;
 	}
 
-	public getEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge | undefined {
+	public getEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: (keyof Output) & string, target: Input, targetInput: (keyof Input) & string): NodeEdge | undefined {
 		return this.edges.values().find(v => {
 			if (v.source !== source)
 				return false;
@@ -74,14 +77,20 @@ export class Graph {
 			this.nodes.delete(found[0]);
 	}
 
-	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge | null {
+	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: (keyof Output) & string, target: Input, targetInput: (keyof Input) & string): NodeEdge | null {
 		if (source === target as GraphNode)
 			return null;
 
 		if (!GraphNode.hasOutput(source, sourceOutput.toString()))
 			return null;
+
 		if (!GraphNode.hasInput(target, targetInput.toString()))
 			return null;
+
+		let inputEdge = target.getInputEdge(targetInput);
+
+		if (inputEdge)
+			this.removeEdge(inputEdge);
 
 		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
 		if (foundEdge)
@@ -103,16 +112,16 @@ export class Graph {
 			this.edges.delete(found[0]);
 	}
 
-	public connectDraggingEdge<T extends GraphNode>(node: T, name: keyof T) {
+	public connectDraggingEdge<T extends GraphNode>(node: T, name: keyof T & string) {
 		if (!this.draggingEdge)
 			return;
 
 		const edge = this.draggingEdge;
 
 		if (edge.from === "output") {
-			this.addEdge(edge.node, edge.key, node, name);
+			this.addEdge(edge.node, edge.key.toString(), node, name);
 		} else {
-			this.addEdge(node, name, edge.node, edge.key);
+			this.addEdge(node, name, edge.node, edge.key.toString());
 		}
 	}
 
@@ -156,6 +165,52 @@ export class Graph {
 		this.selectedNodes = selected;
 		this.selection.mousePos = pos;
 	}
+
+	public cutEdges() {
+		if (!this.slice)
+			return;
+
+		const { downPos, mousePos } = this.slice;
+
+		const minX = Math.min(downPos.x, mousePos.x);
+		const maxX = Math.max(downPos.x, mousePos.x);
+		const minY = Math.min(downPos.y, mousePos.y);
+		const maxY = Math.max(downPos.y, mousePos.y);
+
+		const intersects = (a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean => {
+			const cross = (p: Vec2, q: Vec2, r: Vec2) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+
+			const abC = cross(a, b, c);
+			const abD = cross(a, b, d);
+			const cdA = cross(c, d, a);
+			const cdB = cross(c, d, b);
+
+			return abC * abD <= 0 && cdA * cdB <= 0;
+		};
+
+		const sliceStart = new Vec2(minX, minY);
+		const sliceEnd = new Vec2(maxX, maxY);
+
+		for (const [id, edge] of this.edges) {
+			const source = edge.source.outputElements[edge.sourceOutput];
+			const target = edge.target.inputElements[edge.targetInput];
+
+			if (!source || !target)
+				continue;
+
+			const sourceRect = source.getBoundingClientRect();
+			const targetRect = target.getBoundingClientRect();
+
+			const start = new Vec2(sourceRect.right, sourceRect.top + sourceRect.height / 2);
+
+			const end = new Vec2(targetRect.left, targetRect.top + targetRect.height / 2);
+
+			if (intersects(sliceStart, sliceEnd, start, end))
+				this.edges.delete(id);
+		}
+
+		this.slice = null;
+	}
 }
 
 export type DraggingEdge<T extends GraphNode> = {
@@ -190,6 +245,19 @@ export class NodeEdge {
 }
 
 export class Selection {
+	@observable
+	public accessor downPos: Vec2;
+
+	@observable
+	public accessor mousePos: Vec2;
+
+	public constructor(downPos: Vec2, mousePos: Vec2) {
+		this.downPos = downPos;
+		this.mousePos = mousePos;
+	}
+}
+
+export class Slice {
 	@observable
 	public accessor downPos: Vec2;
 
