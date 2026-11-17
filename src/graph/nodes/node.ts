@@ -89,11 +89,7 @@ export abstract class GraphNode {
 	}
 
 	public getInputEdge(inputKey: string): NodeEdge | undefined {
-		const edge = this.graph.index.getInputEdge(this, inputKey);
-
-		console.log("Input lookup:", this.id, input, edge);
-
-		return edge;
+		return this.graph.index.getInputEdge(this, inputKey);
 	}
 
 	public getOutputEdges(outputKey: string): NodeEdge[] {
