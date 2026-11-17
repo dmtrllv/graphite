@@ -1,4 +1,4 @@
-import { NodeEdge, Vec2, type DraggingEdge, type Graph } from "../../graph";
+import { Graph, GraphNode, NodeEdge, NodeOption, NodeProp, Vec2, type DraggingEdge } from "../../graph";
 import { assert, mapChildren } from "../../utils";
 import { GraphNodeView } from "./node";
 import { useEvent, useMouseMove } from "../../hooks";
@@ -124,11 +124,10 @@ const draw = (graph: Graph, canvas: HTMLCanvasElement) => {
 	ctx.scale(graph.scale, graph.scale);
 };
 
-const renderDraggingEdge = (graph: Graph, edge: DraggingEdge<any>, ctx: CanvasRenderingContext2D) => {
+const renderDraggingEdge = (graph: Graph, edge: DraggingEdge<GraphNode>, ctx: CanvasRenderingContext2D) => {
 	const canvas = ctx.canvas;
 
 	let target: HTMLElement | undefined | null = null;
-
 	if (edge.from === "input") {
 		target = edge.node.inputElements[edge.key];
 	} else {
@@ -143,11 +142,28 @@ const renderDraggingEdge = (graph: Graph, edge: DraggingEdge<any>, ctx: CanvasRe
 	const position = getIOPointPosition(graph, target, canvas, edge.from === "input" ? 0 : 1);
 	const mousePos = getCanvasMousePosition(graph, edge.mousePosition, canvas);
 
+	const kind = edge.node.getPropKind(edge.key);
+	ctx.strokeStyle = kind ? getEdgeColor(kind) : "white";
 	ctx.beginPath();
 	ctx.moveTo(position.x, position.y);
 	ctx.lineTo(mousePos.x, mousePos.y);
 	ctx.stroke();
 };
+
+const getEdgeColor = (kind: string) => {
+	switch (kind) {
+		case "vector":
+			return "#56B6C2";
+		case "scalar":
+			return "#E5A45B";
+		case "texture":
+			return "#62b64d";
+		case "sampler":
+			return "#d46363";
+	}
+	return "white";
+}
+
 
 const renderEdge = (graph: Graph, edge: NodeEdge, ctx: CanvasRenderingContext2D) => {
 	const canvas = ctx.canvas;
@@ -166,35 +182,8 @@ const renderEdge = (graph: Graph, edge: NodeEdge, ctx: CanvasRenderingContext2D)
 
 	const grad = ctx.createLinearGradient(inPos.x, inPos.y, outPos.x, outPos.y);
 
-	switch (sourceProp.kind) {
-		case "vector":
-			grad.addColorStop(0, "#56B6C2");
-			break;
-		case "scalar":
-			grad.addColorStop(0, "#E5A45B");
-			break;
-		case "texture":
-			grad.addColorStop(1, "#62b64d");
-			break;
-		case "sampler":
-			grad.addColorStop(1, "#d46363");
-			break;
-	}
-
-	switch (targetProp.kind) {
-		case "vector":
-			grad.addColorStop(1, "#56B6C2");
-			break;
-		case "scalar":
-			grad.addColorStop(1, "#E5A45B");
-			break;
-		case "texture":
-			grad.addColorStop(1, "#62b64d");
-			break;
-		case "sampler":
-			grad.addColorStop(1, "#d46363");
-			break;
-	}
+	grad.addColorStop(0, getEdgeColor(sourceProp.kind));
+	grad.addColorStop(1, getEdgeColor(targetProp.kind));
 
 	ctx.strokeStyle = grad;
 	ctx.beginPath();

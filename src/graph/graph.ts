@@ -1,5 +1,5 @@
 import { observable } from "../reactive";
-import type { GraphNode, GraphNodeType } from "./nodes";
+import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 
 export class Graph {
@@ -70,9 +70,16 @@ export class Graph {
 	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: keyof Output, target: Input, targetInput: keyof Input): NodeEdge | null {
 		if(source === target as GraphNode)
 			return null;
+		
+		if(!GraphNode.hasOutput(source, sourceOutput.toString()))
+			return null;
+		if(!GraphNode.hasInput(target, targetInput.toString()))
+			return null;
+		
 		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
 		if(foundEdge)
 			return foundEdge;
+		
 		const id = this._edgeIdCounter++;
 		const edge = new NodeEdge(id, source, sourceOutput as any, target, targetInput as any);
 		this.edges.set(id, edge);

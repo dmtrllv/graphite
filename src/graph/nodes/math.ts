@@ -1,5 +1,5 @@
 import { F32, Scalar, Vec4, type Vector } from "../types";
-import { GraphNode, input, NodeOption, NodeOptionProp, option } from "./node";
+import { GraphNode, input, option, SelectOption } from "./node";
 
 export const MathOps = [
 	"add",
@@ -16,8 +16,8 @@ export class MathNode extends GraphNode {
 	@input
 	accessor b: Scalar = new F32(0);
 
-	@option()
-	accessor op = new NodeOption(MathOps);
+	@option("scalar", "output")
+	accessor op = new SelectOption(MathOps);
 }
 
 
@@ -39,8 +39,8 @@ export class VectorMathNode extends GraphNode {
 	@input
 	accessor b: Vector = new Vec4();
 
-	@option()
-	accessor op = new NodeOption(VectorMathOps);
+	@option("vector", "output")
+	accessor op = new SelectOption(VectorMathOps);
 }
 
 export type VectorMathOp = (typeof VectorMathOps)[number];

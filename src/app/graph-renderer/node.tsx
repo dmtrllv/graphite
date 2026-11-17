@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { F16, F32, GraphNode, I32, NodeOption, NodeProp, Type, U32, Vec2, Vec3, Vec4, type NodeOptionType, type TypeCtor } from "../../graph";
+import { F16, F32, GraphNode, I32, NodeOption, NodeProp, SelectOption, Type, U32, Vec2, Vec3, Vec4, type NodeOptionType, type TypeCtor } from "../../graph";
 import { useObservable } from "../../reactive/hook";
 import { mapChildren, stopPropagation } from "../../utils";
 import { useEvent, useMouseMove } from "../../hooks";
@@ -30,7 +30,7 @@ export const GraphNodeView = ({ node }: { node: GraphNode }) => {
 					mapChildren(outputs, (k, v) => <NodePropView key={k} node={node} prop={v} withOutput={true} />)
 				)}
 				{options && (
-					mapChildren(options, (k, v) => <NodePropView key={k} node={node} prop={v} withInput={v.withInput} />)
+					mapChildren(options, (k, v) => <NodePropView key={k} node={node} prop={v} withInput={v.ioType === "input"} withOutput={v.ioType === "output"} />)
 				)}
 				{inputs && (
 					mapChildren(inputs, (k, v) => <NodePropView key={k} node={node} prop={v} withInput={true} />)
@@ -50,7 +50,7 @@ export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsVie
 
 	const hasInput = !!node.getInputEdge(prop.name);
 
-	const Input =  NodePropInputs.get(p.constructor as any);
+	const Input = NodePropInputs.get(p.constructor as any);
 
 	if (!Input) {
 		console.warn(`Missing node prop view for ${p.constructor.name}!`);
@@ -131,8 +131,8 @@ registerNodePropInput([F32, F16, U32, I32], ({ prop, name, disabled }) => {
 registerNodePropInput(Vec2, ({ prop, disabled }) => {
 	return (
 		<div className="vec2">
-			<input type="number" value={prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
-			<input type="number" value={prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
 		</div>
 	);
 });
@@ -140,9 +140,9 @@ registerNodePropInput(Vec2, ({ prop, disabled }) => {
 registerNodePropInput(Vec3, ({ prop, disabled }) => {
 	return (
 		<div className="vec3">
-			<input type="number" value={prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
-			<input type="number" value={prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
-			<input type="number" value={prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
 		</div>
 	);
 });
@@ -150,26 +150,15 @@ registerNodePropInput(Vec3, ({ prop, disabled }) => {
 registerNodePropInput(Vec4, ({ prop, disabled }) => {
 	return (
 		<div className="vec4">
-			<input type="number" value={prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
-			<input type="number" value={prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
-			<input type="number" value={prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
-			<input type="number" value={prop.w} placeholder="w" disabled={disabled} onChange={e => prop.w = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
+			<input type="number" value={disabled ? "" : prop.w} placeholder="w" disabled={disabled} onChange={e => prop.w = +e.target.value} />
 		</div>
 	);
 });
 
-registerNodePropInput(Vec4, ({ prop, disabled }) => {
-	return (
-		<div className="vec4">
-			<input type="number" value={prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
-			<input type="number" value={prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
-			<input type="number" value={prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
-			<input type="number" value={prop.w} placeholder="w" disabled={disabled} onChange={e => prop.w = +e.target.value} />
-		</div>
-	);
-});
-
-registerNodePropInput(NodeOption, ({ prop }) => {
+registerNodePropInput(SelectOption, ({ prop }) => {
 	return (
 		<select value={prop.value} onChange={e => prop.value = e.target.value}>
 			{prop.options.map(option => <option key={option} value={option}>{option}</option>)}

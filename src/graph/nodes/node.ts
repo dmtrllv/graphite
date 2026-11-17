@@ -20,6 +20,21 @@ export abstract class GraphNode {
 		GraphNode.#registry.set(name, target);
 	}
 
+	public static hasInput<Input extends GraphNode>(target: Input, targetInput: string): boolean {
+		if (targetInput in GraphNode.getInputs(target.constructor))
+			return true;
+		const option = GraphNode.getOptions(target.constructor)[targetInput];
+		return option ? option.ioType === "input" : false;
+	}
+
+	public static hasOutput<Output extends GraphNode>(source: Output, sourceOutput: string): boolean {
+		if (sourceOutput in GraphNode.getOutputs(source.constructor))
+			return true;
+		const option = GraphNode.getOptions(source.constructor)[sourceOutput];
+		return option ? option.ioType === "output" : false;
+	}
+
+
 	public static getInputs<T extends typeof GraphNode | Function>(target: T): Record<string, NodeProp> {
 		return (target[Symbol.metadata]?.[INPUTS] ?? {}) as Record<string, NodeProp>;
 	}
@@ -44,9 +59,9 @@ export abstract class GraphNode {
 		return observable({ recursive: true })(val, context);
 	};
 
-	public static readonly option = <T, Node extends GraphNode>(withInput?: boolean): WrappedAccessorDecorator<Node, T> => (val, context) => {
+	public static readonly option = <T, Node extends GraphNode>(kind?: string, ioType?: "input" | "output"): WrappedAccessorDecorator<Node, T> => (val, context) => {
 		const options = (context.metadata![OPTIONS] ??= {}) as Record<string, NodeOptionProp>;
-		options[context.name.toString()] = new NodeOptionProp(context.name.toString(), withInput)
+		options[context.name.toString()] = new NodeOptionProp(context.name.toString(), kind, ioType)
 		return observable({ recursive: true })(val, context);
 	};
 
@@ -75,6 +90,29 @@ export abstract class GraphNode {
 
 	public getOutputEdges(outputKey: string): NodeEdge | undefined {
 		return this.graph.edges.values().find(e => e.source === this && e.sourceOutput === outputKey);
+	}
+
+	public getPropKind(key: string): string | null {
+		if (!(key in this))
+			return null;
+
+		const prop = this[key as keyof this];
+		if (prop instanceof Type)
+			return prop.kind;
+
+		const inputs = GraphNode.getInputs(this.constructor);
+		if (key in inputs)
+			return inputs[key]!.getKind(this);
+
+		const options = GraphNode.getOptions(this.constructor);
+		if (key in options)
+			return options[key]!.getKind();
+
+		const outputs = GraphNode.getOutputs(this.constructor);
+		if (key in outputs)
+			return outputs[key]!.getKind(this);
+
+		return null;
 	}
 }
 
@@ -112,27 +150,42 @@ export type KeyedNodeProp<T extends GraphNode> = NodeProp & {
 }
 
 export class NodeOptionProp extends NodeProp {
-	public readonly withInput: boolean;
+	public readonly ioType: "input" | "output" | undefined;
 
-	public override getKind(node: GraphNode) {
-		return "option";
+	private readonly kind: string;
+
+	public override getKind() {
+		return this.kind;
 	}
 
-	public constructor(name: string, withInput: boolean = false) {
+	public constructor(name: string, kind: string = "option", ioType?: "input" | "output") {
 		super(name);
-		this.withInput = withInput;
+		this.kind = kind;
+		this.ioType = ioType;
 	}
 };
 
-export class NodeOption<T extends readonly string[]> {
+export abstract class NodeOption<T> {
+	@observable
+	public accessor value: T;
+
+	public abstract get kind(): string;
+
+	public constructor(value: T) {
+		this.value = value;
+	}
+};
+
+export class SelectOption<T extends readonly string[]> extends NodeOption<T[number]> {
+	public override get kind(): string {
+		return "select";
+	}
+
 	public readonly options: T;
 
-	@observable
-	public accessor value: T[number];
-
 	public constructor(options: T) {
+		super(options[0]!)
 		this.options = options;
-		this.value = options[0]!;
 	}
 };
 

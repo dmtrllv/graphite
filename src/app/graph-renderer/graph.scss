@@ -74,6 +74,10 @@
 					padding: 5px;
 					width: 100px;
 					display: inline-block;
+					
+					&:disabled {
+						opacity: 0.2;
+					}
 
 					&::-webkit-outer-spin-button,
 					&::-webkit-inner-spin-button {

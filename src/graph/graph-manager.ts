@@ -10,8 +10,8 @@ export class GraphManager {
 
 	public constructor() {
 		const graph = this.add("Test");
-		const a = graph.addNode(ScalarNode);
-		const b = graph.addNode(VectorMathNode, new Vec2(100, 100));
+		const a = graph.addNode(ScalarNode, new Vec2(-200, 0));
+		const b = graph.addNode(VectorMathNode, new Vec2(200, 0));
 		graph.addEdge(a, "value", b, "a");
 	}
 
