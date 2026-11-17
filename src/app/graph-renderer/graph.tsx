@@ -1,5 +1,5 @@
 
-import { Graph, GraphNode, Selection, Slice, Vec2 } from "../../graph";
+import { Graph, GraphNode, Selection, EdgeSlice, Vec2 } from "../../graph";
 import { mapChildren, stopPropagation } from "../../utils";
 import { GraphNodeView } from "./node";
 import { useEvent, useMouseMove } from "../../hooks";
@@ -79,7 +79,10 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 	const selectionStyle = getSelectionStyle(graph);
 
 	useEffect(() => {
-		const unsubscriber = subscribe(graph, { recursive: true }, invalidate);
+		const unsubscriber = subscribe(graph, { recursive: true }, () => {
+			graph.reconcileEdges();
+			invalidate();
+		});
 
 		invalidate();
 
@@ -127,7 +130,7 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 			graph.selection = new Selection(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
 
 		if (e.button === 2)
-			graph.slice = new Slice(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
+			graph.slice = new EdgeSlice(new Vec2(e.clientX, e.clientY), new Vec2(e.clientX, e.clientY));
 	};
 
 	useEvent("mousemove", (e) => {

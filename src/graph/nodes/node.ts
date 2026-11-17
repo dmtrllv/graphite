@@ -2,10 +2,27 @@ import { observable } from "../../reactive";
 import { assert, type AccessorDecorator, type WrappedAccessorDecorator } from "../../utils";
 import type { Graph, NodeEdge } from "../graph";
 import { Type, Vec2 } from "../types";
+import { getTypeConversion } from "../types/cast";
 
 const INPUTS = Symbol("INPUTS");
 const OUTPUTS = Symbol("OUTPUTS");
 const OPTIONS = Symbol("OPTIONS");
+
+export type NodeVariant = {
+	inputs?: readonly string[];
+	outputs?: readonly string[];
+};
+
+export type NodeOptionVariants = Record<string, NodeVariant>;
+
+const getOwnMetadata = <T>(metadata: object, key: symbol): T => {
+	const target = metadata as unknown as Record<PropertyKey, unknown>;
+
+	if (!Object.hasOwn(target, key))
+		Object.defineProperty(target, key, { value: {}, configurable: true });
+
+	return target[key] as T;
+};
 
 export abstract class GraphNode {
 	declare private static [INPUTS]?: Record<string, NodeProp>;
@@ -24,21 +41,6 @@ export abstract class GraphNode {
 		GraphNode.#registry.set(name, target);
 	}
 
-	public static hasInput<Input extends GraphNode>(target: Input, targetInput: string): boolean {
-		if (targetInput in GraphNode.getInputs(target.constructor))
-			return true;
-		const option = GraphNode.getOptions(target.constructor)[targetInput];
-		return option ? option.ioType === "input" : false;
-	}
-
-	public static hasOutput<Output extends GraphNode>(source: Output, sourceOutput: string): boolean {
-		if (sourceOutput in GraphNode.getOutputs(source.constructor))
-			return true;
-		const option = GraphNode.getOptions(source.constructor)[sourceOutput];
-		return option ? option.ioType === "output" : false;
-	}
-
-
 	public static getInputs<T extends typeof GraphNode | Function>(target: T): Record<string, NodeProp> {
 		return (target[Symbol.metadata]?.[INPUTS] ?? {}) as Record<string, NodeProp>;
 	}
@@ -51,23 +53,85 @@ export abstract class GraphNode {
 		return (target[Symbol.metadata]?.[OPTIONS] ?? {}) as Record<string, NodeOptionProp>;
 	}
 
-	public static readonly input: AccessorDecorator = (val, context): any => {
-		const inputs = (context.metadata![INPUTS] ??= {}) as Record<string, NodeProp>;
+	public static readonly input = (): AccessorDecorator => (val, context) => {
+		const inputs = getOwnMetadata<Record<string, NodeProp>>(context.metadata!, INPUTS);
 		inputs[context.name.toString()] = new NodeProp(context.name.toString());
 		return observable({ recursive: true })(val, context);
 	};
 
-	public static readonly output = <T, Node extends GraphNode>(): WrappedAccessorDecorator<Node, T> => (val, context) => {
-		const outputs = (context.metadata![OUTPUTS] ??= {}) as Record<string, NodeProp>;
+	public static readonly output = (): AccessorDecorator => (val, context) => {
+		const outputs = getOwnMetadata<Record<string, NodeProp>>(context.metadata!, OUTPUTS);
 		outputs[context.name.toString()] = new NodeProp(context.name.toString());
 		return observable({ recursive: true })(val, context);
 	};
 
-	public static readonly option = <T, Node extends GraphNode>(kind?: string, ioType?: "input" | "output"): WrappedAccessorDecorator<Node, T> => (val, context) => {
-		const options = (context.metadata![OPTIONS] ??= {}) as Record<string, NodeOptionProp>;
-		options[context.name.toString()] = new NodeOptionProp(context.name.toString(), kind, ioType)
+	public static readonly option = <T, Node extends GraphNode>(variants: NodeOptionVariants): WrappedAccessorDecorator<Node, T> => (val, context) => {
+		const options = getOwnMetadata<Record<string, NodeOptionProp>>(context.metadata!, OPTIONS);
+		options[context.name.toString()] = new NodeOptionProp(context.name.toString(), variants);
 		return observable({ recursive: true })(val, context);
 	};
+
+	public static getInterface(node: GraphNode) {
+		const inputs = GraphNode.getInputs(node.constructor);
+		const outputs = GraphNode.getOutputs(node.constructor);
+		const options = GraphNode.getOptions(node.constructor);
+
+		const controlledInputs = new Set<string>();
+		const controlledOutputs = new Set<string>();
+
+		for (const option of Object.values(options)) {
+			for (const variant of Object.values(option.variants)) {
+				variant.inputs?.forEach(name => controlledInputs.add(name));
+				variant.outputs?.forEach(name => controlledOutputs.add(name));
+			}
+		}
+
+		const resolve = (props: Record<string, NodeProp>, direction: "input" | "output"): ResolvedNodePort[] => {
+			const controlled = direction === "input" ? controlledInputs : controlledOutputs;
+			const active = new Set(Object.values(props).filter(prop => !controlled.has(prop.name)).map(prop => prop.name));
+
+			for (const option of Object.values(options)) {
+				const value = node[option.name as keyof typeof node] as unknown as NodeOption<string>;
+				const variant = option.variants[value.value];
+
+				if (!variant)
+					throw new Error(`Invalid option value "${value.value}" for ${option.name}!`);
+
+				const names = direction === "input" ? variant.inputs : variant.outputs;
+
+				for (const name of names ?? []) {
+					if (!(name in props))
+						throw new Error(`Option "${option.name}" references unknown ${direction} "${name}"!`);
+
+					active.add(name);
+				}
+			}
+
+			return [...active].map(name => {
+				const value = node[name as keyof typeof node];
+
+				if (!(value instanceof Type))
+					throw new Error(`Property "${name}" of ${node.constructor.name} is not a Type!`);
+
+				return { name, direction, value };
+			});
+		};
+
+		return {
+			inputs: resolve(inputs, "input"),
+			outputs: resolve(outputs, "output"),
+			options: Object.values(options)
+		};
+	}
+
+	public static getPort(node: GraphNode, name: string, direction: "input" | "output"): ResolvedNodePort | undefined {
+		const ports = GraphNode.getInterface(node);
+		return (direction === "input" ? ports.inputs : ports.outputs).find(port => port.name === name);
+	}
+
+	public static canConnect(source: ResolvedNodePort, target: ResolvedNodePort): boolean {
+		return getTypeConversion(source.value, target.value) !== null;
+	}
 
 	public readonly id: number;
 	public readonly graph: Graph;
@@ -120,6 +184,12 @@ export abstract class GraphNode {
 	}
 }
 
+export type ResolvedNodePort = {
+	name: string;
+	direction: "input" | "output";
+	value: Type;
+};
+
 export type GraphNodeType<T extends GraphNode> = new (id: number, graph: Graph, position?: Vec2) => T;
 
 export const input = GraphNode.input;
@@ -136,11 +206,11 @@ export class NodeProp {
 	}
 
 	public getKind(node: GraphNode): string {
-		if (this.name in node) {
-			const prop = node[this.name as keyof typeof node]!;
-			if (prop instanceof Type)
-				return prop.kind;
-		}
+		const prop = node[this.name as keyof typeof node];
+
+		if (prop instanceof Type)
+			return prop.kind;
+
 		throw new Error(`Property ${this.name} of ${node.constructor.name} is not a "Type"!`);
 	}
 
@@ -154,20 +224,17 @@ export type KeyedNodeProp<T extends GraphNode> = NodeProp & {
 }
 
 export class NodeOptionProp extends NodeProp {
-	public readonly ioType: "input" | "output" | undefined;
+	public readonly variants: NodeOptionVariants;
 
-	private readonly kind: string;
-
-	public override getKind() {
-		return this.kind;
-	}
-
-	public constructor(name: string, kind: string = "option", ioType?: "input" | "output") {
+	public constructor(name: string, variants: NodeOptionVariants) {
 		super(name);
-		this.kind = kind;
-		this.ioType = ioType;
+		this.variants = variants;
 	}
-};
+
+	public override getKind(): string {
+		return "option";
+	}
+}
 
 export abstract class NodeOption<T> {
 	@observable

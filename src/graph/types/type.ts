@@ -8,4 +8,4 @@ export abstract class Type {
 
 export type TypeKind = "scalar" | "vector" | "matrix";
 
-export type TypeCtor<T extends Type> = new (...args: any[]) => T;
+export type TypeCtor<T extends Type> = abstract new (...args: any[]) => T;

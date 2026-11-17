@@ -26,9 +26,7 @@ export const GraphNodeView = ({ node, onLayoutChange, onLayoutRemove }: {
 		}
 	}, 1 / graph.scale, true);
 
-	const inputs = GraphNode.getInputs(node.constructor);
-	const options = GraphNode.getOptions(node.constructor);
-	const outputs = GraphNode.getOutputs(node.constructor);
+	const { inputs, options, outputs } = GraphNode.getInterface(node);
 
 	const style = useMemo<React.CSSProperties>(() => {
 		return {
@@ -69,29 +67,22 @@ export const GraphNodeView = ({ node, onLayoutChange, onLayoutRemove }: {
 		<div ref={root} className={`graph-node ${node.graph.isSelected(node) ? "selected" : ""}`} style={style} onMouseDown={stopPropagation}>
 			<div className="name" onMouseDown={mouseDown}>{node.name}</div>
 			<div className="body">
-				{outputs && (
-					mapChildren(outputs, (k, v) => <NodePropView key={k} node={node} prop={v} withOutput={true} />)
-				)}
-				{options && (
-					mapChildren(options, (k, v) => <NodePropView key={k} node={node} prop={v} withInput={v.ioType === "input"} withOutput={v.ioType === "output"} />)
-				)}
-				{inputs && (
-					mapChildren(inputs, (k, v) => <NodePropView key={k} node={node} prop={v} withInput={true} />)
-				)}
+				{outputs.map(port => <NodePropView key={port.name} node={node} name={port.name} withOutput={true} />)}
+				{options.map(option => <NodePropView key={option.name} node={node} name={option.name} />)}
+				{inputs.map(port => <NodePropView key={port.name} node={node} name={port.name} withInput={true} />)}
 			</div>
 		</div>
 	);
 };
 
-export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsViewProps) => {
+export const NodePropView = ({ node, name, withInput, withOutput }: { node: GraphNode; name: string; withInput?: boolean; withOutput?: boolean; }) => {
 	useObservable(node);
 
 	const inputRef = useRef<HTMLDivElement>(null);
 	const outputRef = useRef<HTMLDivElement>(null);
 
-	const p = node[prop.name as keyof typeof node];
-
-	const hasInput = !!node.getInputEdge(prop.name);
+	const p = node[name as keyof typeof node];
+	const hasInput = withInput && !!node.getInputEdge(name);
 
 	const Input = NodePropInputs.get(p.constructor as any);
 
@@ -101,14 +92,15 @@ export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsVie
 	}
 
 	useLayoutEffect(() => {
-		node.inputElements[prop.name] = inputRef.current;
-		node.outputElements[prop.name] = outputRef.current;
+		if (withInput)
+			node.inputElements[name] = inputRef.current;
+
+		if (withOutput)
+			node.outputElements[name] = outputRef.current;
 
 		return () => {
-			if (node.inputElements[prop.name])
-				delete node.inputElements[prop.name];
-			if (node.outputElements[prop.name])
-				delete node.outputElements[prop.name];
+			delete node.inputElements[name];
+			delete node.outputElements[name];
 		};
 	}, []);
 
@@ -116,11 +108,11 @@ export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsVie
 		return (e: React.MouseEvent) => {
 			node.graph.draggingEdge = {
 				from,
-				key: prop.name,
+				key: name,
 				node,
 				mousePosition: new Vec2(e.clientX, e.clientY)
-			}
-		}
+			};
+		};
 	};
 
 	useEvent("mouseup", () => {
@@ -128,25 +120,18 @@ export const NodePropView = ({ node, prop, withInput, withOutput }: NodePropsVie
 	});
 
 	const endDraggingEdge = () => {
-		if (node.graph.draggingEdge && prop.isKeyOf(node))
-			node.graph.connectDraggingEdge(node, prop.name);
+		if (node.graph.draggingEdge)
+			node.graph.connectDraggingEdge(node, name);
 	};
 
 	return (
-		<div className={`option ${prop.getKind(node)}`}>
+		<div className={`option ${node.getPropKind(name)}`}>
 			{withInput && <div className="input-point" ref={inputRef} onMouseDown={startDraggingEdge("input")} onMouseUp={endDraggingEdge} />}
-			<label>{prop.name}</label>
-			<Input node={node} name={prop.name} disabled={(!withInput && !withOutput) || hasInput} prop={p} />
+			<label>{name}</label>
+			<Input node={node} name={name} disabled={!withInput && !withOutput || !!hasInput} prop={p} />
 			{withOutput && <div className="output-point" ref={outputRef} onMouseDown={startDraggingEdge("output")} onMouseUp={endDraggingEdge} />}
 		</div>
 	);
-};
-
-type NodePropsViewProps = {
-	node: GraphNode;
-	prop: NodeProp;
-	withInput?: boolean;
-	withOutput?: boolean;
 };
 
 const NodePropInputs = new Map<TypeCtor<any> | NodeOptionType<any, any>, React.FC<NodeInputProps<any>>>();

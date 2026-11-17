@@ -6,6 +6,7 @@ import { GraphIndex } from "./graph-index";
 export class Graph {
 	private _nodeIdCounter = 0;
 	private _edgeIdCounter = 0;
+	private _reconcilingEdges = false;
 
 	public readonly id: number;
 
@@ -34,7 +35,7 @@ export class Graph {
 	public accessor selectedNodes: GraphNode[] = [];
 
 	@observable
-	public accessor slice: Slice | null = null;
+	public accessor slice: EdgeSlice | null = null;
 
 	public readonly index = new GraphIndex();
 
@@ -80,17 +81,17 @@ export class Graph {
 		this.nodes.delete(node.id);
 	}
 
-	public addEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: (keyof Output) & string, target: Input, targetInput: (keyof Input) & string): NodeEdge | null {
-		if (source === target as GraphNode)
+	public addEdge(source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string): NodeEdge | null {
+		if (source === target)
 			return null;
 
-		if (!GraphNode.hasOutput(source, sourceOutput.toString()))
+		const sourcePort = GraphNode.getPort(source, sourceOutput, "output");
+		const targetPort = GraphNode.getPort(target, targetInput, "input");
+
+		if (!sourcePort || !targetPort || !GraphNode.canConnect(sourcePort, targetPort))
 			return null;
 
-		if (!GraphNode.hasInput(target, targetInput.toString()))
-			return null;
-
-		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
+		const foundEdge = this.getEdge(source, sourceOutput as any, target, targetInput as any);
 
 		if (foundEdge)
 			return foundEdge;
@@ -101,7 +102,7 @@ export class Graph {
 			this.removeEdge(inputEdge);
 
 		const id = this._edgeIdCounter++;
-		const edge = new NodeEdge(id, source, sourceOutput as any, target, targetInput as any);
+		const edge = new NodeEdge(id, source, sourceOutput, target, targetInput);
 
 		this.edges.set(id, edge);
 		this.index.add(edge);
@@ -121,17 +122,16 @@ export class Graph {
 		this.index.remove(edge);
 	}
 
-	public connectDraggingEdge<T extends GraphNode>(node: T, name: keyof T & string) {
+	public connectDraggingEdge(node: GraphNode, name: string) {
 		if (!this.draggingEdge)
 			return;
 
 		const edge = this.draggingEdge;
 
-		if (edge.from === "output") {
+		if (edge.from === "output")
 			this.addEdge(edge.node, edge.key.toString(), node, name);
-		} else {
+		else
 			this.addEdge(node, name, edge.node, edge.key.toString());
-		}
 	}
 
 	public getCanvasMousePosition = (position: Vec2, canvas: HTMLCanvasElement) => {
@@ -220,6 +220,25 @@ export class Graph {
 
 		this.slice = null;
 	}
+
+	public reconcileEdges() {
+		if (this._reconcilingEdges)
+			return;
+
+		this._reconcilingEdges = true;
+
+		try {
+			for (const edge of [...this.edges.values()]) {
+				const source = GraphNode.getPort(edge.source, edge.sourceOutput, "output");
+				const target = GraphNode.getPort(edge.target, edge.targetInput, "input");
+
+				if (!source || !target || !GraphNode.canConnect(source, target))
+					this.removeEdge(edge);
+			}
+		} finally {
+			this._reconcilingEdges = false;
+		}
+	}
 }
 
 export class DraggingEdge<T extends GraphNode> {
@@ -228,11 +247,11 @@ export class DraggingEdge<T extends GraphNode> {
 	@observable
 	public accessor node: T;
 	@observable
-	public accessor key: keyof T;
+	public accessor key: string;
 	@observable
 	public accessor mousePosition: Vec2;
 
-	public constructor(from: "input" | "output", node: T, key: keyof T, mousePosition: Vec2) {
+	public constructor(from: "input" | "output", node: T, key: string, mousePosition: Vec2) {
 		this.from = from;
 		this.node = node;
 		this.key = key;
@@ -255,7 +274,7 @@ export class NodeEdge {
 	@observable
 	public accessor targetInput: string;
 
-	public constructor(id: number, source: GraphNode, sourceOutput: keyof typeof source, target: GraphNode, targetInput: keyof typeof target) {
+	public constructor(id: number, source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string) {
 		this.id = id;
 		this.source = source;
 		this.sourceOutput = sourceOutput;
@@ -277,7 +296,7 @@ export class Selection {
 	}
 }
 
-export class Slice {
+export class EdgeSlice {
 	@observable
 	public accessor downPos: Vec2;
 

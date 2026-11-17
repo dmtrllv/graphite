@@ -1,45 +1,61 @@
 import { F32, Scalar, Vec4, type Vector } from "../types";
-import { GraphNode, input, option, SelectOption } from "./node";
+import { GraphNode, input, output, option, SelectOption } from "./node";
 
 export const MathOps = [
 	"add",
 	"subtract",
-	"multiplty",
+	"multiply",
 	"divide",
+	"negate"
 ] as const;
 
 @GraphNode.register("Math")
 export class MathNode extends GraphNode {
-	@input
+	@input()
 	accessor a: Scalar = new F32(0);
 
-	@input
+	@input()
 	accessor b: Scalar = new F32(0);
 
-	@option("scalar", "output")
+	@output()
+	accessor result: Scalar = new F32(0);
+
+	@option({
+		add: { inputs: ["a", "b"], outputs: ["result"] },
+		subtract: { inputs: ["a", "b"], outputs: ["result"] },
+		multiply: { inputs: ["a", "b"], outputs: ["result"] },
+		divide: { inputs: ["a", "b"], outputs: ["result"] },
+		negate: { inputs: ["a"], outputs: ["result"] }
+	})
 	accessor op = new SelectOption(MathOps);
 }
 
-
 export type MathOp = (typeof MathOps)[number];
-
 
 export const VectorMathOps = [
 	"add",
 	"subtract",
-	"multiplty",
-	"divide",
+	"multiply",
+	"divide"
 ] as const;
 
 @GraphNode.register("Vector Math")
 export class VectorMathNode extends GraphNode {
-	@input
+	@input()
 	accessor a: Vector = new Vec4();
 
-	@input
+	@input()
 	accessor b: Vector = new Vec4();
 
-	@option("vector", "output")
+	@output()
+	accessor result: Vector = new Vec4();
+
+	@option({
+		add: { inputs: ["a", "b"], outputs: ["result"] },
+		subtract: { inputs: ["a", "b"], outputs: ["result"] },
+		multiply: { inputs: ["a", "b"], outputs: ["result"] },
+		divide: { inputs: ["a", "b"], outputs: ["result"] }
+	})
 	accessor op = new SelectOption(VectorMathOps);
 }
 
