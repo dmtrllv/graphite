@@ -3,10 +3,10 @@ import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 import { GraphIndex } from "./graph-index";
 
+const RECONCILING_GRAPHS = new WeakSet<Graph>();
 export class Graph {
 	private _nodeIdCounter = 0;
 	private _edgeIdCounter = 0;
-	private _reconcilingEdges = false;
 
 	public readonly id: number;
 
@@ -222,10 +222,10 @@ export class Graph {
 	}
 
 	public reconcileEdges() {
-		if (this._reconcilingEdges)
+		if (RECONCILING_GRAPHS.has(this))
 			return;
 
-		this._reconcilingEdges = true;
+		RECONCILING_GRAPHS.add(this);
 
 		try {
 			for (const edge of [...this.edges.values()]) {
@@ -236,7 +236,7 @@ export class Graph {
 					this.removeEdge(edge);
 			}
 		} finally {
-			this._reconcilingEdges = false;
+			RECONCILING_GRAPHS.delete(this);
 		}
 	}
 }
