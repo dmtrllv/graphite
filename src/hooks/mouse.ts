@@ -33,7 +33,7 @@ export const useMouseMove = (startPosition: Vec2, onMove: (newPosition: Vec2, of
 
 	useEvent("mouseup", e => {
 		if (moveState.isDown) {
-			//e.stopPropagation();
+			e.stopPropagation();
 			moveState.isDown = false
 		};
 	});
