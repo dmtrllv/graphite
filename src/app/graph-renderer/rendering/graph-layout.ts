@@ -1,4 +1,4 @@
-import { Graph, GraphNode, Vec2 } from "../../../graph";
+import { Vec2, type Graph, type GraphNode } from "../../../graph";
 
 type PortDirection = "input" | "output";
 
@@ -23,7 +23,7 @@ export class GraphLayout {
 					continue;
 
 				const rect = element.getBoundingClientRect();
-				const offset = direction === "input" ? 0.2 : 0.8;
+				const offset = direction === "input" ? 0.8 : 0.2;
 
 				const position = new Vec2(
 					(rect.left + rect.width * offset - canvasRect.left - canvasRect.width / 2 - graph.offset.x) / graph.scale,
@@ -44,7 +44,7 @@ export class GraphLayout {
 	private updatePort(node: GraphNode, direction: PortDirection, key: string, position: Vec2): void {
 		const id = this.getKey(node, direction, key);
 		const port = this.ports.get(id);
-
+		
 		if (port && port.position.distance(position) < 0.01)
 			return;
 

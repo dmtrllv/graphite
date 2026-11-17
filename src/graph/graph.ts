@@ -1,6 +1,7 @@
 import { observable } from "../reactive";
 import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
+import { GraphIndex } from "./graph-index";
 
 export class Graph {
 	private _nodeIdCounter = 0;
@@ -26,7 +27,6 @@ export class Graph {
 	@observable
 	public accessor draggingEdge: DraggingEdge<any> | null = null;
 
-
 	@observable
 	public accessor selection: Selection | null = null;
 
@@ -36,6 +36,8 @@ export class Graph {
 	@observable
 	public accessor slice: Slice | null = null;
 
+	public readonly index = new GraphIndex();
+
 	public constructor(id: number, name: string, offset: Vec2);
 	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>);
 	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
@@ -44,24 +46,18 @@ export class Graph {
 		this.offset = offset;
 		this.nodes = nodes;
 		this.edges = edges;
+
+		for (const edge of this.edges.values())
+			this.index.add(edge);
 	}
 
 	public getEdge<Output extends GraphNode, Input extends GraphNode>(source: Output, sourceOutput: (keyof Output) & string, target: Input, targetInput: (keyof Input) & string): NodeEdge | undefined {
-		return this.edges.values().find(v => {
-			if (v.source !== source)
-				return false;
-			if (v.sourceOutput !== sourceOutput)
-				return false;
-			if (v.target !== target)
-				return false;
-			if (v.targetInput !== targetInput)
-				return false;
-			return true;
-		});
+		return this.index.getOutputEdges(source, sourceOutput).find(edge =>
+			edge.target === target && edge.targetInput === targetInput
+		);
 	}
 
 	public addNode<T extends GraphNode>(type: GraphNodeType<T>, position: Vec2 = new Vec2()): T {
-		console.log("add node");
 		const id = this._nodeIdCounter++;
 		const node = new type(id, this, position);
 		this.nodes.set(id, node);
@@ -94,26 +90,35 @@ export class Graph {
 		if (!GraphNode.hasInput(target, targetInput.toString()))
 			return null;
 
-		let inputEdge = target.getInputEdge(targetInput);
+		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
+
+		if (foundEdge)
+			return foundEdge;
+
+		const inputEdge = this.index.getInputEdge(target, targetInput);
 
 		if (inputEdge)
 			this.removeEdge(inputEdge);
 
-		const foundEdge = this.getEdge(source, sourceOutput, target, targetInput);
-		if (foundEdge)
-			return foundEdge;
-
 		const id = this._edgeIdCounter++;
 		const edge = new NodeEdge(id, source, sourceOutput as any, target, targetInput as any);
+
 		this.edges.set(id, edge);
+		this.index.add(edge);
+
 		return edge;
 	}
 
 	public removeEdge(id: number): void;
 	public removeEdge(edge: NodeEdge): void;
 	public removeEdge(idOrEdge: number | NodeEdge) {
-		const id = typeof idOrEdge === "number" ? idOrEdge : idOrEdge.id;
-		this.edges.delete(id);
+		const edge = typeof idOrEdge === "number" ? this.edges.get(idOrEdge) : idOrEdge;
+
+		if (!edge)
+			return;
+
+		this.edges.delete(edge.id);
+		this.index.remove(edge);
 	}
 
 	public connectDraggingEdge<T extends GraphNode>(node: T, name: keyof T & string) {
@@ -217,11 +222,22 @@ export class Graph {
 	}
 }
 
-export type DraggingEdge<T extends GraphNode> = {
-	readonly from: "input" | "output";
-	readonly node: T;
-	readonly key: keyof T;
-	readonly mousePosition: Vec2;
+export class DraggingEdge<T extends GraphNode> {
+	@observable
+	public accessor from: "input" | "output";
+	@observable
+	public accessor node: T;
+	@observable
+	public accessor key: keyof T;
+	@observable
+	public accessor mousePosition: Vec2;
+
+	public constructor(from: "input" | "output", node: T, key: keyof T, mousePosition: Vec2) {
+		this.from = from;
+		this.node = node;
+		this.key = key;
+		this.mousePosition = mousePosition;
+	}
 }
 
 export class NodeEdge {

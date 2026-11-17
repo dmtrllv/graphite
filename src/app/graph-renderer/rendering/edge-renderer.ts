@@ -1,4 +1,4 @@
-import { Graph, GraphNode, NodeEdge, type DraggingEdge } from "../../../graph";
+import type { Graph, GraphNode, NodeEdge, DraggingEdge } from "../../../graph";
 import { EdgeGeometryCache } from "./edge-geometry";
 import { GraphLayout } from "./graph-layout";
 

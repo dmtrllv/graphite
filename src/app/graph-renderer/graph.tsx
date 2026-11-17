@@ -80,7 +80,7 @@ export const GraphRenderer = ({ graph }: { graph: Graph }) => {
 
 	useEffect(() => {
 		const unsubscribers = [
-			subscribe(graph, ["edges"], invalidate),
+			subscribe(graph as any, ["edges"], invalidate),
 			subscribe(graph, ["scale"], invalidate),
 			subscribe(graph, ["offset"], { recursive: true }, invalidate),
 			subscribe(graph, ["draggingEdge", "slice"], { recursive: true }, invalidate)

@@ -40,11 +40,11 @@ export const GraphNodeView = ({ node, onLayoutChange, onLayoutRemove }: {
 
 	useLayoutEffect(() => {
 		onLayoutChange(node);
+	}, [node, node.position.x, node.position.y, onLayoutChange]);
 
-		return () => {
-			onLayoutRemove(node);
-		};
-	}, [node, node.position.x, node.position.y, onLayoutChange, onLayoutRemove]);
+	useLayoutEffect(() => {
+		return () => onLayoutRemove(node);
+	}, [node, onLayoutRemove]);
 
 	useEffect(() => {
 		if (!root.current)

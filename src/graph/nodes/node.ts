@@ -1,4 +1,4 @@
-import { computed, observable } from "../../reactive";
+import { observable } from "../../reactive";
 import { assert, type AccessorDecorator, type WrappedAccessorDecorator } from "../../utils";
 import type { Graph, NodeEdge } from "../graph";
 import { Type, Vec2 } from "../types";
@@ -89,11 +89,11 @@ export abstract class GraphNode {
 	}
 
 	public getInputEdge(inputKey: string): NodeEdge | undefined {
-		return this.graph.edges.values().find(e => e.target === this && e.targetInput === inputKey);
+		return this.graph.index.getInputEdge(this, inputKey);
 	}
 
-	public getOutputEdges(outputKey: string): NodeEdge | undefined {
-		return this.graph.edges.values().find(e => e.source === this && e.sourceOutput === outputKey);
+	public getOutputEdges(outputKey: string): NodeEdge[] {
+		return this.graph.index.getOutputEdges(this, outputKey);
 	}
 
 	public getPropKind(key: string): string | null {

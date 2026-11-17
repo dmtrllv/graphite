@@ -1,4 +1,4 @@
-import { Graph } from "../../../graph";
+import type { Graph } from "../../../graph";
 import { EdgeRenderer } from "./edge-renderer";
 import { GraphLayout } from "./graph-layout";
 
@@ -23,6 +23,7 @@ export class GraphCanvasRenderer {
 		if (!ctx)
 			return;
 
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 		ctx.save();
