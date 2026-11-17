@@ -44,9 +44,13 @@ export const NodePropView = ({ node, editor, layout, name, withInput, withOutput
 		event.stopPropagation();
 
 		const root = event.currentTarget.closest(".graph-renderer");
+		const canvas = root?.querySelector("canvas");
 
 		if (root instanceof HTMLElement)
 			root.setPointerCapture(event.pointerId);
+
+		if (canvas instanceof HTMLCanvasElement)
+			layout.updateNode(node, editor.graph, canvas);
 
 		editor.beginEdgeDrag(from, node, key, new Vec2(event.clientX, event.clientY));
 	};

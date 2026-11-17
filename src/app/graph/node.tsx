@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { GraphNode, NodeOption } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { useObservable } from "../../reactive/hook";
@@ -36,7 +36,7 @@ export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDow
 		transform: "translate(-50%, -50%)"
 	}), [node.position.x, node.position.y]);
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const element = root.current;
 
 		if (!element)
@@ -54,9 +54,25 @@ export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDow
 		};
 	}, [node, layout, onLayoutChange]);
 
+	useLayoutEffect(() => {
+		onLayoutChange(node);
+	}, [node.position.x, node.position.y, node, onLayoutChange]);
+
 	return (
-		<div ref={root} className={`graph-node ${selected ? "selected" : ""}`} style={style}>
-			<div className="name" onPointerDown={event => onNodePointerDown(event, node)}>{node.name}</div>
+		<div
+			ref={root}
+			className={`graph-node ${selected ? "selected" : ""}`}
+			style={style}
+			onPointerDown={event => {
+				const target = event.target as HTMLElement;
+
+				if (target.closest("input, select, textarea, button, .input-point, .output-point"))
+					return;
+
+				onNodePointerDown(event, node);
+			}}
+		>
+			<div className="name">{node.name}</div>
 			<div className="body">
 				{options.map(option => (
 					<NodePropView key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} />
