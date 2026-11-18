@@ -19,7 +19,7 @@ export const GraphEditorView = ({ editor, onCreateSubgraph, projectManager }: Gr
 	return (
 		<div className="graph-editor">
 			<GraphRenderer projectManager={projectManager} key={editor.graph.id} editor={editor} onCreateSubgraph={onCreateSubgraph} />
-			<GraphProperties graph={editor.graph} />
+			<GraphProperties graph={editor.graph} onOpenGraph={graph => projectManager.openGraph(projectManager.activeProject.graphManager.openEditor(graph))} />
 		</div>
 	);
 };

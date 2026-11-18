@@ -46,8 +46,11 @@ const InterfacePortView = ({ graph, direction, port }: { graph: Graph; direction
 	);
 };
 
-export const GraphProperties = ({ graph }: { graph: Graph }) => {
+export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGraph: (graph: Graph) => void; }) => {
 	useObservable(graph, { recursive: true });
+	useObservable(graph.manager!, { recursive: false });
+
+	const availableSubgraphs = graph.isWorldGraph ? graph.manager!.getAvailableSubgraphs(graph) : [];
 
 	const window = useWindow();
 
@@ -67,6 +70,18 @@ export const GraphProperties = ({ graph }: { graph: Graph }) => {
 		<div className="graph-properties">
 			<div className="graph-properties-header">{graph.isWorldGraph ? "World" : "Graph Properties"}</div>
 			{!graph.isWorldGraph && <button onClick={removeGraph}>×</button>}
+			{graph.isWorldGraph && (
+				<div className="graph-properties-group">
+					<div className="graph-properties-title">
+						<span>Subgraphs</span>
+					</div>
+					{availableSubgraphs.map(definition => (
+						<div key={definition.id} className="graph-properties-subgraph" onClick={() => onOpenGraph(definition)}>
+							{definition.name}
+						</div>
+					))}
+				</div>
+			)}
 			{!graph.isWorldGraph && (
 				<>
 					<div className="graph-properties-section">

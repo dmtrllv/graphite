@@ -194,6 +194,14 @@ export class GraphManager {
 			}
 		}
 	}
+
+	public getAvailableSubgraphs(parent: Graph): Graph[] {
+		return [...this.graphs.values()].filter(graph =>
+			!graph.isWorldGraph &&
+			graph !== parent &&
+			!this.hasRecursiveReference(parent, graph)
+		);
+	}
 }
 
 export class DuplicateGraphNameError extends Error {

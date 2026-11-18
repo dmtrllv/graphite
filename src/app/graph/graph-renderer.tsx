@@ -3,7 +3,7 @@ import type { GraphEditor } from "../../graph/editor";
 import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
 import { mapChildren } from "../../utils";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { subscribe } from "../../reactive";
+import { subscribe, useObservable } from "../../reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
 import type { ProjectManager } from "../../editor/project-manager";
@@ -39,6 +39,8 @@ type NodePickerState = {
 
 export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { projectManager: ProjectManager, editor: GraphEditor, onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void; }) => {
 	const graph = editor.graph;
+	const manager = useObservable(graph.manager!, { recursive: false });
+	const availableSubgraphs = manager.getAvailableSubgraphs(graph);
 	const root = useRef<HTMLDivElement>(null);
 	const canvas = useRef<HTMLCanvasElement>(null);
 	const pan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -361,6 +363,15 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 					}}>
 						Subgraph
 					</div>
+					{availableSubgraphs.map(definition => (
+						<div key={definition.id} className="node-picker-item" onClick={() => {
+							const node = editor.addNode(SubgraphNode, nodePicker.position) as SubgraphNode;
+							node.graphId = definition.id;
+							setNodePicker(null);
+						}}>
+							{definition.name}
+						</div>
+					))}
 					{nodeTypes.map(([name, type]) => (
 						<div key={name} className="node-picker-item" onClick={() => {
 							editor.addNode(type, nodePicker.position);
