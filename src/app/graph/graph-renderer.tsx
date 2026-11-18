@@ -205,7 +205,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 		if (event.button === 1) {
 			event.preventDefault();
 			pan.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-			root.current?.setPointerCapture(event.pointerId);
+			(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 			return;
 		}
 
@@ -219,7 +219,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 			return;
 		}
 
-		root.current?.setPointerCapture(event.pointerId);
+		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 		editor.activeTool?.pointerDown(getPointerEvent(event));
 	};
 
@@ -229,7 +229,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 
 		event.preventDefault();
 		event.stopPropagation();
-		root.current?.setPointerCapture(event.pointerId);
+		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 		editor.setTool(selectTool);
 		editor.activeTool?.pointerDown(getPointerEvent(event, node));
 	};

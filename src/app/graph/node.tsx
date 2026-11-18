@@ -73,14 +73,12 @@ export const GraphNodeView = ({ projectManager, node, editor, layout, selected, 
 	const name = node instanceof SubgraphNode ? node.definition?.name ?? "Subgraph (unnamed)" : node.name;
 
 	const onDoubleClick = () => {
-		console.log("open sub graph")
 		if (!node.graph.manager)
 			return;
 		if ((node instanceof SubgraphNode) && node.definition) {
 			const graph = node.graph.manager.get(node.definition.id);
 			if (!graph)
 				return;
-
 			const editor = node.graph.manager.openEditor(graph);
 			projectManager.openGraph(editor);
 		}
