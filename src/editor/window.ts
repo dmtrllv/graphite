@@ -1,32 +1,35 @@
-import type React from "react";
+import type { ComponentType } from "react";
 import type { WindowManager } from "./window-manager";
 import { observable } from "../reactive";
 
-export class Window<T extends React.FC<P>, P extends {}> {
+export type WindowBounds = {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+};
+
+export class Window<P extends object = any> {
 	private static _idCounter = 0;
 
 	public readonly id: number = Window._idCounter++;
 	public readonly manager: WindowManager;
 	public readonly title: string;
 	public readonly props: P;
-	public readonly Component: T;
+	public readonly Component: ComponentType<P>;
 
 	@observable
-	public accessor state: WindowState = WindowState.Docked;
+	public accessor state: WindowState = "docked";
 
-	public constructor(manager: WindowManager, title: string, Component: T, props: P) {
+	@observable
+	public accessor bounds: WindowBounds = { x: 80, y: 80, width: 480, height: 320 };
+
+	public constructor(manager: WindowManager, title: string, Component: ComponentType<P>, props: P) {
 		this.manager = manager;
 		this.title = title;
-		this.props = props;
 		this.Component = Component;
+		this.props = props;
 	}
 }
 
-export const WindowState = {
-	Docked: "Docked",
-	Minimized: "Minimized",
-	Maximized: "Maximized",
-	Floating: "Floating",
-} as const;
-
-export type WindowState = (typeof WindowState)[keyof typeof WindowState];
+export type WindowState = "docked" | "floating";

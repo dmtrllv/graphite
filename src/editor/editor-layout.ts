@@ -15,13 +15,25 @@ export class EditorLayout {
 	@observable
 	public accessor children: (EditorLayout | LayoutPanel)[];
 
+	@observable
+	public accessor size: number = 1;
+
 	public constructor(parent: EditorLayout | null, children: (EditorLayout | LayoutPanel)[] = []) {
 		this.parent = parent;
 		this.children = children;
 	}
 
-	public addPanel(window: Window<any, any>) {
-		this.children.push(new LayoutPanel(this, [window]));
+	public resize(index: number, delta: number, totalSize: number, minSize: number = 120): void {
+		const first = this.children[index];
+		const second = this.children[index + 1];
+		if (!first || !second || totalSize <= 0)
+			return;
+
+		const totalWeight = first.size + second.size;
+		const minWeight = Math.min(totalWeight / 2, totalWeight * minSize / totalSize);
+		const deltaWeight = delta / totalSize * totalWeight;
+		first.size = Math.max(minWeight, Math.min(totalWeight - minWeight, first.size + deltaWeight));
+		second.size = totalWeight - first.size;
 	}
 }
 
@@ -31,7 +43,7 @@ export class LayoutPanel {
 	public readonly id: number = LayoutPanel._idCounter++;
 
 	@observable
-	public accessor layout: EditorLayout;
+	public accessor parent: EditorLayout;
 
 	@observable
 	public accessor tabs: Window<any, any>[];
@@ -39,8 +51,17 @@ export class LayoutPanel {
 	@observable
 	public accessor activeTab: number = 0;
 
-	public constructor(layout: EditorLayout, tabs: Window<any, any>[]) {
-		this.layout = layout;
+	@observable
+	public accessor size: number = 1;
+
+	public constructor(parent: EditorLayout, tabs: Window<any, any>[]) {
+		this.parent = parent;
 		this.tabs = tabs;
+	}
+
+	public activate(window: Window<any, any>): void {
+		const index = this.tabs.indexOf(window);
+		if (index !== -1)
+			this.activeTab = index;
 	}
 }

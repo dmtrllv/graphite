@@ -5,9 +5,9 @@ import { WindowManager } from "./window-manager";
 
 export class Editor {
 	private static _instance: Editor | null;
-	
+
 	public static readonly load = async () => {
-		if(this._instance)
+		if (this._instance)
 			return this._instance;
 
 		this._instance = new Editor();
@@ -16,8 +16,8 @@ export class Editor {
 	}
 
 	public readonly settings: SettingsManager = new SettingsManager();
-	public readonly windowManager: WindowManager = new WindowManager();
 	public readonly layout: EditorLayout = new EditorLayout(null);
+	public readonly windowManager: WindowManager = new WindowManager(this.layout);
 	public readonly projectManager: ProjectManager = new ProjectManager(this);
 
 	public async init() {}
