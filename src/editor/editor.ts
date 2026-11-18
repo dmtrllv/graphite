@@ -1,4 +1,5 @@
 import { EditorLayout } from "./editor-layout";
+import { Menubar, MenuItem, MenuSeparator } from "./menubar";
 import { ProjectManager } from "./project-manager";
 import { SettingsManager } from "./settings-manager";
 import { WindowManager } from "./window-manager";
@@ -20,5 +21,27 @@ export class Editor {
 	public readonly windowManager: WindowManager = new WindowManager(this.layout);
 	public readonly projectManager: ProjectManager = new ProjectManager(this);
 
-	public async init() {}
+	public readonly menubar: Menubar = new Menubar([
+		new MenuItem("file", "File", undefined, [
+			new MenuItem("new_project", "New Project"),
+			MenuSeparator,
+			new MenuItem("save", "Save"),
+			new MenuItem("save_as", "Save As"),
+			MenuSeparator,
+			new MenuItem("open", "Open"),
+			new MenuItem("open_recent", "Open Recent", undefined, this.projectManager.projects.map(p => {
+				return new MenuItem(p.name, p.name, () => {
+					this.projectManager.loadProject(p.name);
+				});
+			}))
+		]),
+		new MenuItem("edit", "Edit", undefined, [
+
+		]),
+		new MenuItem("view", "View", undefined, [
+
+		]),
+	]);
+
+	public async init() { }
 }

@@ -1,18 +1,14 @@
-import type { Editor } from "../../editor";
+import type { Menubar } from "../../editor/menubar";
+import { useObservable } from "../../reactive";
 
 import "./styles/menubar.scss";
 
-export const MenuBarView = ({ editor }: { editor: Editor }) => {
-	
+export const MenuBarView = ({ menubar }: { menubar: Menubar }) => {
+	useObservable(menubar);
 
 	return (
 		<div className="menu-bar">
-			<button onClick={() => editor.projectManager.saveProject()}>save</button>
-			<button onClick={() => editor.windowManager.open("Test " + Math.floor(Math.random() * 1000), Test, {})}>save</button>
+			
 		</div>
 	);
 };
-
-const Test = () => {
-	return <div>Test</div>
-}
