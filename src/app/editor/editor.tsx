@@ -26,6 +26,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 	const workspaceRef = useRef<HTMLDivElement>(null);
 	const dragRef = useRef<DragState | null>(null);
 	const dropTargetRef = useRef<DropTarget>(null);
+	const moveFrameRef = useRef<number | null>(null);
 	const [dropTarget, setDropTarget] = useState<DropTarget>(null);
 	const [isDragging, setIsDragging] = useState(false);
 
@@ -70,11 +71,17 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 			drag.moved = true;
 
 			if (drag.sourceState === "floating") {
-				targetWindow.bounds = {
-					...drag.originBounds,
-					x: drag.originBounds.x + deltaX,
-					y: drag.originBounds.y + deltaY
-				};
+				if (moveFrameRef.current !== null)
+					cancelAnimationFrame(moveFrameRef.current);
+
+				moveFrameRef.current = requestAnimationFrame(() => {
+					targetWindow.bounds = {
+						...drag.originBounds,
+						x: drag.originBounds.x + deltaX,
+						y: drag.originBounds.y + deltaY
+					};
+					moveFrameRef.current = null;
+				});
 			}
 
 			const element = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
@@ -85,29 +92,55 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 				return;
 			}
 
-			const rect = panelElement.getBoundingClientRect();
-			const x = pointerEvent.clientX - rect.left;
-			const y = pointerEvent.clientY - rect.top;
-			const edge = Math.min(rect.width, rect.height) * 0.22;
-			const distances: [DockPosition, number][] = [
-				["left", x],
-				["right", rect.width - x],
-				["top", y],
-				["bottom", rect.height - y]
-			];
-			const nearest = distances.reduce((a, b) => a[1] < b[1] ? a : b);
 			const panelId = Number(panelElement.dataset["panelId"]);
-
 			if (!editor.windowManager.getPanel(panelId)) {
 				updateDropTarget(null);
 				return;
 			}
 
-			const position: DockPosition | "float" = nearest[1] < edge
-				? nearest[0]
-				: element?.closest("[data-dock-center]")
-					? "center"
-					: "float";
+			const x = pointerEvent.clientX;
+			const y = pointerEvent.clientY;
+			const tabTitles = panelElement.querySelector<HTMLElement>(".tab-titles");
+			const tabSpace = panelElement.querySelector<HTMLElement>(".tab-title-space");
+
+			if (tabTitles) {
+				const rect = tabTitles.getBoundingClientRect();
+
+				if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+					if (tabSpace) {
+						const space = tabSpace.getBoundingClientRect();
+
+						if (x >= space.left && x <= space.right && y >= space.top && y <= space.bottom) {
+							updateDropTarget({ panelId, position: "center" });
+							return;
+						}
+					}
+
+					updateDropTarget({ panelId, position: "float" });
+					return;
+				}
+			}
+
+			const content = panelElement.querySelector<HTMLElement>(".tabs");
+			if (!content) {
+				updateDropTarget({ panelId, position: "float" });
+				return;
+			}
+
+			const rect = content.getBoundingClientRect();
+			const localX = x - rect.left;
+			const localY = y - rect.top;
+			const edge = Math.min(rect.width, rect.height) * 0.22;
+
+			const distances: [DockPosition, number][] = [
+				["left", localX],
+				["right", rect.width - localX],
+				["top", localY],
+				["bottom", rect.height - localY]
+			];
+
+			const nearest = distances.reduce((a, b) => a[1] < b[1] ? a : b);
+			const position: DockPosition | "float" = nearest[1] < edge ? nearest[0] : "float";
 
 			updateDropTarget({ panelId, position });
 		};
@@ -146,6 +179,11 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 					if (rect && pointerEvent.clientX >= rect.left && pointerEvent.clientX <= rect.right && pointerEvent.clientY >= rect.top && pointerEvent.clientY <= rect.bottom)
 						editor.windowManager.dockToRoot(targetWindow);
 				}
+			}
+
+			if (moveFrameRef.current !== null) {
+				cancelAnimationFrame(moveFrameRef.current);
+				moveFrameRef.current = null;
 			}
 
 			setIsDragging(false);
