@@ -86,7 +86,7 @@ export abstract class GraphNode {
 
 	public readonly id: number;
 
-	private readonly _graph: Graph;
+	public readonly graph: Graph;
 
 	@observable
 	public accessor position: Vec2;
@@ -97,16 +97,22 @@ export abstract class GraphNode {
 
 	public constructor(id: number, graph: Graph, position: Vec2 = new Vec2()) {
 		this.id = id;
-		this._graph = graph;
+		this.graph = graph;
 		this.position = position;
 	}
 
+	public serializeData(): Record<string, unknown> {
+		return {};
+	}
+
+	public restoreData(_data: Record<string, unknown>): void { }
+
 	public getInputEdge(inputKey: string): NodeEdge | undefined {
-		return this._graph.index.getInputEdge(this, inputKey);
+		return this.graph.index.getInputEdge(this, inputKey);
 	}
 
 	public getOutputEdges(outputKey: string): NodeEdge[] {
-		return this._graph.index.getOutputEdges(this, outputKey);
+		return this.graph.index.getOutputEdges(this, outputKey);
 	}
 
 	public getPropKind(key: string): string | null {

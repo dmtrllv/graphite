@@ -52,6 +52,7 @@ export class GraphManager {
 
 		const id = this.#idCounter++;
 		const graph = new Graph(id, name, offset, nodes, edges, this.graphs.size === 0);
+		graph.setManager(this);
 		this.graphs.set(id, graph);
 		return graph;
 	}
@@ -68,6 +69,7 @@ export class GraphManager {
 		else if (graph.isWorldGraph)
 			throw new Error("A GraphManager can only contain one World Graph!");
 
+		graph.setManager(this);
 		this.graphs.set(graph.id, graph);
 		this.#idCounter = Math.max(this.#idCounter, graph.id + 1);
 	}

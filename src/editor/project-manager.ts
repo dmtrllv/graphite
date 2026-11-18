@@ -41,7 +41,7 @@ export class ProjectManager {
 
 	private createNewProject(name: string = "New Project"): Project {
 		const p = new Project(this, new ProjectInfo(name, currentDateTime()), this.editor.settings.defaultSettings.clone());
-		const graph = p.graphManager.add("World");
+		const graph = p.graphManager.worldGraph;
 		graph.addNode(VectorMathNode);
 		const editor = p.graphManager.openEditor(graph);
 		this.editor.windowManager.open(graph.name, GraphEditorView, { editor }, { singleInstance: true });
@@ -58,9 +58,9 @@ export class ProjectManager {
 	}
 
 	public saveProjectAs(name: string): boolean {
-		if(this.projects.find(info => info.name === name))
+		if (this.projects.find(info => info.name === name))
 			return false;
-		
+
 		this.activeProject.info = new ProjectInfo(name, currentDateTime());
 		this.projects = [this.activeProject.info, ...this.projects];
 		this.saveProjectInfos();
@@ -87,6 +87,9 @@ export class ProjectManager {
 	}
 
 	public loadProject(name: string): void {
+		if(this.activeProject.info.name === name)
+			return;
+		
 		const json = localStorage.getItem(projectKey(name));
 		const info = this.projects.find(p => p.name === name);
 

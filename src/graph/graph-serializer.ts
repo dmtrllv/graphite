@@ -44,6 +44,7 @@ interface SerializedNode {
 	position: [number, number];
 	values: Record<string, SerializedType>;
 	options: Record<string, string>;
+	data?: Record<string, unknown>;
 }
 
 interface SerializedEdge {
@@ -127,6 +128,22 @@ const deserializeType = (value: SerializedType): Type => {
 	}
 };
 
+const serializeNodeData = (node: GraphNode): Record<string, unknown> => {
+	return Object.fromEntries(Object.entries(node.serializeData()).map(([key, value]) => [
+		key,
+		value instanceof Type ? { $type: "Type", value: serializeType(value) } : value
+	]));
+};
+
+const deserializeNodeData = (data: Record<string, unknown> = {}): Record<string, unknown> => {
+	return Object.fromEntries(Object.entries(data).map(([key, value]) => {
+		if (value && typeof value === "object" && "$type" in value && value.$type === "Type")
+			return [key, deserializeType((value as any).value)];
+
+		return [key, value];
+	}));
+};
+
 const serializeNode = (node: GraphNode): SerializedNode => {
 	const type = node.constructor as typeof GraphNode;
 	const inputs = GraphNode.getInputs(type);
@@ -159,7 +176,8 @@ const serializeNode = (node: GraphNode): SerializedNode => {
 		type: node.name,
 		position: [node.position.x, node.position.y],
 		values,
-		options: serializedOptions
+		options: serializedOptions,
+		data: serializeNodeData(node)
 	};
 };
 
@@ -195,6 +213,8 @@ const deserializeNode = (graph: Graph, json: SerializedNode): GraphNode => {
 
 		option.value = value;
 	}
+
+	node.restoreData(deserializeNodeData(json.data));
 
 	return node;
 };

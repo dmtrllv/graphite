@@ -21,6 +21,7 @@
 	flex: 0 0 5px;
 	touch-action: none;
 	background: var(--bg-1);
+	transition: background-color 150ms;
 
 	&.horizontal {
 		cursor: col-resize;
@@ -31,6 +32,6 @@
 	}
 
 	&:hover {
-		background: var(--border-1);
+		background: color-mix(in srgb, var(--accent-1) 30%, transparent);
 	}
 }

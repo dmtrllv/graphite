@@ -2,16 +2,22 @@ import { observable } from "../reactive";
 import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 import { GraphIndex } from "./graph-index";
+import type { GraphManager } from "./graph-manager";
 
 const RECONCILING_GRAPHS = new WeakSet<Graph>();
 
 export class Graph {
 	private _nodeIdCounter = 0;
 	private _edgeIdCounter = 0;
+	private _isWorldGraph: boolean;
+
+	private _manager?: GraphManager;
+
+	public get manager(): GraphManager | undefined {
+		return this._manager;
+	}
 
 	public readonly id: number;
-
-	private _isWorldGraph: boolean;
 
 	@observable
 	public accessor name: string;
@@ -37,10 +43,6 @@ export class Graph {
 		return this._isWorldGraph;
 	}
 
-	public setWorldGraph(value: boolean): void {
-		this._isWorldGraph = value;
-	}
-
 	public constructor(id: number, name: string, offset: Vec2);
 	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>, isWorldGraph?: boolean);
 	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map(), isWorldGraph = false) {
@@ -58,6 +60,14 @@ export class Graph {
 			this.index.add(edge);
 			this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
 		}
+	}
+	
+	public setWorldGraph(value: boolean): void {
+		this._isWorldGraph = value;
+	}
+
+	public setManager(manager: GraphManager): void {
+		this._manager = manager;
 	}
 
 	public getEdge(source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string): NodeEdge | undefined {
