@@ -13,4 +13,11 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
+
+	.menu-bar {
+		padding-bottom: 0px;
+		&:not(.active) {
+			margin-top: -23px !important;
+		}
+	}
 }

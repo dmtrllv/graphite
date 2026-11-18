@@ -22,8 +22,8 @@ const getSelectionStyle = (editor: GraphEditor, root: HTMLDivElement | null): Re
 	style.top = Math.min(d.y, m.y) - rect.top;
 	style.width = Math.abs(d.x - m.x);
 	style.height = Math.abs(d.y - m.y);
-	style.border = "1px solid red";
-	style.backgroundColor = "rgba(255, 0, 0, 0.3)";
+	style.border = "1px solid var(--accent-1)";
+	style.backgroundColor = "color-mix(in srgb, var(--accent-1) 30%, transparent)";
 	style.position = "absolute";
 	style.pointerEvents = "none";
 

@@ -20,10 +20,13 @@ export class WindowManager {
 		this.layout = layout;
 	}
 
-	public open<T extends ComponentType<any>>(title: string, Component: T, props: ComponentProps<T>): Window<ComponentProps<T>> {
+	public open<T extends ComponentType<any>>(title: string, Component: T, props: ComponentProps<T>, float: boolean = false): Window<ComponentProps<T>> {
 		const window = new Window(this, title, Component, props);
 		this.windows.push(window);
-		this.dockToRoot(window);
+		if (float)
+			this.float(window);
+		else
+			this.dockToRoot(window);
 		return window;
 	}
 

@@ -27,7 +27,7 @@
 				&.selected {
 					.name,
 					.body {
-						border-color: rgb(172, 59, 59) !important;
+						border-color: var(--accent-1) !important;
 					}
 					.name {
 						border-bottom: 1px solid var(--border-1);

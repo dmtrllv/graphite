@@ -17,9 +17,9 @@ export const mapChildren: MapChildrenFn = (obj: any, mapper: any) => {
 }
 
 interface MapChildrenFn {
+	<V>(arr: Array<V> | ReadonlyArray<V>, mapper: (value: V, index: number) => JSX.Element): JSX.Element[];
 	<K, V>(map: Map<K, V> | ReadonlyMap<K, V>,  mapper: (key: K, value: V, index: number) => JSX.Element): JSX.Element[];
 	<V>(set: Set<V> | ReadonlySet<V>, mapper: (value: V, index: number) => JSX.Element): JSX.Element[];
-	<V>(arr: Array<V> | ReadonlyArray<V>, mapper: (value: V, index: number) => JSX.Element): JSX.Element[];
 	<T extends object>(object: T, mapper: <K extends keyof T>(key: K, value: T[K], index: number) => JSX.Element): JSX.Element[];
 }
 

@@ -1,3 +1,4 @@
+import { SettingsView } from "../app/editor/settings";
 import { EditorLayout } from "./editor-layout";
 import { Menubar, MenuItem, MenuSeparator } from "./menubar";
 import { ProjectManager } from "./project-manager";
@@ -33,7 +34,11 @@ export class Editor {
 				return new MenuItem(p.name, p.name, () => {
 					this.projectManager.loadProject(p.name);
 				});
-			}))
+			})),
+			MenuSeparator,
+			new MenuItem("settings", "Settings", () => {
+				this.windowManager.open("Settings", SettingsView, { projectManager: this.projectManager }, true);
+			})
 		]),
 		new MenuItem("edit", "Edit", undefined, [
 
