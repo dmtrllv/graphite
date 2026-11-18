@@ -14,11 +14,10 @@ type NodePropViewProps = {
 	withInput?: boolean;
 	withOutput?: boolean;
 	outputNames?: readonly string[];
+	outputTypes: ReadonlyMap<string, Type>;
 };
 
-export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames }: NodePropViewProps) => {
-	useObservable(node);
-
+export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames, outputTypes }: NodePropViewProps) => {
 	const isSubgraphNode = node instanceof SubgraphNode;
 
 	const inputRef = useCallback((element: HTMLDivElement | null) => {
@@ -72,13 +71,9 @@ export const NodePropView = ({ node, editor, layout, name, portKey = name, value
 			)}
 			<label>{name}</label>
 			{!isSubgraphNode && <Input node={node} name={name} disabled={!!hasInput} prop={prop} />}
-			{exposedOutputs.map(outputName => {
-				const output = node.getInterface().outputs.find(port => port.key === outputName);
-
-				return (
-					<div key={outputName} className={`output-point ${output?.value.kind ?? ""}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
-				);
-			})}
+			{exposedOutputs.map(outputName => (
+				<div key={outputName} className={`output-point ${outputTypes.get(outputName)?.kind ?? ""}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
+			))}
 		</div>
 	);
 };

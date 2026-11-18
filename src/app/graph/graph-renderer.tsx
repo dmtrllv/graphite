@@ -1,4 +1,4 @@
-import { GraphInputNode, GraphNode, GraphOutputNode, Vec2 } from "../../graph";
+import { GraphInputNode, GraphNode, GraphOutputNode, SubgraphNode, Vec2 } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
 import { mapChildren } from "../../utils";
@@ -44,7 +44,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 	const pan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 	const [structureVersion, setStructureVersion] = useState(graph.structureVersion);
 	const [editorVersion, setEditorVersion] = useState(0);
-	const [graphVersion, setGraphVersion] = useState(0);
+	const [, setGraphVersion] = useState(0);
 	const store = useMemo(() => new GraphRendererStore(editor), [editor]);
 	const [nodePicker, setNodePicker] = useState<NodePickerState>(null);
 	const mousePosition = useRef<Vec2 | null>(null);
@@ -123,7 +123,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 
 		layout.updateAll(graph, element);
 		invalidate();
-	}, [graphVersion, graph, layout, invalidate])
+	}, [graph, layout, invalidate])
 
 	useEffect(() => {
 		editor.setTool(selectTool);
@@ -305,16 +305,11 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 		if (!element)
 			return;
 
-		const observer = new ResizeObserver(() => {
-			for (const node of graph.nodes.values())
-				updateNodeLayout(node);
-
-			invalidate();
-		});
+		const observer = new ResizeObserver(() => store.invalidateLayout());
 
 		observer.observe(element);
 		return () => observer.disconnect();
-	}, [graph, updateNodeLayout, invalidate]);
+	}, [store]);
 
 	const onMouseLeave = () => {
 		setHovering(false);
@@ -353,6 +348,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 						onNodePointerDown={onNodePointerDown}
 						onLayoutChange={updateNodeLayout}
 						projectManager={projectManager}
+						definitionVersion={node instanceof SubgraphNode ? node.definition?.structureVersion ?? 0 : 0}
 					/>
 				))}
 			</div>

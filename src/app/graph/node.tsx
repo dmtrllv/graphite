@@ -14,14 +14,16 @@ type GraphNodeViewProps = {
 	onNodePointerDown: (event: React.PointerEvent, node: GraphNode) => void;
 	onLayoutChange: (node: GraphNode) => void;
 	projectManager: ProjectManager;
+	definitionVersion: number;
 };
 
-export const GraphNodeView = ({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
+export const GraphNodeView = React.memo(({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
 	const position = useObservableProp(node, "position");
 
 	const root = useRef<HTMLDivElement>(null);
 	const { inputs, options, outputs } = GraphNode.getInterface(node);
+	const outputTypes = new Map(outputs.map(port => [port.key, port.value]));
 	const optionOutputNames = new Map<string, readonly string[]>();
 	const attachedOutputs = new Set<string>();
 
@@ -89,15 +91,15 @@ export const GraphNodeView = ({ projectManager, node, editor, layout, selected, 
 			<div className="name" onPointerDown={onPointerDown} onDoubleClick={onDoubleClick}>{name}</div>
 			<div className="body">
 				{outputs.filter(port => !attachedOutputs.has(port.key)).map(port => (
-					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput />
+					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput outputTypes={outputTypes} />
 				))}
 				{options.map(option => (
-					<NodePropView key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} />
+					<NodePropView key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} outputTypes={outputTypes} />
 				))}
 				{inputs.map(port => (
-					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput />
+					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput outputTypes={outputTypes} />
 				))}
 			</div>
 		</div>
 	);
-};
+});

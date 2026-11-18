@@ -4,7 +4,24 @@ import { GraphNode } from "./node";
 @GraphNode.register("Subgraph")
 export class SubgraphNode extends GraphNode {
 	@observable
-	public accessor graphId: number | null = null;
+	private accessor _graphId: number | null = null;
+
+	public get graphId(): number | null {
+		return this._graphId;
+	}
+
+	public set graphId(value: number | null) {
+		const manager = this.graph.manager;
+		const definition = value === null ? undefined : manager?.get(value);
+
+		if (definition?.isWorldGraph)
+			throw new Error("The World Graph cannot be used as a subgraph!");
+
+		if (definition && manager?.hasRecursiveReference(this.graph, definition))
+			throw new Error("A graph cannot reference itself or one of its parent graphs!");
+
+		this._graphId = value;
+	}
 
 	public get definition() {
 		if (this.graphId === null)
@@ -12,7 +29,7 @@ export class SubgraphNode extends GraphNode {
 
 		const graph = this.graph.manager?.get(this.graphId);
 
-		if (!graph || graph.isWorldGraph || this.graph.manager?.hasRecursiveReference(this.graph, graph))
+		if (!graph || graph.isWorldGraph)
 			return undefined;
 
 		return graph;

@@ -18,6 +18,7 @@ export class GraphLayout {
 	private ports = new Map<string, PortPosition>();
 	private portVersions = new Map<string, number>();
 	private portElements = new Map<string, PortElement>();
+	private nodePorts = new Map<number, Set<string>>();
 	private nodeElements = new Map<number, { node: GraphNode; element: HTMLDivElement }>();
 	private hoveredPort: HTMLDivElement | null = null;
 
@@ -37,6 +38,15 @@ export class GraphLayout {
 
 		if (element) {
 			this.portElements.set(id, { node, direction, key, element });
+
+			let ports = this.nodePorts.get(node.id);
+
+			if (!ports) {
+				ports = new Set();
+				this.nodePorts.set(node.id, ports);
+			}
+
+			ports.add(id);
 		} else {
 			const port = this.portElements.get(id);
 
@@ -45,6 +55,12 @@ export class GraphLayout {
 
 			this.portElements.delete(id);
 			this.ports.delete(id);
+
+			const ports = this.nodePorts.get(node.id);
+			ports?.delete(id);
+
+			if (!ports?.size)
+				this.nodePorts.delete(node.id);
 		}
 	}
 
@@ -64,10 +80,17 @@ export class GraphLayout {
 			return false;
 
 		const canvasRect = canvas.getBoundingClientRect();
+		const ports = this.nodePorts.get(node.id);
+
+		if (!ports)
+			return false;
+
 		let changed = false;
 
-		for (const port of this.portElements.values()) {
-			if (port.node !== node)
+		for (const id of ports) {
+			const port = this.portElements.get(id);
+
+			if (!port || port.node !== node)
 				continue;
 
 			const rect = port.element.getBoundingClientRect();
@@ -144,13 +167,22 @@ export class GraphLayout {
 	public removeNode(node: GraphNode): void {
 		this.nodeElements.delete(node.id);
 
-		for (const [id, port] of this.portElements) {
-			if (port.node !== node)
-				continue;
+		const ports = this.nodePorts.get(node.id);
+
+		if (!ports)
+			return;
+
+		for (const id of ports) {
+			const port = this.portElements.get(id);
+
+			if (this.hoveredPort === port?.element)
+				this.setHoveredPort();
 
 			this.portElements.delete(id);
 			this.ports.delete(id);
 		}
+
+		this.nodePorts.delete(node.id);
 	}
 
 	public getPortAt(x: number, y: number): { node: GraphNode; direction: PortDirection; key: string } | undefined {

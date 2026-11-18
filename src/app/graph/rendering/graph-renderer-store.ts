@@ -14,6 +14,7 @@ export class GraphRendererStore {
 	private canvas: HTMLCanvasElement | null = null;
 	private scheduler = new RenderScheduler(() => this.render());
 	private unsubscribers: (() => void)[] = [];
+	private layoutDirty = true;
 
 	public constructor(editor: GraphEditor) {
 		this.editor = editor;
@@ -23,11 +24,12 @@ export class GraphRendererStore {
 	public attach(canvas: HTMLCanvasElement): void {
 		this.detach();
 		this.canvas = canvas;
+		this.layoutDirty = true;
 
 		this.unsubscribers = [
-			subscribe(this.graph, "offset", { recursive: true }, this.invalidate),
-			subscribe(this.graph, "scale", this.invalidate),
-			subscribe(this.graph, "structureVersion", this.invalidate),
+			subscribe(this.graph, "offset", { recursive: true }, this.invalidateLayout),
+			subscribe(this.graph, "scale", this.invalidateLayout),
+			subscribe(this.graph, "structureVersion", this.invalidateLayout),
 			subscribe(this.editor, "selectedNodes", { recursive: true }, this.invalidate),
 			subscribe(this.editor, "draggingEdge", { recursive: true }, this.invalidate),
 			subscribe(this.editor, "edgeCut", { recursive: true }, this.invalidate)
@@ -50,6 +52,11 @@ export class GraphRendererStore {
 		this.scheduler.invalidate();
 	};
 
+	public invalidateLayout = (): void => {
+		this.layoutDirty = true;
+		this.invalidate();
+	};
+
 	public updateNode(node: GraphNode): void {
 		if (!this.canvas)
 			return;
@@ -67,7 +74,11 @@ export class GraphRendererStore {
 		if (!this.canvas)
 			return;
 
-		this.layout.updateAll(this.graph, this.canvas);
+		if (this.layoutDirty) {
+			this.layout.updateAll(this.graph, this.canvas);
+			this.layoutDirty = false;
+		}
+
 		this.renderer.render(this.graph, this.editor, this.canvas, this.layout);
 	}
 }

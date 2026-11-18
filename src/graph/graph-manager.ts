@@ -1,4 +1,4 @@
-import { Graph, type GraphNode, type NodeEdge } from "../graph";
+import { Graph, SubgraphNode, type GraphNode, type NodeEdge } from "../graph";
 import { observable } from "../reactive";
 import { GraphEditor } from "./editor";
 import { Vec2 } from "./types";
@@ -54,6 +54,14 @@ export class GraphManager {
 		const graph = new Graph(id, name, offset, nodes, edges, this.graphs.size === 0);
 		graph.setManager(this);
 		this.graphs.set(id, graph);
+
+		try {
+			this.validateReferences();
+		} catch (error) {
+			this.graphs.delete(id);
+			throw error;
+		}
+
 		return graph;
 	}
 
@@ -72,6 +80,13 @@ export class GraphManager {
 		graph.setManager(this);
 		this.graphs.set(graph.id, graph);
 		this._idCounter = Math.max(this._idCounter, graph.id + 1);
+
+		try {
+			this.validateReferences();
+		} catch (error) {
+			this.graphs.delete(graph.id);
+			throw error;
+		}
 	}
 
 	public notifyInterfaceChanged(graph: Graph): void {
@@ -169,6 +184,15 @@ export class GraphManager {
 		}
 
 		this.graphs.delete(graph.id);
+	}
+
+	private validateReferences(): void {
+		for (const graph of this.graphs.values()) {
+			for (const node of graph.nodes.values()) {
+				if (node instanceof SubgraphNode && node.graphId !== null)
+					node.graphId = node.graphId;
+			}
+		}
 	}
 }
 

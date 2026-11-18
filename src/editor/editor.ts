@@ -45,7 +45,7 @@ export class Editor {
 
 		]),
 		new MenuItem("view", "View", undefined, [
-
+			new MenuItem("world_graph", "World Graph", () => {}),
 		]),
 	]);
 
