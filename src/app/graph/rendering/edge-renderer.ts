@@ -16,9 +16,9 @@ export class EdgeRenderer {
 		if (editor.draggingEdge)
 			this.renderDraggingEdge(graph, editor.draggingEdge, layout, ctx);
 
-		if (editor.slice) {
-			const start = graph.getCanvasMousePosition(editor.slice.downPos, ctx.canvas);
-			const end = graph.getCanvasMousePosition(editor.slice.mousePos, ctx.canvas);
+		if (editor.edgeCut) {
+			const start = graph.getCanvasMousePosition(editor.edgeCut.downPos, ctx.canvas);
+			const end = graph.getCanvasMousePosition(editor.edgeCut.mousePos, ctx.canvas);
 
 			ctx.strokeStyle = "red";
 			ctx.beginPath();

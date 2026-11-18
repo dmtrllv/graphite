@@ -30,7 +30,7 @@ export class GraphRendererStore {
 			subscribe(this.graph, "structureVersion", this.invalidate),
 			subscribe(this.editor, "selectedNodes", { recursive: true }, this.invalidate),
 			subscribe(this.editor, "draggingEdge", { recursive: true }, this.invalidate),
-			subscribe(this.editor, "slice", { recursive: true }, this.invalidate)
+			subscribe(this.editor, "edgeCut", { recursive: true }, this.invalidate)
 		];
 
 		this.invalidate();

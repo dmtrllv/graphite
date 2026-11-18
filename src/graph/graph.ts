@@ -1,7 +1,7 @@
 import { observable } from "../reactive";
-import { GraphNode, type GraphNodeType } from "./nodes";
+import { GraphNode, type GraphNodeJson, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
-import { GraphIndex } from "./graph-index";
+import { GraphIndex, type GraphIndexJson } from "./graph-index";
 
 const RECONCILING_GRAPHS = new WeakSet<Graph>();
 

@@ -78,3 +78,8 @@ export class GraphIndex {
 		return [...edges];
 	}
 }
+
+export type GraphIndexJson = {
+	incoming: Record<number, Record<string, NodeEdge>>,
+	outgoing: Record<number, Record<string, Set<NodeEdge>>>,
+}

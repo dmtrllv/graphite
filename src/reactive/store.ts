@@ -1,34 +1,35 @@
-import { useObservable } from "./hook";
+//import { useObservable } from "./hook";
 
-const stores = new Map<Ctor, any>();
+//const stores = new Map<Ctor, any>();
 
-type Ctor = new () => any;
+//type Ctor = new () => any;
 
-export const registerStore = <T extends Ctor>(type: T, _: ClassDecoratorContext) => {
-	stores.set(type, new type());
-};
+//export const registerStore = <T extends Ctor>(type: T, _: ClassDecoratorContext) => {
+//	stores.set(type, new type());
+//};
 
-export const getStore = <T extends Ctor>(type: T): InstanceType<T> => {
-	const store = stores.get(type);
-	if(!store)
-		throw new Error(`Store ${type.name} is not registered!`);
-	return store;
-};
+//export const getStore = <T extends Ctor>(type: T): InstanceType<T> => {
+//	const store = stores.get(type);
+//	if(!store)
+//		throw new Error(`Store ${type.name} is not registered!`);
+//	return store;
+//};
 
-export const useStore = <T extends Ctor>(type: T) => useObservable(getStore(type));
+//export const useStore = <T extends Ctor>(type: T) => useObservable(getStore(type));
 
-let isInitialized = false;
+//let isInitialized = false;
 
-export const initStores = async () => {
-	if (isInitialized)
-		return;
+//export const loadStores = async () => {
+//	if (isInitialized)
+//		return;
 
-	isInitialized = true;
+//	isInitialized = true;
 
-	const promises = Array.from(stores.values().map(store => "init" in store && store.init()));
-	await Promise.all(promises);
-};
+//	await Promise.all(Array.from(stores.values().map(store => "init" in store && store.init())));
+//	await Promise.all(Array.from(stores.values().map(store => "start" in store && store.start())));
+//};
 
-export interface Store {
-	init?(): void | Promise<void>;
-}
+//export interface Store {
+//	init?(): void | Promise<void>;
+//	start?(): void | Promise<void>;
+//}

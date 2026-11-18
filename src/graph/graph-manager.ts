@@ -1,8 +1,7 @@
 import { Graph, ScalarNode, Vec2, VectorMathNode, type GraphNode, type NodeEdge } from "../graph";
-import { observable, registerStore } from "../reactive";
+import { observable } from "../reactive";
 import { GraphEditor } from "./editor";
 
-@registerStore
 export class GraphManager {
 	#idCounter = 0;
 

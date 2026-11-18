@@ -24,7 +24,7 @@ export class GraphEditor {
 	public accessor draggingEdge: DraggingEdge | null = null;
 
 	@observable
-	public accessor slice: EdgeSlice | null = null;
+	public accessor edgeCut: EdgeSlice | null = null;
 
 	public constructor(graph: Graph) {
 		this.graph = graph;

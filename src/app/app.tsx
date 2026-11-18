@@ -1,15 +1,16 @@
-import { GraphManager } from "../graph";
-import { useStore } from "../reactive";
-import { GraphRenderer } from "./graph/graph-renderer";
+import { useEffect, useState } from "react";
+import { Editor } from "../editor";
+import { EditorView } from "./editor";
 
 export const App = () => {
-	const graphManager = useStore(GraphManager);
-	const graph = graphManager.get("Test");
+	const [editor, setEditor] = useState<Editor | null>(null);
 
-	if (!graph)
-		return null;
+	useEffect(() => {
+		Editor.load().then(setEditor);
+	}, []);
 
-	const editor = graphManager.openEditor(graph);
+	if(!editor)
+		return <>Loading...</>;
 
-	return <GraphRenderer editor={editor} />;
+	return <EditorView editor={editor} />;
 };
