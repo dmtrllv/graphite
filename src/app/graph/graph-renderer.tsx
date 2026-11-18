@@ -30,6 +30,12 @@ const getSelectionStyle = (editor: GraphEditor, root: HTMLDivElement | null): Re
 	return style;
 };
 
+type NodePickerState = {
+	x: number;
+	y: number;
+	position: Vec2
+} | null
+
 export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	const graph = editor.graph;
 	const root = useRef<HTMLDivElement>(null);
@@ -39,7 +45,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	const [editorVersion, setEditorVersion] = useState(0);
 	const [graphVersion, setGraphVersion] = useState(0);
 	const store = useMemo(() => new GraphRendererStore(editor), [editor]);
-	const [nodePicker, setNodePicker] = useState<{ x: number; y: number; position: Vec2 } | null>(null);
+	const [nodePicker, setNodePicker] = useState<NodePickerState>(null);
 	const mousePosition = useRef<Vec2 | null>(null);
 	const nodeTypes = useMemo(() => [...GraphNode.getRegisteredNodes().entries()].sort(([a], [b]) => a.localeCompare(b)), []);
 
@@ -127,7 +133,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 			const target = event.target as HTMLElement;
 			if (target.closest("input, textarea, select, [contenteditable='true']"))
 				return;
-			
+
 			if (event.ctrlKey && event.key.toLowerCase() === "z") {
 				event.preventDefault();
 
@@ -188,6 +194,9 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	}) as GraphPointerEvent;
 
 	const onPointerDown = (event: React.PointerEvent) => {
+		if (nodePicker)
+			setNodePicker(null);
+
 		if (event.button === 1) {
 			event.preventDefault();
 			pan.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };

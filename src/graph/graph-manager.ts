@@ -12,13 +12,27 @@ export class GraphManager {
 	@observable
 	public accessor editors = new Map<Graph, GraphEditor>();
 
+	public constructor(createWorldGraph = true) {
+		if (createWorldGraph)
+			this.add("World");
+	}
+
+	public get worldGraph(): Graph {
+		const graph = this.graphs.values().next().value;
+
+		if (!graph)
+			throw new Error("GraphManager does not contain a World Graph!");
+
+		return graph;
+	}
+
 	public get(id: number): Graph | undefined;
 	public get(name: string): Graph | undefined;
 	public get(idOrName: number | string): Graph | undefined {
 		if (typeof idOrName === "number")
 			return this.graphs.get(idOrName);
 
-		return this.graphs.values().find(graph => graph.name === idOrName);
+		return [...this.graphs.values()].find(graph => graph.name === idOrName);
 	}
 
 	public openEditor(graph: Graph): GraphEditor {
@@ -37,7 +51,7 @@ export class GraphManager {
 			throw new DuplicateGraphNameError(name);
 
 		const id = this.#idCounter++;
-		const graph = new Graph(id, name, offset, nodes, edges);
+		const graph = new Graph(id, name, offset, nodes, edges, this.graphs.size === 0);
 		this.graphs.set(id, graph);
 		return graph;
 	}
@@ -48,6 +62,11 @@ export class GraphManager {
 
 		if (this.get(graph.name))
 			throw new DuplicateGraphNameError(graph.name);
+
+		if (this.graphs.size === 0)
+			graph.setWorldGraph(true);
+		else if (graph.isWorldGraph)
+			throw new Error("A GraphManager can only contain one World Graph!");
 
 		this.graphs.set(graph.id, graph);
 		this.#idCounter = Math.max(this.#idCounter, graph.id + 1);

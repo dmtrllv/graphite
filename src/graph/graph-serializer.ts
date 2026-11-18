@@ -57,6 +57,7 @@ interface SerializedEdge {
 interface SerializedGraph {
 	id: number;
 	name: string;
+	isWorldGraph: boolean;
 	offset: [number, number];
 	scale: number;
 	nodes: SerializedNode[];
@@ -202,6 +203,7 @@ const serializeGraph = (graph: Graph): SerializedGraph => {
 	return {
 		id: graph.id,
 		name: graph.name,
+		isWorldGraph: graph.isWorldGraph,
 		offset: [graph.offset.x, graph.offset.y],
 		scale: graph.scale,
 		nodes: [...graph.nodes.values()].map(serializeNode),
@@ -216,7 +218,7 @@ const serializeGraph = (graph: Graph): SerializedGraph => {
 };
 
 const deserializeGraph = (json: SerializedGraph): Graph => {
-	const graph = new Graph(json.id, json.name, new Vec2(...json.offset));
+	const graph = new Graph(json.id, json.name, new Vec2(...json.offset), undefined, undefined, json.isWorldGraph);
 	graph.scale = json.scale;
 
 	const nodes = new Map<number, GraphNode>();
@@ -252,7 +254,7 @@ export const serializeGraphManager = (manager: GraphManager): SerializedGraphMan
 };
 
 export const deserializeGraphManager = (json: SerializedGraphManager): GraphManager => {
-	const manager = new GraphManager();
+	const manager = new GraphManager(false);
 
 	for (const graphJson of json.graphs)
 		manager.restore(deserializeGraph(graphJson));

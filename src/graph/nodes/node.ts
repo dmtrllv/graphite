@@ -72,61 +72,12 @@ export abstract class GraphNode {
 	};
 
 	public static getInterface(node: GraphNode) {
-		const inputs = GraphNode.getInputs(node.constructor);
-		const outputs = GraphNode.getOutputs(node.constructor);
-		const options = GraphNode.getOptions(node.constructor);
-
-		const controlledInputs = new Set<string>();
-		const controlledOutputs = new Set<string>();
-
-		for (const option of Object.values(options)) {
-			for (const variant of Object.values(option.variants)) {
-				variant.inputs?.forEach(name => controlledInputs.add(name));
-				variant.outputs?.forEach(name => controlledOutputs.add(name));
-			}
-		}
-
-		const resolve = (props: Record<string, NodeProp>, direction: "input" | "output"): ResolvedNodePort[] => {
-			const controlled = direction === "input" ? controlledInputs : controlledOutputs;
-			const active = new Set(Object.values(props).filter(prop => !controlled.has(prop.name)).map(prop => prop.name));
-
-			for (const option of Object.values(options)) {
-				const value = node[option.name as keyof typeof node] as unknown as NodeOption<string>;
-				const variant = option.variants[value.value];
-
-				if (!variant)
-					throw new Error(`Invalid option value "${value.value}" for ${option.name}!`);
-
-				const names = direction === "input" ? variant.inputs : variant.outputs;
-
-				for (const name of names ?? []) {
-					if (!(name in props))
-						throw new Error(`Option "${option.name}" references unknown ${direction} "${name}"!`);
-
-					active.add(name);
-				}
-			}
-
-			return [...active].map(name => {
-				const value = node[name as keyof typeof node];
-
-				if (!(value instanceof Type))
-					throw new Error(`Property "${name}" of ${node.constructor.name} is not a Type!`);
-
-				return { name, direction, value };
-			});
-		};
-
-		return {
-			inputs: resolve(inputs, "input"),
-			outputs: resolve(outputs, "output"),
-			options: Object.values(options)
-		};
+		return node.getInterface();
 	}
 
-	public static getPort(node: GraphNode, name: string, direction: "input" | "output"): ResolvedNodePort | undefined {
+	public static getPort(node: GraphNode, key: string, direction: "input" | "output"): ResolvedNodePort | undefined {
 		const ports = GraphNode.getInterface(node);
-		return (direction === "input" ? ports.inputs : ports.outputs).find(port => port.name === name);
+		return (direction === "input" ? ports.inputs : ports.outputs).find(port => port.key === key);
 	}
 
 	public static canConnect(source: ResolvedNodePort, target: ResolvedNodePort): boolean {
@@ -134,7 +85,7 @@ export abstract class GraphNode {
 	}
 
 	public readonly id: number;
-	
+
 	private readonly _graph: Graph;
 
 	@observable
@@ -180,6 +131,59 @@ export abstract class GraphNode {
 
 		return null;
 	}
+
+	public getInterface() {
+		const inputs = GraphNode.getInputs(this.constructor);
+		const outputs = GraphNode.getOutputs(this.constructor);
+		const options = GraphNode.getOptions(this.constructor);
+
+		const controlledInputs = new Set<string>();
+		const controlledOutputs = new Set<string>();
+
+		for (const option of Object.values(options)) {
+			for (const variant of Object.values(option.variants)) {
+				variant.inputs?.forEach(name => controlledInputs.add(name));
+				variant.outputs?.forEach(name => controlledOutputs.add(name));
+			}
+		}
+
+		const resolve = (props: Record<string, NodeProp>, direction: "input" | "output"): ResolvedNodePort[] => {
+			const controlled = direction === "input" ? controlledInputs : controlledOutputs;
+			const active = new Set(Object.values(props).filter(prop => !controlled.has(prop.name)).map(prop => prop.name));
+
+			for (const option of Object.values(options)) {
+				const value = this[option.name as keyof this] as unknown as NodeOption<string>;
+				const variant = option.variants[value.value];
+
+				if (!variant)
+					throw new Error(`Invalid option value "${value.value}" for ${option.name}!`);
+
+				const names = direction === "input" ? variant.inputs : variant.outputs;
+
+				for (const name of names ?? []) {
+					if (!(name in props))
+						throw new Error(`Option "${option.name}" references unknown ${direction} "${name}"!`);
+
+					active.add(name);
+				}
+			}
+
+			return [...active].map(key => {
+				const value = this[key as keyof this];
+
+				if (!(value instanceof Type))
+					throw new Error(`Property "${key}" of ${this.constructor.name} is not a Type!`);
+
+				return { key, name: key, direction, value };
+			});
+		};
+
+		return {
+			inputs: resolve(inputs, "input"),
+			outputs: resolve(outputs, "output"),
+			options: Object.values(options)
+		};
+	}
 }
 
 export type GraphNodeJson = {
@@ -188,6 +192,7 @@ export type GraphNodeJson = {
 }
 
 export type ResolvedNodePort = {
+	key: string;
 	name: string;
 	direction: "input" | "output";
 	value: Type;

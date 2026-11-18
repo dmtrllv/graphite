@@ -11,6 +11,8 @@ export class Graph {
 
 	public readonly id: number;
 
+	private _isWorldGraph: boolean;
+
 	@observable
 	public accessor name: string;
 
@@ -31,14 +33,23 @@ export class Graph {
 
 	public readonly index = new GraphIndex();
 
+	public get isWorldGraph(): boolean {
+		return this._isWorldGraph;
+	}
+
+	public setWorldGraph(value: boolean): void {
+		this._isWorldGraph = value;
+	}
+
 	public constructor(id: number, name: string, offset: Vec2);
-	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>);
-	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
+	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>, isWorldGraph?: boolean);
+	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map(), isWorldGraph = false) {
 		this.id = id;
 		this.name = name;
 		this.offset = offset;
 		this.nodes = nodes;
 		this.edges = edges;
+		this._isWorldGraph = isWorldGraph;
 
 		for (const node of this.nodes.values())
 			this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);

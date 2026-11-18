@@ -75,14 +75,14 @@ export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDow
 		>
 			<div className="name">{node.name}</div>
 			<div className="body">
+				{outputs.filter(port => !attachedOutputs.has(port.key)).map(port => (
+					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput />
+				))}
 				{options.map(option => (
 					<NodePropView key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} />
 				))}
-				{outputs.filter(port => !attachedOutputs.has(port.name)).map(port => (
-					<NodePropView key={port.name} node={node} editor={editor} layout={layout} name={port.name} withOutput />
-				))}
 				{inputs.map(port => (
-					<NodePropView key={port.name} node={node} editor={editor} layout={layout} name={port.name} withInput />
+					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput />
 				))}
 			</div>
 		</div>

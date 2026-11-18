@@ -9,23 +9,24 @@ type NodePropViewProps = {
 	editor: GraphEditor;
 	layout: GraphLayout;
 	name: string;
+	portKey?: string;
+	value?: Type;
 	withInput?: boolean;
 	withOutput?: boolean;
 	outputNames?: readonly string[];
 };
 
-export const NodePropView = ({ node, editor, layout, name, withInput, withOutput, outputNames }: NodePropViewProps) => {
+export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames }: NodePropViewProps) => {
 	useObservable(node);
 
 	const inputRef = useCallback((element: HTMLDivElement | null) => {
 		if (withInput)
-			layout.setPortElement(node, "input", name, element);
-	}, [node, layout, name, withInput]);
+			layout.setPortElement(node, "input", portKey, element);
+	}, [node, layout, portKey, withInput]);
 
-	const prop = useObservable(node[name as keyof typeof node] as any);
-
-	const hasInput = withInput && !!node.getInputEdge(name);
-	const exposedOutputs = outputNames ?? (withOutput ? [name] : []);
+	const prop = useObservable(value ?? node[name as keyof typeof node] as any);
+	const hasInput = withInput && !!node.getInputEdge(portKey);
+	const exposedOutputs = outputNames ?? (withOutput ? [portKey] : []);
 	const Input = NodePropInputs.get(prop.constructor as any);
 	const outputRefs = useRef(new Map<string, (element: HTMLDivElement | null) => void>());
 
@@ -63,14 +64,14 @@ export const NodePropView = ({ node, editor, layout, name, withInput, withOutput
 	}
 
 	return (
-		<div className={`option ${node.getPropKind(name)}`}>
+		<div className={`option ${prop.kind}`}>
 			{withInput && (
-				<div className={`input-point ${node.getPropKind(name)}`} ref={inputRef} onPointerDown={startDraggingEdge("input", name)} />
+				<div className={`input-point ${prop.kind}`} ref={inputRef} onPointerDown={startDraggingEdge("input", portKey)} />
 			)}
 			<label>{name}</label>
 			<Input node={node} name={name} disabled={!!hasInput} prop={prop} />
 			{exposedOutputs.map(outputName => (
-				<div key={outputName} className={`output-point ${node.getPropKind(outputName)}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
+				<div key={outputName} className={`output-point ${prop.kind}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
 			))}
 		</div>
 	);
