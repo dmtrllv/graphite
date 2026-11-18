@@ -23,7 +23,7 @@ export const NodePropView = ({ node, editor, layout, name, withInput, withOutput
 	}, [node, layout, name, withInput]);
 
 	const prop = useObservable(node[name as keyof typeof node] as any);
-	
+
 	const hasInput = withInput && !!node.getInputEdge(name);
 	const exposedOutputs = outputNames ?? (withOutput ? [name] : []);
 	const Input = NodePropInputs.get(prop.constructor as any);
@@ -54,6 +54,7 @@ export const NodePropView = ({ node, editor, layout, name, withInput, withOutput
 			layout.updateNode(node, editor.graph, canvas);
 
 		editor.beginEdgeDrag(from, node, key, new Vec2(event.clientX, event.clientY));
+		layout.setHoveredPort({ node, direction: from, key });
 	};
 
 	if (!Input) {

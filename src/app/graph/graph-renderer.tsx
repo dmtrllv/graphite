@@ -2,7 +2,7 @@ import { GraphNode, Vec2 } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
 import { mapChildren } from "../../utils";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { subscribe } from "../../reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
@@ -38,6 +38,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	const pan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 	const [structureVersion, setStructureVersion] = useState(graph.structureVersion);
 	const [editorVersion, setEditorVersion] = useState(0);
+	const [graphVersion, setGraphVersion] = useState(0);
 	const store = useMemo(() => new GraphRendererStore(editor), [editor]);
 	const layout = store.layout;
 
@@ -82,8 +83,14 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 			subscribe(graph, "structureVersion", () => {
 				setStructureVersion(graph.structureVersion);
 			}),
-			subscribe(graph, "offset", { recursive: true }, invalidate),
-			subscribe(graph, "scale", invalidate),
+			subscribe(graph, "offset", { recursive: true }, () => {
+				setGraphVersion(version => version + 1);
+				invalidate();
+			}),
+			subscribe(graph, "scale", () => {
+				setGraphVersion(version => version + 1);
+				invalidate();
+			}),
 			subscribe(editor, "selectedNodes", { recursive: true }, () => setEditorVersion(version => version + 1)),
 			subscribe(editor, "selection", { recursive: true }, () => {
 				setEditorVersion(version => version + 1);
@@ -96,6 +103,16 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 				unsubscribe();
 		};
 	}, [graph, editor, invalidate]);
+
+	useLayoutEffect(() => {
+		const element = canvas.current;
+
+		if (!element)
+			return;
+
+		layout.updateAll(graph, element);
+		invalidate();
+	}, [graphVersion, graph, layout, invalidate])
 
 	useEffect(() => {
 		editor.setTool(selectTool);
@@ -160,8 +177,12 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 			return;
 		}
 
-		if (editor.draggingEdge)
+		if (editor.draggingEdge) {
 			editor.updateEdgeDrag(new Vec2(event.clientX, event.clientY));
+			layout.setHoveredPort(layout.getPortAt(event.clientX, event.clientY));
+		} else {
+			layout.setHoveredPort();
+		}
 
 		editor.activeTool?.pointerMove(getPointerEvent(event));
 	};
@@ -179,6 +200,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 
 		editor.activeTool?.pointerUp(getPointerEvent(event));
 		editor.cancelEdgeDrag();
+		layout.setHoveredPort();
 
 		if (event.button === 2)
 			editor.setTool(selectTool);
@@ -231,6 +253,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 				editor.activeTool?.cancel();
 				editor.cancelEdgeDrag();
 				editor.setTool(selectTool);
+				layout.setHoveredPort();
 			}}
 			onWheel={onWheel}
 			onContextMenu={event => event.preventDefault()}

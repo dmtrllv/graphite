@@ -19,6 +19,7 @@ export class GraphLayout {
 	private portVersions = new Map<string, number>();
 	private portElements = new Map<string, PortElement>();
 	private nodeElements = new Map<number, { node: GraphNode; element: HTMLDivElement }>();
+	private hoveredPort: HTMLDivElement | null = null;
 
 	private getPortKey(node: GraphNode, direction: PortDirection, key: string): string {
 		return `${node.id}:${direction}:${key}`;
@@ -34,12 +35,28 @@ export class GraphLayout {
 	public setPortElement(node: GraphNode, direction: PortDirection, key: string, element: HTMLDivElement | null): void {
 		const id = this.getPortKey(node, direction, key);
 
-		if (element)
+		if (element) {
 			this.portElements.set(id, { node, direction, key, element });
-		else {
+		} else {
+			const port = this.portElements.get(id);
+
+			if (this.hoveredPort === port?.element)
+				this.setHoveredPort();
+
 			this.portElements.delete(id);
 			this.ports.delete(id);
 		}
+	}
+
+	public setHoveredPort(port?: { node: GraphNode; direction: PortDirection; key: string }): void {
+		const element = port ? this.portElements.get(this.getPortKey(port.node, port.direction, port.key))?.element ?? null : null;
+
+		if (this.hoveredPort === element)
+			return;
+
+		this.hoveredPort?.classList.remove("hovered");
+		this.hoveredPort = element;
+		this.hoveredPort?.classList.add("hovered");
 	}
 
 	public updateNode(node: GraphNode, graph: Graph, canvas: HTMLCanvasElement): boolean {
