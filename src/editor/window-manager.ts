@@ -5,6 +5,8 @@ import { Window, type WindowBounds } from "./window";
 
 export type DockPosition = "center" | "left" | "right" | "top" | "bottom";
 
+export type DropTarget = { panelId: number; position: DockPosition | "float" } | null;
+
 export class WindowManager {
 	public readonly layout: EditorLayout;
 

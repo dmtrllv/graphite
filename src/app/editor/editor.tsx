@@ -2,14 +2,12 @@ import { useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { Editor } from "../../editor";
 import type { Window } from "../../editor/window";
-import type { DockPosition } from "../../editor/window-manager";
+import type { DockPosition, DropTarget } from "../../editor/window-manager";
 import { useObservable } from "../../reactive";
 import { LayoutView } from "./layout";
 import { MenuBarView } from "./menubar";
 
 import "./styles/editor.scss";
-
-type DropTarget = { panelId: number; position: DockPosition } | null;
 
 type DragState = {
 	window: Window;
@@ -29,6 +27,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 	const dragRef = useRef<DragState | null>(null);
 	const dropTargetRef = useRef<DropTarget>(null);
 	const [dropTarget, setDropTarget] = useState<DropTarget>(null);
+	const [isDragging, setIsDragging] = useState(false);
 
 	const updateDropTarget = (target: DropTarget) => {
 		const previous = dropTargetRef.current;
@@ -56,6 +55,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 		};
 
 		dragRef.current = drag;
+		setIsDragging(true);
 
 		const onMove = (pointerEvent: PointerEvent) => {
 			if (pointerEvent.pointerId !== drag.pointerId)
@@ -96,10 +96,20 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 				["bottom", rect.height - y]
 			];
 			const nearest = distances.reduce((a, b) => a[1] < b[1] ? a : b);
-			const position = nearest[1] < edge ? nearest[0] : "center";
 			const panelId = Number(panelElement.dataset["panelId"]);
 
-			updateDropTarget(editor.windowManager.getPanel(panelId) ? { panelId, position } : null);
+			if (!editor.windowManager.getPanel(panelId)) {
+				updateDropTarget(null);
+				return;
+			}
+
+			const position: DockPosition | "float" = nearest[1] < edge
+				? nearest[0]
+				: element?.closest("[data-dock-center]")
+					? "center"
+					: "float";
+
+			updateDropTarget({ panelId, position });
 		};
 
 		const onUp = (pointerEvent: PointerEvent) => {
@@ -114,9 +124,17 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 				const target = dropTargetRef.current;
 				const panel = target ? editor.windowManager.getPanel(target.panelId) : null;
 
-				if (panel && target)
-					editor.windowManager.dock(targetWindow, panel, target.position);
-				else if (drag.sourceState === "docked") {
+				if (panel && target) {
+					if (target.position === "float") {
+						const rect = workspaceRef.current?.getBoundingClientRect();
+						editor.windowManager.float(targetWindow, {
+							x: pointerEvent.clientX - (rect?.left ?? 0) - 140,
+							y: pointerEvent.clientY - (rect?.top ?? 0) - 16
+						});
+					} else {
+						editor.windowManager.dock(targetWindow, panel, target.position);
+					}
+				} else if (drag.sourceState === "docked") {
 					const rect = workspaceRef.current?.getBoundingClientRect();
 					editor.windowManager.float(targetWindow, {
 						x: pointerEvent.clientX - (rect?.left ?? 0) - 140,
@@ -130,6 +148,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 				}
 			}
 
+			setIsDragging(false);
 			dragRef.current = null;
 			updateDropTarget(null);
 		};
@@ -144,7 +163,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 			<MenuBarView editor={editor} />
 			<div className="editor-workspace" ref={workspaceRef}>
 				<LayoutView layout={editor.layout} onWindowDrag={onWindowDrag} dropTarget={dropTarget} />
-				<div className="floating-windows">
+				<div className={`floating-windows${isDragging ? " dragging" : ""}`}>
 					{editor.windowManager.floatingWindows.map(floatingWindow => {
 						const Component = floatingWindow.Component;
 

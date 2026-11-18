@@ -10,35 +10,19 @@
 	.tab-titles {
 		display: flex;
 		flex: 0 0 30px;
-		overflow: hidden;
 		background-color: var(--bg-1);
 
 		.title {
 			display: flex;
 			align-items: center;
-			gap: 8px;
-			min-width: 0;
-			padding: 5px 8px 5px 10px;
 			border: 1px solid var(--border-1);
-			background-color: var(--bg-2);
+			padding: 5px 10px;
 			opacity: 0.65;
-			cursor: pointer;
-			user-select: none;
-
-			span {
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
-			}
+			background-color: var(--bg-2);
 
 			&:first-child {
 				border-top-left-radius: 6px;
 			}
-
-			&:last-child {
-				border-top-right-radius: 6px;
-			}
-
 			&:not(:first-child) {
 				margin-left: -1px;
 			}
@@ -47,6 +31,11 @@
 			&:hover {
 				opacity: 1;
 			}
+		}
+
+		.tab-title-space {
+			flex: 1 1 auto;
+			min-width: 0;
 		}
 	}
 

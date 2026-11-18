@@ -1,14 +1,12 @@
 import { Fragment, useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { EditorLayout } from "../../editor/editor-layout";
-import type { DockPosition } from "../../editor/window-manager";
+import type { DropTarget } from "../../editor/window-manager";
 import type { Window } from "../../editor/window";
 import { useObservable } from "../../reactive";
 import { PanelView } from "./panel";
 
 import "./styles/layout.scss";
-
-type DropTarget = { panelId: number; position: DockPosition } | null;
 
 export const LayoutView = ({ layout, onWindowDrag, dropTarget }: {
 	layout: EditorLayout;
@@ -23,7 +21,7 @@ export const LayoutView = ({ layout, onWindowDrag, dropTarget }: {
 				<Fragment key={`${child instanceof EditorLayout ? "layout" : "panel"}-${child.id}`}>
 					{child instanceof EditorLayout
 						? <LayoutView layout={child} onWindowDrag={onWindowDrag} dropTarget={dropTarget} />
-						: <PanelView panel={child} onWindowDrag={onWindowDrag} dropPosition={dropTarget?.panelId === child.id ? dropTarget.position : null} />}
+						: <PanelView panel={child} onWindowDrag={onWindowDrag} dropPosition={dropTarget?.panelId === child.id && dropTarget.position !== "float" ? dropTarget.position : null} />}
 					{index < layout.children.length - 1 && <SplitHandle layout={layout} index={index} />}
 				</Fragment>
 			))}

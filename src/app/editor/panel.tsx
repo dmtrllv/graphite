@@ -34,6 +34,7 @@ export const PanelView = ({ panel, onWindowDrag, dropPosition }: {
 						<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => tab.manager.close(tab)}>×</button>
 					</div>
 				))}
+				<div className="tab-title-space" data-dock-center />
 			</div>
 			<div className="tabs">
 				{activeWindow && Component && (
