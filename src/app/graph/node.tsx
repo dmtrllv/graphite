@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { GraphNode, NodeOption } from "../../graph";
+import { GraphNode, NodeOption, SubgraphNode } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { useObservable, useObservableProp } from "../../reactive/hook";
 import { GraphLayout } from "./rendering";
@@ -59,21 +59,20 @@ export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDow
 		onLayoutChange(node);
 	}, [node.position.x, node.position.y, node, onLayoutChange]);
 
+	const onPointerDown = (e: React.PointerEvent) => {
+		const target = e.target as HTMLElement;
+
+		if (target.closest("input, select, textarea, button, .input-point, .output-point"))
+			return;
+
+		onNodePointerDown(e, node);
+	};
+	
+	const name = node instanceof SubgraphNode ? node.definition?.name ?? "Subgraph (unnamed)" : node.name;
+
 	return (
-		<div
-			ref={root}
-			className={`graph-node ${selected ? "selected" : ""}`}
-			style={style}
-			onPointerDown={event => {
-				const target = event.target as HTMLElement;
-
-				if (target.closest("input, select, textarea, button, .input-point, .output-point"))
-					return;
-
-				onNodePointerDown(event, node);
-			}}
-		>
-			<div className="name">{node.name}</div>
+		<div ref={root} className={`graph-node ${selected ? "selected" : ""}`} style={style} onPointerDown={onPointerDown}>
+			<div className="name">{name}</div>
 			<div className="body">
 				{outputs.filter(port => !attachedOutputs.has(port.key)).map(port => (
 					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput />

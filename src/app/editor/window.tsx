@@ -1,6 +1,6 @@
-import { useRef } from "react";
+import { createContext, useContext, useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import type { Window } from "../../editor/window";
+import { Window } from "../../editor/window";
 import { useObservable } from "../../reactive";
 
 type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
@@ -79,17 +79,23 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 	};
 
 	return (
-		<div className="floating-window" style={style}>
-			<div className="floating-title" onPointerDown={event => onWindowDrag(floatingWindow, event)}>
-				<span>{floatingWindow.title}</span>
-				<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => onClose(floatingWindow)}>×</button>
+		<WindowContext.Provider value={floatingWindow}>
+			<div className="floating-window" style={style}>
+				<div className="floating-title" onPointerDown={event => onWindowDrag(floatingWindow, event)}>
+					<span>{floatingWindow.title}</span>
+					<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => onClose(floatingWindow)}>×</button>
+				</div>
+				<div className="floating-content">
+					<Component window={floatingWindow} {...floatingWindow.props} />
+				</div>
+				{directions.map(direction => (
+					<div key={direction} className={`resize-handle resize-${direction}`} onPointerDown={event => onResizeStart(direction, event)} onPointerMove={onResizeMove} onPointerUp={onResizeEnd} onPointerCancel={onResizeEnd} />
+				))}
 			</div>
-			<div className="floating-content">
-				<Component window={floatingWindow} {...floatingWindow.props} />
-			</div>
-			{directions.map(direction => (
-				<div key={direction} className={`resize-handle resize-${direction}`} onPointerDown={event => onResizeStart(direction, event)} onPointerMove={onResizeMove} onPointerUp={onResizeEnd} onPointerCancel={onResizeEnd} />
-			))}
-		</div>
+		</WindowContext.Provider>
 	);
 };
+
+export const WindowContext = createContext<null | Window<any>>(null);
+
+export const useWindow = () => useContext(WindowContext);

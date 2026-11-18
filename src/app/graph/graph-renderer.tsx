@@ -331,7 +331,7 @@ export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEdito
 			<div className="graph" style={style}>
 				{mapChildren(graph.nodes, (key, node) => (
 					<GraphNodeView
-						key={key}
+						key={`${graph.id}:${key}`}
 						node={node}
 						editor={editor}
 						layout={layout}

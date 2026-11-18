@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from "react";
-import { F16, F32, GraphNode, I32, SelectOption, Type, U32, Vec2, Vec3, Vec4, type NodeOption, type NodeOptionType, type TypeCtor } from "../../graph";
+import { F16, F32, GraphNode, I32, SelectOption, SubgraphNode, Type, U32, Vec2, Vec3, Vec4, type NodeOption, type NodeOptionType, type TypeCtor } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { useObservable } from "../../reactive/hook";
 import type { GraphLayout } from "./rendering";
@@ -18,6 +18,8 @@ type NodePropViewProps = {
 
 export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames }: NodePropViewProps) => {
 	useObservable(node);
+
+	const isSubgraphNode = node instanceof SubgraphNode;
 
 	const inputRef = useCallback((element: HTMLDivElement | null) => {
 		if (withInput)
@@ -69,7 +71,7 @@ export const NodePropView = ({ node, editor, layout, name, portKey = name, value
 				<div className={`input-point ${prop.kind}`} ref={inputRef} onPointerDown={startDraggingEdge("input", portKey)} />
 			)}
 			<label>{name}</label>
-			<Input node={node} name={name} disabled={!!hasInput} prop={prop} />
+			{!isSubgraphNode && <Input node={node} name={name} disabled={!!hasInput} prop={prop} />}
 			{exposedOutputs.map(outputName => (
 				<div key={outputName} className={`output-point ${prop.kind}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
 			))}

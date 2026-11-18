@@ -142,6 +142,34 @@ export class GraphManager {
 
 		return contains(definition);
 	}
+
+	public removeGraph(graph: Graph): void {
+		if (graph.isWorldGraph)
+			throw new Error("The World Graph cannot be removed!");
+
+		if (this.graphs.get(graph.id) !== graph)
+			return;
+
+		for (const candidate of this.graphs.values()) {
+			if (candidate === graph)
+				continue;
+
+			for (const node of [...candidate.nodes.values()]) {
+				if ("graphId" in node && node.graphId === graph.id)
+					candidate.removeNode(node);
+			}
+		}
+
+		const editor = this.editors.get(graph);
+
+		if (editor) {
+			editor.activeTool?.cancel();
+			editor.selectedNodes = [];
+			this.editors.delete(graph);
+		}
+
+		this.graphs.delete(graph.id);
+	}
 }
 
 export class DuplicateGraphNameError extends Error {

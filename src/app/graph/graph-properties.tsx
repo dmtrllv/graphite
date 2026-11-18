@@ -1,5 +1,6 @@
 import { useObservable } from "../../reactive";
 import { Bool, F16, F32, I32, U32, Vec2, Vec3, Vec4, type Graph, type GraphInterfacePort, type Type } from "../../graph";
+import { useWindow } from "../editor/window";
 
 const types = {
 	F16,
@@ -29,17 +30,9 @@ const getTypeName = (type: Type): keyof typeof types => {
 	return type.constructor.name as keyof typeof types;
 };
 
-const InterfacePortView = ({ graph, direction, port }: {
-	graph: Graph;
-	direction: "input" | "output";
-	port: GraphInterfacePort;
-}) => {
+const InterfacePortView = ({ graph, direction, port }: { graph: Graph; direction: "input" | "output"; port: GraphInterfacePort; }) => {
 	const update = (changes: Partial<Pick<GraphInterfacePort, "name" | "type">>) => {
-		try {
-			graph.updateInterfacePort(direction, port.id, changes);
-		} catch (error) {
-			console.error(error);
-		}
+		graph.updateInterfacePort(direction, port.id, changes);
 	};
 
 	return (
@@ -55,10 +48,19 @@ const InterfacePortView = ({ graph, direction, port }: {
 
 export const GraphProperties = ({ graph }: { graph: Graph }) => {
 	useObservable(graph, { recursive: true });
+	
+	const window = useWindow();
+
+	
+	const removeGraph = () => {
+		graph.manager!.removeGraph(graph);
+		window?.close();
+	};
 
 	return (
 		<div className="graph-properties">
-			<div className="graph-properties-header">{graph.isWorldGraph && "World "}Graph Properties</div>
+			<div className="graph-properties-header">{graph.isWorldGraph ? "World" : "Graph Properties"}</div>
+			{!graph.isWorldGraph && <button onClick={removeGraph}>×</button>}
 			{!graph.isWorldGraph && (
 				<>
 					<div className="graph-properties-section">

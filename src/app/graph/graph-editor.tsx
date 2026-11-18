@@ -15,7 +15,7 @@ export const GraphEditorView = ({ editor, onCreateSubgraph }: GraphEditorProps) 
 
 	return (
 		<div className="graph-editor">
-			<GraphRenderer editor={editor} onCreateSubgraph={onCreateSubgraph} />
+			<GraphRenderer key={editor.graph.id} editor={editor} onCreateSubgraph={onCreateSubgraph} />
 			<GraphProperties graph={editor.graph} />
 		</div>
 	);

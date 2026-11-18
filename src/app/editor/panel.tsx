@@ -3,6 +3,7 @@ import { LayoutPanel } from "../../editor/editor-layout";
 import type { DockPosition } from "../../editor/window-manager";
 import type { Window } from "../../editor/window";
 import { useObservable } from "../../reactive";
+import { WindowContext } from "./window";
 
 import "./styles/panel.scss";
 
@@ -35,7 +36,9 @@ export const PanelView = ({ panel, onWindowDrag, dropPosition }: { panel: Layout
 			<div className="tabs">
 				{activeWindow && Component && (
 					<div className="tab active">
-						<Component window={activeWindow} {...activeWindow.props} />
+						<WindowContext value={activeWindow}>
+							<Component window={activeWindow} {...activeWindow.props} />
+						</WindowContext>
 					</div>
 				)}
 			</div>
