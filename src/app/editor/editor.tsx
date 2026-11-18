@@ -19,6 +19,38 @@ type DragState = {
 	moved: boolean;
 };
 
+const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose, onResizeEnd }: {
+	floatingWindow: Window;
+	onWindowDrag: (window: Window, event: ReactPointerEvent) => void;
+	onClose: (window: Window) => void;
+	onResizeEnd: (window: Window, element: HTMLDivElement) => void;
+}) => {
+	useObservable(floatingWindow);
+
+	const Component = floatingWindow.Component;
+
+	return (
+		<div
+			className="floating-window"
+			style={{
+				left: floatingWindow.bounds.x,
+				top: floatingWindow.bounds.y,
+				width: floatingWindow.bounds.width,
+				height: floatingWindow.bounds.height
+			}}
+			onPointerUp={event => onResizeEnd(floatingWindow, event.currentTarget)}
+		>
+			<div className="floating-title" onPointerDown={event => onWindowDrag(floatingWindow, event)}>
+				<span>{floatingWindow.title}</span>
+				<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => onClose(floatingWindow)}>×</button>
+			</div>
+			<div className="floating-content">
+				<Component {...floatingWindow.props} />
+			</div>
+		</div>
+	);
+};
+
 export const EditorView = ({ editor }: { editor: Editor }) => {
 	useObservable(editor.layout);
 	useObservable(editor.windowManager);
@@ -202,43 +234,27 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 			<div className="editor-workspace" ref={workspaceRef}>
 				<LayoutView layout={editor.layout} onWindowDrag={onWindowDrag} dropTarget={dropTarget} />
 				<div className={`floating-windows${isDragging ? " dragging" : ""}`}>
-					{editor.windowManager.floatingWindows.map(floatingWindow => {
-						const Component = floatingWindow.Component;
+					{editor.windowManager.floatingWindows.map(floatingWindow => (
+						<FloatingWindowView
+							key={floatingWindow.id}
+							floatingWindow={floatingWindow}
+							onWindowDrag={onWindowDrag}
+							onClose={window => editor.windowManager.close(window)}
+							onResizeEnd={(window, element) => {
+								const rect = element.getBoundingClientRect();
+								const workspace = workspaceRef.current?.getBoundingClientRect();
+								if (!workspace)
+									return;
 
-						return (
-							<div
-								key={floatingWindow.id}
-								className="floating-window"
-								style={{
-									left: floatingWindow.bounds.x,
-									top: floatingWindow.bounds.y,
-									width: floatingWindow.bounds.width,
-									height: floatingWindow.bounds.height
-								}}
-								onPointerUp={event => {
-									const rect = event.currentTarget.getBoundingClientRect();
-									const workspace = workspaceRef.current?.getBoundingClientRect();
-									if (!workspace)
-										return;
-
-									floatingWindow.bounds = {
-										x: rect.left - workspace.left,
-										y: rect.top - workspace.top,
-										width: rect.width,
-										height: rect.height
-									};
-								}}
-							>
-								<div className="floating-title" onPointerDown={event => onWindowDrag(floatingWindow, event)}>
-									<span>{floatingWindow.title}</span>
-									<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => editor.windowManager.close(floatingWindow)}>×</button>
-								</div>
-								<div className="floating-content">
-									<Component {...floatingWindow.props} />
-								</div>
-							</div>
-						);
-					})}
+								window.bounds = {
+									x: rect.left - workspace.left,
+									y: rect.top - workspace.top,
+									width: rect.width,
+									height: rect.height
+								};
+							}}
+						/>
+					))}
 				</div>
 			</div>
 		</div>
