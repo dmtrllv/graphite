@@ -6,11 +6,7 @@ import { useObservable } from "../../reactive";
 
 import "./styles/panel.scss";
 
-export const PanelView = ({ panel, onWindowDrag, dropPosition }: {
-	panel: LayoutPanel;
-	onWindowDrag: (window: Window, event: ReactPointerEvent) => void;
-	dropPosition: DockPosition | null;
-}) => {
+export const PanelView = ({ panel, onWindowDrag, dropPosition }: { panel: LayoutPanel; onWindowDrag: (window: Window, event: ReactPointerEvent) => void; dropPosition: DockPosition | null; }) => {
 	useObservable(panel);
 
 	const activeWindow = panel.tabs[panel.activeTab];
@@ -39,7 +35,7 @@ export const PanelView = ({ panel, onWindowDrag, dropPosition }: {
 			<div className="tabs">
 				{activeWindow && Component && (
 					<div className="tab active">
-						<Component {...activeWindow.props} />
+						<Component window={activeWindow} {...activeWindow.props} />
 					</div>
 				)}
 			</div>

@@ -5,7 +5,10 @@ import { Settings } from "./settings";
 
 export class Project {
 	public readonly manager: ProjectManager;
-	public readonly info: ProjectInfo;
+	
+	@observable
+	public accessor info: ProjectInfo;
+	
 	public readonly settings: Settings;
 
 	public readonly graphManager: GraphManager;

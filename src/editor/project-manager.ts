@@ -1,3 +1,4 @@
+import { SaveProjectView } from "../app/editor/projects";
 import { GraphEditorView } from "../app/graph";
 import { VectorMathNode } from "../graph";
 import { observable } from "../reactive";
@@ -43,7 +44,7 @@ export class ProjectManager {
 		const graph = p.graphManager.add("World");
 		graph.addNode(VectorMathNode);
 		const editor = p.graphManager.openEditor(graph);
-		this.editor.windowManager.open(graph.name, GraphEditorView, { editor }, true);
+		this.editor.windowManager.open(graph.name, GraphEditorView, { editor }, { singleInstance: true });
 		return p;
 	}
 
@@ -56,8 +57,24 @@ export class ProjectManager {
 		this.activeProject = this.createNewProject(name);
 	}
 
+	public saveProjectAs(name: string): boolean {
+		if(this.projects.find(info => info.name === name))
+			return false;
+		
+		this.activeProject.info = new ProjectInfo(name, currentDateTime());
+		this.projects = [this.activeProject.info, ...this.projects];
+		this.saveProjectInfos();
+		this.saveProject();
+		return true;
+	}
+
 	public saveProject(): void {
 		const project = this.activeProject;
+		if (!project.isSaved) {
+			this.editor.windowManager.open("Save Project As", SaveProjectView, { manager: this }, { singleInstance: true, float: true });
+			return;
+		}
+
 		const json = serializeProject(project);
 		localStorage.setItem(projectKey(project.info.name), JSON.stringify(json));
 		this.saveProjectSettings(project);
@@ -75,19 +92,19 @@ export class ProjectManager {
 
 		if (!json || !info)
 			throw new Error(`Project '${name}' does not exist.`);
-		
+
 		const settings = this.editor.settings.loadProjectSettings(name);
 		const project = deserializeProject(this, JSON.parse(json), info.lastSave, settings);
 		const oldProject = this.activeProject;
 
 		this.editor.windowManager.closeAll();
-		
+
 		this.activeProject = project;
 		const graph = this.activeProject.graphManager.get("World");
 
 		if (graph) {
 			const editor = this.activeProject.graphManager.openEditor(graph);
-			this.editor.windowManager.open(graph.name, GraphEditorView, { editor }, true);
+			this.editor.windowManager.open(graph.name, GraphEditorView, { editor }, { singleInstance: true });
 		}
 
 		oldProject.dispose();

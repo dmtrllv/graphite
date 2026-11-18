@@ -1,11 +1,15 @@
 import type { ComponentProps, ComponentType } from "react";
 import { observable } from "../reactive";
 import { EditorLayout, LayoutPanel } from "./editor-layout";
-import { Window, type WindowBounds } from "./window";
+import { Window, type WindowBounds, type WindowOpenOptions } from "./window";
 
 export type DockPosition = "center" | "left" | "right" | "top" | "bottom";
 
 export type DropTarget = { panelId: number; position: DockPosition | "float" } | null;
+
+export type OpenOptions = WindowOpenOptions & {
+	float?: boolean;
+}
 
 export class WindowManager {
 	public readonly layout: EditorLayout;
@@ -20,19 +24,19 @@ export class WindowManager {
 		this.layout = layout;
 	}
 
-	public open<T extends ComponentType<any>>(title: string, Component: T, props: ComponentProps<T>, singleInstance: boolean, float: boolean = false): Window<ComponentProps<T>> {
+	public open<T extends ComponentType<any>>(title: string, Component: T, props: Omit<ComponentProps<T>, "window">, { float, ...options }: OpenOptions): Window<ComponentProps<T>> {
 		const found = this.windows.find(w => (w.Component === Component) && w.isSingleInstance);
-		
-		if(found)
+
+		if (found)
 			return found;
 
-		const window = new Window(this, title, Component, props, singleInstance);
+		const window = new Window(this, title, Component, props, options);
 		this.windows.push(window);
 		if (float)
 			this.float(window);
 		else
 			this.dockToRoot(window);
-		return window;
+		return window as any;
 	}
 
 	public close(window: Window): void {

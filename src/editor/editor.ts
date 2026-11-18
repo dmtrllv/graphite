@@ -30,7 +30,7 @@ export class Editor {
 			new MenuItem("save", "Save", () => this.projectManager.saveProject()),
 			new MenuItem("save_as", "Save As"),
 			MenuSeparator,
-			new MenuItem("open", "Open", () => this.windowManager.open("Projects", ProjectList, { manager: this.projectManager }, true,true)),
+			new MenuItem("open", "Open", () => this.windowManager.open("Projects", ProjectList, { manager: this.projectManager }, { singleInstance: true, float: true })),
 			new MenuItem("open_recent", "Open Recent", undefined, this.projectManager.projects.map(p => {
 				return new MenuItem(p.name, p.name, () => {
 					this.projectManager.loadProject(p.name);
@@ -38,7 +38,7 @@ export class Editor {
 			})),
 			MenuSeparator,
 			new MenuItem("settings", "Settings", () => {
-				this.windowManager.open("Settings", SettingsView, { projectManager: this.projectManager }, true, true);
+				this.windowManager.open("Settings", SettingsView, { projectManager: this.projectManager }, { singleInstance: true, float: true });
 			})
 		]),
 		new MenuItem("edit", "Edit", undefined, [

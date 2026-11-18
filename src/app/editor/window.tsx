@@ -85,7 +85,7 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 				<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => onClose(floatingWindow)}>×</button>
 			</div>
 			<div className="floating-content">
-				<Component {...floatingWindow.props} />
+				<Component window={floatingWindow} {...floatingWindow.props} />
 			</div>
 			{directions.map(direction => (
 				<div key={direction} className={`resize-handle resize-${direction}`} onPointerDown={event => onResizeStart(direction, event)} onPointerMove={onResizeMove} onPointerUp={onResizeEnd} onPointerCancel={onResizeEnd} />
