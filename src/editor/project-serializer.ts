@@ -9,7 +9,6 @@ export interface SerializedProject {
 	project: {
 		name: string;
 	};
-	settings: Record<string, unknown>;
 	graphManager: SerializedGraphManager;
 }
 
@@ -19,12 +18,11 @@ export const serializeProject = (project: Project): SerializedProject => {
 		project: {
 			name: project.info.name
 		},
-		settings: {},
 		graphManager: serializeGraphManager(project.graphManager)
 	};
 };
 
-export const deserializeProject = (manager: ProjectManager, json: SerializedProject): Project => {
+export const deserializeProject = (manager: ProjectManager, json: SerializedProject, lastSave: string, settings: Settings): Project => {
 	if (json.version !== 1)
 		throw new Error(`Unsupported project version '${json.version}'.`);
 
@@ -34,8 +32,7 @@ export const deserializeProject = (manager: ProjectManager, json: SerializedProj
 	if (!json.graphManager || !Array.isArray(json.graphManager.graphs))
 		throw new Error("Invalid graph manager data.");
 
-	const info = new ProjectInfo(json.project.name);
-	const settings = new Settings();
+	const info = new ProjectInfo(json.project.name, lastSave);
 	const graphManager = deserializeGraphManager(json.graphManager);
 
 	return new Project(manager, info, settings, graphManager);

@@ -25,7 +25,7 @@ const getChildrenAtPath = (menu: MenuItem, path: number[]): MenuItemChild[] => {
 
 export const MenuBarView = ({ menubar, autoHide }: { menubar: Menubar, autoHide?: boolean }) => {
 	useObservable(menubar);
-
+	
 	const rootRef = useRef<HTMLDivElement>(null);
 	const [active, setActive] = useState(false);
 	const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -257,12 +257,12 @@ export const MenuBarView = ({ menubar, autoHide }: { menubar: Menubar, autoHide?
 	);
 
 	const style: React.CSSProperties = {};
-
+	
 	if (!active && autoHide)
 		style.marginTop = "-28px";
 
 	return (
-		<div ref={rootRef} className={`menu-bar${active ? " active" : ""}`} role="menubar" style={style}>
+		<div ref={rootRef} className={`menu-bar${active ? " active" : ""} ${!active && autoHide ? "hidden" : ""}`} role="menubar" style={style}>
 			{menubar.items.map((item, index) => {
 				const onPointerEnter = () => {
 					if (active && isOpen) {

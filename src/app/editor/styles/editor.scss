@@ -16,7 +16,7 @@
 
 	.menu-bar {
 		padding-bottom: 0px;
-		&:not(.active) {
+		&:not(.active).hidden {
 			margin-top: -23px !important;
 		}
 	}

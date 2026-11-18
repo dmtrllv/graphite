@@ -1,5 +1,5 @@
 import { GraphManager } from "../graph";
-import { observable } from "../reactive";
+import { observable, subscribe, type Unsubscriber } from "../reactive";
 import type { ProjectManager } from "./project-manager";
 import { Settings } from "./settings";
 
@@ -9,6 +9,7 @@ export class Project {
 	public readonly settings: Settings;
 
 	public readonly graphManager: GraphManager;
+	private readonly unsubscribeSettings: Unsubscriber;
 
 	public get isSaved() {
 		return !!this.manager.projects.find(info => info.name === this.info.name);
@@ -19,6 +20,18 @@ export class Project {
 		this.info = info;
 		this.settings = settings;
 		this.graphManager = graphManager;
+
+		this.unsubscribeSettings = subscribe(this.settings.preferences, { recursive: true }, this.onSettingsChange);
+		this.unsubscribeSettings = subscribe(this.info, this.onSettingsChange);
+	}
+
+	private readonly onSettingsChange = () => {
+		if (this.isSaved)
+			this.manager.saveProjectSettings(this);
+	}
+
+	public dispose() {
+		this.unsubscribeSettings();
 	}
 }
 
@@ -26,7 +39,11 @@ export class ProjectInfo {
 	@observable
 	public accessor name: string;
 
-	public constructor(name: string) {
+	@observable
+	public accessor lastSave: string;
+
+	public constructor(name: string, lastSave: string) {
 		this.name = name;
+		this.lastSave = lastSave;
 	}
 }

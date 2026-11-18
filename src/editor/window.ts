@@ -23,12 +23,15 @@ export class Window<P extends object = any> {
 
 	@observable
 	public accessor bounds: WindowBounds = { x: 80, y: 80, width: 480, height: 320 };
+	
+	public readonly isSingleInstance: boolean;
 
-	public constructor(manager: WindowManager, title: string, Component: ComponentType<P>, props: P) {
+	public constructor(manager: WindowManager, title: string, Component: ComponentType<P>, props: P, singleInstance: boolean) {
 		this.manager = manager;
 		this.title = title;
 		this.Component = Component;
 		this.props = props;
+		this.isSingleInstance = singleInstance;
 	}
 }
 

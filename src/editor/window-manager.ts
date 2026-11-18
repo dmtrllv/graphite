@@ -20,8 +20,13 @@ export class WindowManager {
 		this.layout = layout;
 	}
 
-	public open<T extends ComponentType<any>>(title: string, Component: T, props: ComponentProps<T>, float: boolean = false): Window<ComponentProps<T>> {
-		const window = new Window(this, title, Component, props);
+	public open<T extends ComponentType<any>>(title: string, Component: T, props: ComponentProps<T>, singleInstance: boolean, float: boolean = false): Window<ComponentProps<T>> {
+		const found = this.windows.find(w => (w.Component === Component) && w.isSingleInstance);
+		
+		if(found)
+			return found;
+
+		const window = new Window(this, title, Component, props, singleInstance);
 		this.windows.push(window);
 		if (float)
 			this.float(window);
@@ -85,10 +90,15 @@ export class WindowManager {
 		window.state = "docked";
 	}
 
-	public float(window: Window, bounds?: Partial<WindowBounds>): void {
+	public float(window: Window, bounds: Partial<WindowBounds> | "centered" = "centered"): void {
 		this.detach(window);
 
-		if (bounds)
+		if (bounds === "centered") {
+			const x = (globalThis.window.innerWidth / 2) - (window.bounds.width / 2);
+			const y = (globalThis.window.innerHeight / 2) - (window.bounds.width / 2);
+			window.bounds = { ...window.bounds, x, y };
+		}
+		else if (bounds)
 			window.bounds = { ...window.bounds, ...bounds };
 
 		this.floatingWindows.push(window);
@@ -195,5 +205,11 @@ export class WindowManager {
 		child.size = layout.size;
 		parent.children[index] = child;
 		this.normalize(parent);
+	}
+
+	public closeAll() {
+		const w = [...this.windows];
+		w.map(w => this.close(w));
+		this.windows = [];
 	}
 }
