@@ -15,12 +15,12 @@ export class MoveNodesAction implements GraphAction {
 
 	public execute(): void {
 		for (const change of this.changes)
-			change.node.position = change.after.clone();
+			change.node.position.set(change.after);
 	}
 
 	public undo(): void {
 		for (const change of this.changes)
-			change.node.position = change.before.clone();
+			change.node.position.set(change.before);
 	}
 }
 

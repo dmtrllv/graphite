@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { GraphNode, NodeOption } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
-import { useObservable } from "../../reactive/hook";
+import { useObservable, useObservableProp } from "../../reactive/hook";
 import { GraphLayout } from "./rendering";
 import { NodePropView } from "./node-prop-view";
 
@@ -16,7 +16,7 @@ type GraphNodeViewProps = {
 
 export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
-	const position = useObservable(node.position);
+	const position = useObservableProp(node, "position");
 
 	const root = useRef<HTMLDivElement>(null);
 	const { inputs, options, outputs } = GraphNode.getInterface(node);

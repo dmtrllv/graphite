@@ -59,7 +59,7 @@ export class SelectTool extends GraphEditorToolBase {
 				return;
 
 			for (const change of this.changes) {
-				change.node.position = change.before.clone().add(delta);
+				change.node.position.set(change.before.clone().add(delta));
 				change.after = change.node.position.clone();
 			}
 

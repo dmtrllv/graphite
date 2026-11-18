@@ -69,6 +69,17 @@ export const useObservable = <T extends object>(value: T | (() => T), options: O
 	return target;
 };
 
+export const useObservableProp = <T extends object, K extends keyof T>(target: T, key: K): T[K] => {
+	const [value, setValue] = useState(() => target[key]);
+
+	useEffect(() => {
+		const update = () => setValue(target[key]);
+		return subscribe(target, key as any, update);
+	}, [target, key]);
+
+	return useObservable(value as T[K] & object) as T[K];
+};
+
 export interface SubscribeHook {
 	<T extends object, K extends RecursiveKey<T>>(obj: T, key: K, subscriber: Subscriber<T, K>): void;
 	<T extends object, K extends RecursiveKey<T>>(obj: T, key: K, options: SubscribeOptions & { recursive: true }, subscriber: RecursiveSubscriber<T, K>): void;
