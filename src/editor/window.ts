@@ -18,7 +18,10 @@ export class Window<P extends object = any> {
 
 	public readonly id: number = Window._idCounter++;
 	public readonly manager: WindowManager;
-	public readonly title: string;
+	
+	@observable
+	public accessor title: string;
+	
 	public readonly props: P;
 	public readonly Component: ComponentType<P & { window: Window<P> }>;
 

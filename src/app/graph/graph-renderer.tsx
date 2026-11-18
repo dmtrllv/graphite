@@ -6,6 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { subscribe } from "../../reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
+import type { ProjectManager } from "../../editor/project-manager";
 
 const getSelectionStyle = (editor: GraphEditor, root: HTMLDivElement | null): React.CSSProperties => {
 	const style: React.CSSProperties = {};
@@ -36,7 +37,7 @@ type NodePickerState = {
 	position: Vec2
 } | null
 
-export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEditor, onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void; }) => {
+export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { projectManager: ProjectManager, editor: GraphEditor, onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void; }) => {
 	const graph = editor.graph;
 	const root = useRef<HTMLDivElement>(null);
 	const canvas = useRef<HTMLCanvasElement>(null);
@@ -48,6 +49,7 @@ export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEdito
 	const [nodePicker, setNodePicker] = useState<NodePickerState>(null);
 	const mousePosition = useRef<Vec2 | null>(null);
 	const nodeTypes = useMemo(() => [...GraphNode.getRegisteredNodes().entries()].filter(([name]) => !["Subgraph", "Graph Input", "Graph Output"].includes(name)).sort(([a], [b]) => a.localeCompare(b)), []);
+	const [isHovering, setHovering] = useState(false);
 
 	const layout = store.layout;
 
@@ -130,6 +132,9 @@ export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEdito
 
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
+			if (!isHovering)
+				return;
+
 			const target = event.target as HTMLElement;
 			if (target.closest("input, textarea, select, [contenteditable='true']"))
 				return;
@@ -181,7 +186,7 @@ export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEdito
 
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [editor, graph, nodePicker]);
+	}, [editor, graph, nodePicker, isHovering]);
 
 	const getPointerEvent = (event: React.PointerEvent, node?: GraphNode) => ({
 		clientX: event.clientX,
@@ -230,6 +235,9 @@ export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEdito
 	};
 
 	const onPointerMove = (event: React.PointerEvent) => {
+		if (!isHovering)
+			setHovering(true);
+
 		mousePosition.current = new Vec2(event.clientX - root.current!.getBoundingClientRect().left, event.clientY - root.current!.getBoundingClientRect().top);
 
 		const activePan = pan.current;
@@ -308,6 +316,11 @@ export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEdito
 		return () => observer.disconnect();
 	}, [graph, updateNodeLayout, invalidate]);
 
+	const onMouseLeave = () => {
+		setHovering(false);
+	};
+
+
 	return (
 		<div
 			ref={root}
@@ -326,6 +339,7 @@ export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEdito
 			}}
 			onWheel={onWheel}
 			onContextMenu={event => event.preventDefault()}
+			onMouseLeave={onMouseLeave}
 		>
 			<canvas ref={canvas} />
 			<div className="graph" style={style}>
@@ -338,6 +352,7 @@ export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEdito
 						selected={editor.isSelected(node)}
 						onNodePointerDown={onNodePointerDown}
 						onLayoutChange={updateNodeLayout}
+						projectManager={projectManager}
 					/>
 				))}
 			</div>

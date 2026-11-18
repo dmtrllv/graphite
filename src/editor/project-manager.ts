@@ -117,8 +117,9 @@ export class ProjectManager {
 
 		this.editor.windowManager.open(graph.name, GraphEditorView, {
 			editor,
-			onCreateSubgraph: (parentEditor, position) => this.createSubgraph(parentEditor, position)
-		}, { singleInstance: false });
+			onCreateSubgraph: (parentEditor, position) => this.createSubgraph(parentEditor, position),
+			projectManager: this
+		}, { singleInstance: false, check: (w) => w.Component === GraphEditorView && w.props["editor"] === editor });
 	}
 
 	public createSubgraph(editor: GraphEditor, position: Vec2): void {

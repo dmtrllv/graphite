@@ -4,6 +4,7 @@ import type { GraphEditor } from "../../graph/editor";
 import { useObservable, useObservableProp } from "../../reactive/hook";
 import { GraphLayout } from "./rendering";
 import { NodePropView } from "./node-prop-view";
+import type { ProjectManager } from "../../editor/project-manager";
 
 type GraphNodeViewProps = {
 	node: GraphNode;
@@ -12,9 +13,10 @@ type GraphNodeViewProps = {
 	selected: boolean;
 	onNodePointerDown: (event: React.PointerEvent, node: GraphNode) => void;
 	onLayoutChange: (node: GraphNode) => void;
+	projectManager: ProjectManager;
 };
 
-export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
+export const GraphNodeView = ({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
 	const position = useObservableProp(node, "position");
 
@@ -67,12 +69,26 @@ export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDow
 
 		onNodePointerDown(e, node);
 	};
-	
+
 	const name = node instanceof SubgraphNode ? node.definition?.name ?? "Subgraph (unnamed)" : node.name;
 
+	const onDoubleClick = () => {
+		console.log("open sub graph")
+		if (!node.graph.manager)
+			return;
+		if ((node instanceof SubgraphNode) && node.definition) {
+			const graph = node.graph.manager.get(node.definition.id);
+			if (!graph)
+				return;
+
+			const editor = node.graph.manager.openEditor(graph);
+			projectManager.openGraph(editor);
+		}
+	};
+
 	return (
-		<div ref={root} className={`graph-node ${selected ? "selected" : ""}`} style={style} onPointerDown={onPointerDown}>
-			<div className="name">{name}</div>
+		<div ref={root} className={`graph-node ${selected ? "selected" : ""}`} style={style}>
+			<div className="name" onPointerDown={onPointerDown} onDoubleClick={onDoubleClick}>{name}</div>
 			<div className="body">
 				{outputs.filter(port => !attachedOutputs.has(port.key)).map(port => (
 					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput />

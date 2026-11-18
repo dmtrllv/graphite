@@ -48,14 +48,20 @@ const InterfacePortView = ({ graph, direction, port }: { graph: Graph; direction
 
 export const GraphProperties = ({ graph }: { graph: Graph }) => {
 	useObservable(graph, { recursive: true });
-	
+
 	const window = useWindow();
 
-	
+
 	const removeGraph = () => {
 		graph.manager!.removeGraph(graph);
 		window?.close();
 	};
+
+	const rename = (event: React.ChangeEvent<HTMLInputElement>) => {
+		graph.manager?.rename(graph, event.target.value);
+		if (window)
+			window.title = event.target.value;
+	}
 
 	return (
 		<div className="graph-properties">
@@ -64,7 +70,7 @@ export const GraphProperties = ({ graph }: { graph: Graph }) => {
 			{!graph.isWorldGraph && (
 				<>
 					<div className="graph-properties-section">
-						<input value={graph.name} onChange={event => graph.manager?.rename(graph, event.target.value)} />
+						<input value={graph.name} onChange={rename} />
 					</div>
 					<div className="graph-properties-group">
 						<div className="graph-properties-title">
