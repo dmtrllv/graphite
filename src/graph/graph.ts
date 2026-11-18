@@ -3,8 +3,15 @@ import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 import { GraphIndex } from "./graph-index";
 import type { GraphManager } from "./graph-manager";
+import { F32, Type } from "./types";
 
 const RECONCILING_GRAPHS = new WeakSet<Graph>();
+
+export type GraphInterfacePort = {
+	id: string;
+	name: string;
+	type: Type;
+};
 
 export class Graph {
 	private _nodeIdCounter = 0;
@@ -37,6 +44,12 @@ export class Graph {
 	@observable
 	public accessor structureVersion = 0;
 
+	@observable({ recursive: true })
+	public accessor inputs: GraphInterfacePort[] = [];
+
+	@observable({ recursive: true })
+	public accessor outputs: GraphInterfacePort[] = [];
+
 	public readonly index = new GraphIndex();
 
 	public get isWorldGraph(): boolean {
@@ -61,7 +74,7 @@ export class Graph {
 			this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
 		}
 	}
-	
+
 	public setWorldGraph(value: boolean): void {
 		this._isWorldGraph = value;
 	}
@@ -188,6 +201,74 @@ export class Graph {
 		} finally {
 			RECONCILING_GRAPHS.delete(this);
 		}
+	}
+
+	public addInput(name = "Input", type: Type = new F32(0)): GraphInterfacePort {
+		return this.addInterfacePort("input", name, type);
+	}
+
+	public addOutput(name = "Output", type: Type = new F32(0)): GraphInterfacePort {
+		return this.addInterfacePort("output", name, type);
+	}
+
+	public addInterfacePort(direction: "input" | "output", name: string, type: Type = new F32(0)): GraphInterfacePort {
+		const ports = direction === "input" ? this.inputs : this.outputs;
+		const port = { id: crypto.randomUUID(), name, type };
+
+		if (ports.some(item => item.name === name))
+			throw new Error(`Graph ${direction} "${name}" already exists!`);
+
+		if (direction === "input")
+			this.inputs = [...this.inputs, port];
+		else
+			this.outputs = [...this.outputs, port];
+
+		this.notifyInterfaceChanged();
+		return port;
+	}
+
+	public updateInterfacePort(direction: "input" | "output", id: string, changes: Partial<Pick<GraphInterfacePort, "name" | "type">>): void {
+		const ports = direction === "input" ? this.inputs : this.outputs;
+		const port = ports.find(item => item.id === id);
+
+		if (!port)
+			return;
+
+		if (changes.name !== undefined && ports.some(item => item.id !== id && item.name === changes.name))
+			throw new Error(`Graph ${direction} "${changes.name}" already exists!`);
+
+		const updated = ports.map(item => item.id === id ? { ...item, ...changes } : item);
+
+		if (direction === "input")
+			this.inputs = updated;
+		else
+			this.outputs = updated;
+
+		this.notifyInterfaceChanged();
+	}
+
+	public removeInterfacePort(direction: "input" | "output", id: string): void {
+		const ports = direction === "input" ? this.inputs : this.outputs;
+
+		if (!ports.some(port => port.id === id))
+			return;
+
+		if (direction === "input")
+			this.inputs = ports.filter(port => port.id !== id);
+		else
+			this.outputs = ports.filter(port => port.id !== id);
+
+		for (const node of [...this.nodes.values()]) {
+			if ("interfaceId" in node && node.interfaceId === id)
+				this.removeNode(node);
+		}
+
+		this.notifyInterfaceChanged();
+	}
+
+	private notifyInterfaceChanged(): void {
+		this.structureVersion++;
+		this.manager?.notifyInterfaceChanged(this);
 	}
 }
 

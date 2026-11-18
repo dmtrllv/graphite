@@ -5,6 +5,7 @@ import { observable } from "../reactive";
 import type { Editor } from "./editor";
 import { Project, ProjectInfo } from "./project";
 import { serializeProject, deserializeProject } from "./project-serializer";
+import { SubgraphNode, Vec2, type GraphEditor } from "../graph";
 
 const PROJECTS_KEY = "graphite:projects";
 
@@ -43,8 +44,7 @@ export class ProjectManager {
 		const p = new Project(this, new ProjectInfo(name, currentDateTime()), this.editor.settings.defaultSettings.clone());
 		const graph = p.graphManager.worldGraph;
 		graph.addNode(VectorMathNode);
-		const editor = p.graphManager.openEditor(graph);
-		this.editor.windowManager.open(graph.name, GraphEditorView, { editor }, { singleInstance: true });
+		this.openGraph(p.graphManager.openEditor(graph));
 		return p;
 	}
 
@@ -87,9 +87,9 @@ export class ProjectManager {
 	}
 
 	public loadProject(name: string): void {
-		if(this.activeProject.info.name === name)
+		if (this.activeProject.info.name === name)
 			return;
-		
+
 		const json = localStorage.getItem(projectKey(name));
 		const info = this.projects.find(p => p.name === name);
 
@@ -106,10 +106,26 @@ export class ProjectManager {
 		const graph = this.activeProject.graphManager.get("World");
 
 		if (graph) {
-			const editor = this.activeProject.graphManager.openEditor(graph);
-			this.editor.windowManager.open(graph.name, GraphEditorView, { editor }, { singleInstance: true });
+			this.openGraph(this.activeProject.graphManager.openEditor(graph));
 		}
 
 		oldProject.dispose();
+	}
+
+	public openGraph(editor: GraphEditor): void {
+		const graph = editor.graph;
+
+		this.editor.windowManager.open(graph.name, GraphEditorView, {
+			editor,
+			onCreateSubgraph: (parentEditor, position) => this.createSubgraph(parentEditor, position)
+		}, { singleInstance: false });
+	}
+
+	public createSubgraph(editor: GraphEditor, position: Vec2): void {
+		const manager = this.activeProject.graphManager;
+		const graph = manager.createSubgraph();
+		const node = editor.addNode(SubgraphNode, position) as SubgraphNode;
+		node.graphId = graph.id;
+		this.openGraph(manager.openEditor(graph));
 	}
 }

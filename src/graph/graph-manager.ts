@@ -4,7 +4,7 @@ import { GraphEditor } from "./editor";
 import { Vec2 } from "./types";
 
 export class GraphManager {
-	#idCounter = 0;
+	private _idCounter = 0;
 
 	@observable
 	public accessor graphs = new Map<number, Graph>();
@@ -50,7 +50,7 @@ export class GraphManager {
 		if (this.get(name))
 			throw new DuplicateGraphNameError(name);
 
-		const id = this.#idCounter++;
+		const id = this._idCounter++;
 		const graph = new Graph(id, name, offset, nodes, edges, this.graphs.size === 0);
 		graph.setManager(this);
 		this.graphs.set(id, graph);
@@ -71,7 +71,76 @@ export class GraphManager {
 
 		graph.setManager(this);
 		this.graphs.set(graph.id, graph);
-		this.#idCounter = Math.max(this.#idCounter, graph.id + 1);
+		this._idCounter = Math.max(this._idCounter, graph.id + 1);
+	}
+
+	public notifyInterfaceChanged(graph: Graph): void {
+		for (const candidate of this.graphs.values()) {
+			if (candidate === graph)
+				continue;
+
+			const affected = [...candidate.nodes.values()].some(node => "graphId" in node && node.graphId === graph.id);
+
+			if (affected) {
+				candidate.reconcileEdges();
+				candidate.structureVersion++;
+			}
+		}
+	}
+
+	public createSubgraph(): Graph {
+		let index = 1;
+		let name = `Subgraph ${index}`;
+
+		while (this.get(name))
+			name = `Subgraph ${++index}`;
+
+		return this.add(name);
+	}
+
+	public rename(graph: Graph, name: string): void {
+		const normalized = name.trim();
+
+		if (!normalized)
+			throw new Error("Graph name cannot be empty!");
+
+		const existing = this.get(normalized);
+
+		if (existing && existing !== graph)
+			throw new DuplicateGraphNameError(normalized);
+
+		if (graph.isWorldGraph)
+			throw new Error("The World Graph cannot be renamed!");
+
+		graph.name = normalized;
+	}
+
+	public hasRecursiveReference(parent: Graph, definition: Graph): boolean {
+		const visited = new Set<number>();
+
+		const contains = (graph: Graph): boolean => {
+			if (graph === parent)
+				return true;
+
+			if (visited.has(graph.id))
+				return false;
+
+			visited.add(graph.id);
+
+			for (const node of graph.nodes.values()) {
+				if (!("graphId" in node) || typeof node.graphId !== "number")
+					continue;
+
+				const child = this.get(node.graphId);
+
+				if (child && contains(child))
+					return true;
+			}
+
+			return false;
+		};
+
+		return contains(definition);
 	}
 }
 

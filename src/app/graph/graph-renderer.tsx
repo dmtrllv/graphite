@@ -1,4 +1,4 @@
-import { GraphNode, Vec2 } from "../../graph";
+import { GraphInputNode, GraphNode, GraphOutputNode, Vec2 } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
 import { mapChildren } from "../../utils";
@@ -36,7 +36,7 @@ type NodePickerState = {
 	position: Vec2
 } | null
 
-export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
+export const GraphRenderer = ({ editor, onCreateSubgraph }: { editor: GraphEditor, onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void; }) => {
 	const graph = editor.graph;
 	const root = useRef<HTMLDivElement>(null);
 	const canvas = useRef<HTMLCanvasElement>(null);
@@ -47,7 +47,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	const store = useMemo(() => new GraphRendererStore(editor), [editor]);
 	const [nodePicker, setNodePicker] = useState<NodePickerState>(null);
 	const mousePosition = useRef<Vec2 | null>(null);
-	const nodeTypes = useMemo(() => [...GraphNode.getRegisteredNodes().entries()].sort(([a], [b]) => a.localeCompare(b)), []);
+	const nodeTypes = useMemo(() => [...GraphNode.getRegisteredNodes().entries()].filter(([name]) => !["Subgraph", "Graph Input", "Graph Output"].includes(name)).sort(([a], [b]) => a.localeCompare(b)), []);
 
 	const layout = store.layout;
 
@@ -344,9 +344,36 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 			<div className="selection" style={selectionStyle} data-version={editorVersion} data-structure-version={structureVersion} />
 			{nodePicker && (
 				<div className="node-picker" style={{ left: nodePicker.x, top: nodePicker.y }} onPointerDown={event => event.stopPropagation()}>
+					<div className="node-picker-item" onClick={() => {
+						onCreateSubgraph(editor, nodePicker.position);
+						setNodePicker(null);
+					}}>
+						Subgraph
+					</div>
 					{nodeTypes.map(([name, type]) => (
-						<div key={name} className="node-picker-item" onClick={() => { editor.addNode(type, nodePicker.position); setNodePicker(null); }}>
+						<div key={name} className="node-picker-item" onClick={() => {
+							editor.addNode(type, nodePicker.position);
+							setNodePicker(null);
+						}}>
 							{name}
+						</div>
+					))}
+					{editor.graph.inputs.map(port => (
+						<div key={`input-${port.id}`} className="node-picker-item" onClick={() => {
+							const node = editor.addNode(GraphInputNode, nodePicker.position) as GraphInputNode;
+							node.interfaceId = port.id;
+							setNodePicker(null);
+						}}>
+							Input: {port.name}
+						</div>
+					))}
+					{editor.graph.outputs.map(port => (
+						<div key={`output-${port.id}`} className="node-picker-item" onClick={() => {
+							const node = editor.addNode(GraphOutputNode, nodePicker.position) as GraphOutputNode;
+							node.interfaceId = port.id;
+							setNodePicker(null);
+						}}>
+							Output: {port.name}
 						</div>
 					))}
 				</div>

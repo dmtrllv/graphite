@@ -1,48 +1,37 @@
 import { observable } from "../../reactive";
-import { F32, Type } from "../types";
 import { GraphNode } from "./node";
 
 abstract class GraphIONode extends GraphNode {
 	@observable
-	public accessor interfaceId: string = crypto.randomUUID();
+	public accessor interfaceId = "";
 
-	@observable
-	public accessor interfaceName = "Value";
-
-	@observable
-	public accessor value: Type = new F32(0);
+	public get interfacePort() {
+		return [...this.graph.inputs, ...this.graph.outputs].find(port => port.id === this.interfaceId);
+	}
 
 	public override serializeData(): Record<string, unknown> {
-		return {
-			interfaceId: this.interfaceId,
-			interfaceName: this.interfaceName,
-			value: this.value
-		};
+		return { interfaceId: this.interfaceId };
 	}
 
 	public override restoreData(data: Record<string, unknown>): void {
 		if (typeof data["interfaceId"] === "string")
 			this.interfaceId = data["interfaceId"];
-
-		if (typeof data["interfaceName"] === "string")
-			this.interfaceName = data["interfaceName"];
-
-		if (data["value"] instanceof Type)
-			this.value = data["value"];
 	}
 }
 
 @GraphNode.register("Graph Input")
 export class GraphInputNode extends GraphIONode {
 	public override getInterface() {
+		const port = this.graph.inputs.find(item => item.id === this.interfaceId);
+
 		return {
 			inputs: [],
-			outputs: [{
-				key: this.interfaceId,
-				name: this.interfaceName,
+			outputs: port ? [{
+				key: port.id,
+				name: port.name,
 				direction: "output" as const,
-				value: this.value
-			}],
+				value: port.type
+			}] : [],
 			options: []
 		};
 	}
@@ -51,13 +40,15 @@ export class GraphInputNode extends GraphIONode {
 @GraphNode.register("Graph Output")
 export class GraphOutputNode extends GraphIONode {
 	public override getInterface() {
+		const port = this.graph.outputs.find(item => item.id === this.interfaceId);
+
 		return {
-			inputs: [{
-				key: this.interfaceId,
-				name: this.interfaceName,
+			inputs: port ? [{
+				key: port.id,
+				name: port.name,
 				direction: "input" as const,
-				value: this.value
-			}],
+				value: port.type
+			}] : [],
 			outputs: [],
 			options: []
 		};

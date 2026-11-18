@@ -38,6 +38,12 @@ interface SerializedMatrix {
 
 type SerializedType = SerializedScalar | SerializedVec2 | SerializedVec3 | SerializedVec4 | SerializedMatrix;
 
+interface SerializedGraphInterfacePort {
+	id: string;
+	name: string;
+	type: SerializedType;
+}
+
 interface SerializedNode {
 	id: number;
 	type: string;
@@ -63,6 +69,8 @@ interface SerializedGraph {
 	scale: number;
 	nodes: SerializedNode[];
 	edges: SerializedEdge[];
+	inputs?: SerializedGraphInterfacePort[];
+	outputs?: SerializedGraphInterfacePort[];
 }
 
 export interface SerializedGraphManager {
@@ -233,13 +241,36 @@ const serializeGraph = (graph: Graph): SerializedGraph => {
 			sourceOutput: edge.sourceOutput,
 			target: edge.target.id,
 			targetInput: edge.targetInput
-		}))
+		})),
+		inputs: graph.inputs.map(port => ({
+			id: port.id,
+			name: port.name,
+			type: serializeType(port.type)
+		})),
+		outputs: graph.outputs.map(port => ({
+			id: port.id,
+			name: port.name,
+			type: serializeType(port.type)
+		})),
 	};
 };
 
 const deserializeGraph = (json: SerializedGraph): Graph => {
 	const graph = new Graph(json.id, json.name, new Vec2(...json.offset), undefined, undefined, json.isWorldGraph);
+	
 	graph.scale = json.scale;
+
+	graph.inputs = (json.inputs ?? []).map(port => ({
+		id: port.id,
+		name: port.name,
+		type: deserializeType(port.type)
+	}));
+
+	graph.outputs = (json.outputs ?? []).map(port => ({
+		id: port.id,
+		name: port.name,
+		type: deserializeType(port.type)
+	}));
 
 	const nodes = new Map<number, GraphNode>();
 

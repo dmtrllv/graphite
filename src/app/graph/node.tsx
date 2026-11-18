@@ -74,13 +74,6 @@ export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDow
 			}}
 		>
 			<div className="name">{node.name}</div>
-			{"interfaceName" in node && (
-				<input
-					className="node-interface-name"
-					value={(node as GraphNode & { interfaceName: string }).interfaceName}
-					onChange={event => (node as GraphNode & { interfaceName: string }).interfaceName = event.target.value}
-				/>
-			)}
 			<div className="body">
 				{outputs.filter(port => !attachedOutputs.has(port.key)).map(port => (
 					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput />
