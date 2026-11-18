@@ -165,7 +165,15 @@ export class WindowManager {
 	}
 
 	private normalize(layout: EditorLayout): void {
+		for (const child of [...layout.children]) {
+			if (child instanceof EditorLayout)
+				this.normalize(child);
+		}
+
 		if (layout === this.layout)
+			return;
+
+		if (layout.children.length !== 1)
 			return;
 
 		const parent = layout.parent;
@@ -177,15 +185,12 @@ export class WindowManager {
 			return;
 
 		const child = layout.children[0];
+		if (!child)
+			return;
 
-		if (child) {
-			child.parent = parent;
-			child.size = layout.size;
-			parent.children[index] = child;
-			this.normalize(parent);
-		} else {
-			parent.children.splice(index, 1);
-			this.normalize(parent);
-		}
+		child.parent = parent;
+		child.size = layout.size;
+		parent.children[index] = child;
+		this.normalize(parent);
 	}
 }
