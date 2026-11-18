@@ -40,7 +40,7 @@
 	}
 	&.active {
 		div {
-			background-color: rgba(60, 255, 0, 0.36);
+			background-color: color-mix(in srgb, var(--accent-1) 30%, transparent);
 			&::after {
 				background-color: white;
 				left: calc(100% - 18px);

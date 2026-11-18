@@ -60,7 +60,7 @@ const decorate = <This extends object, Value>(
 		const previous = state.value;
 		state.dirty = true;
 
-		if (!options.eager)
+		if (!state.initialized)
 			return;
 
 		const current = evaluate(target, state);
@@ -86,16 +86,8 @@ const decorate = <This extends object, Value>(
 		if (!state)
 			throw new Error(`${this.constructor.name}.${key} is not initialized!`);
 
-		if (!state.initialized || state.dirty) {
-			const previous = state.value;
-			const initialized = state.initialized;
-			const current = evaluate(this, state);
-
-			if (initialized && !options.eager && !Object.is(previous, current))
-				notify(this, createEvent(key, previous, current));
-
-			return current;
-		}
+		if (!state.initialized || state.dirty)
+			return evaluate(this, state);
 
 		trackDependencies(state.dependencies);
 
