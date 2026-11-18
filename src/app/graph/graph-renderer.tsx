@@ -127,6 +127,17 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 			const target = event.target as HTMLElement;
 			if (target.closest("input, textarea, select, [contenteditable='true']"))
 				return;
+			
+			if (event.ctrlKey && event.key.toLowerCase() === "z") {
+				event.preventDefault();
+
+				if (event.shiftKey)
+					editor.history.redo();
+				else
+					editor.history.undo();
+
+				return;
+			}
 
 			if (event.ctrlKey && event.code === "Space") {
 				event.preventDefault();
