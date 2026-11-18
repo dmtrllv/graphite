@@ -73,7 +73,7 @@ export const NodePropView = ({ node, editor, layout, name, portKey = name, value
 			<label>{name}</label>
 			{!isSubgraphNode && <Input node={node} name={name} disabled={!!hasInput} prop={prop} />}
 			{exposedOutputs.map(outputName => (
-				<div key={outputName} className={`output-point ${prop.kind}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
+				<div key={outputName} className={`output-point ${(node[outputName as keyof typeof node] as Type).kind}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
 			))}
 		</div>
 	);
