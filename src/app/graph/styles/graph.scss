@@ -184,13 +184,26 @@
 			}
 		}
 
-		.context-menu {
-			z-index: 10;
+		.node-picker {
 			position: absolute;
-			//display: none;
+			z-index: 20;
+			min-width: 180px;
+			max-height: 300px;
+			overflow-y: auto;
+			background-color: var(--bg-2);
+			border: 1px solid var(--border-1);
+			border-radius: 6px;
+			padding: 4px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 
-			&.show {
-				display: block;
+			.node-picker-item {
+				padding: 7px 10px;
+				border-radius: 4px;
+				cursor: pointer;
+
+				&:hover {
+					background-color: var(--bg-3);
+				}
 			}
 		}
 	}

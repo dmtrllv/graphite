@@ -6,9 +6,8 @@ import { useObservable } from "../../reactive";
 import "./styles/editor.scss";
 
 export const EditorView = ({ editor }: { editor: Editor }) => {
-	const settings = useObservable(editor.projectManager).activeProject.settings;
-	const preferences = useObservable(settings.preferences, { recursive: true });
-	console.log(preferences.autoHideMenu);
+	const projectManager = useObservable(editor.projectManager, { recursive: true });
+	const preferences = projectManager.activeProject.settings.preferences;
 
 	return (
 		<div className="editor">

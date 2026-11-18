@@ -2,10 +2,9 @@ import { observable } from "../reactive";
 import type { Graph } from "./graph";
 import type { GraphEditorTool } from "./tools/tool";
 import { Selection, DraggingEdge, EdgeSlice } from "./editor-state";
-import { GraphNode } from "./nodes";
-import { GraphEditorHistory } from "./actions/history";
-import { ConnectNodesAction } from "./actions/actions";
+import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
+import { GraphEditorHistory, ConnectNodesAction, AddNodeAction, DeleteNodesAction } from "./actions";
 
 export class GraphEditor {
 	public readonly graph: Graph;
@@ -86,6 +85,21 @@ export class GraphEditor {
 
 	public cancelEdgeDrag(): void {
 		this.draggingEdge = null;
+	}
+
+	public addNode(type: GraphNodeType<any>, position: Vec2): GraphNode {
+		const action = new AddNodeAction(this.graph, type, position);
+		this.history.execute(action);
+		this.selectedNodes = [action.node!];
+		return action.node!;
+	}
+
+	public removeSelectedNodes(): void {
+		if (!this.selectedNodes.length)
+			return;
+
+		this.history.execute(new DeleteNodesAction(this.graph, [...this.selectedNodes]));
+		this.selectedNodes = [];
 	}
 }
 

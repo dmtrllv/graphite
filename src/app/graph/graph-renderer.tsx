@@ -39,6 +39,10 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	const [editorVersion, setEditorVersion] = useState(0);
 	const [graphVersion, setGraphVersion] = useState(0);
 	const store = useMemo(() => new GraphRendererStore(editor), [editor]);
+	const [nodePicker, setNodePicker] = useState<{ x: number; y: number; position: Vec2 } | null>(null);
+	const mousePosition = useRef<Vec2 | null>(null);
+	const nodeTypes = useMemo(() => [...GraphNode.getRegisteredNodes().entries()].sort(([a], [b]) => a.localeCompare(b)), []);
+
 	const layout = store.layout;
 
 	const invalidate = useCallback(() => store.invalidate(), [store]);
@@ -118,6 +122,50 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 		return () => editor.setTool(null);
 	}, [editor, selectTool]);
 
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement;
+			if (target.closest("input, textarea, select, [contenteditable='true']"))
+				return;
+
+			if (event.ctrlKey && event.code === "Space") {
+				event.preventDefault();
+
+				const rect = root.current?.getBoundingClientRect();
+				if (!rect)
+					return;
+
+				const position = mousePosition.current ?? new Vec2(rect.width / 2, rect.height / 2);
+				const graphPosition = mousePosition.current
+					? position.clone()
+					: new Vec2(rect.width / 2, rect.height / 2);
+
+				setNodePicker({
+					x: position.x,
+					y: position.y,
+					position: graph.getCanvasMousePosition(new Vec2(rect.left + graphPosition.x, rect.top + graphPosition.y), canvas.current!)
+				});
+				return;
+			}
+
+			if (event.key === "Escape" && nodePicker) {
+				setNodePicker(null);
+				return;
+			}
+
+			if (event.key === "Delete" || event.key === "Backspace") {
+				if (nodePicker)
+					return;
+
+				event.preventDefault();
+				editor.removeSelectedNodes();
+			}
+		};
+
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [editor, graph, nodePicker]);
+
 	const getPointerEvent = (event: React.PointerEvent, node?: GraphNode) => ({
 		clientX: event.clientX,
 		clientY: event.clientY,
@@ -162,6 +210,8 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	};
 
 	const onPointerMove = (event: React.PointerEvent) => {
+		mousePosition.current = new Vec2(event.clientX - root.current!.getBoundingClientRect().left, event.clientY - root.current!.getBoundingClientRect().top);
+
 		const activePan = pan.current;
 
 		if (activePan?.pointerId === event.pointerId) {
@@ -272,6 +322,15 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 				))}
 			</div>
 			<div className="selection" style={selectionStyle} data-version={editorVersion} data-structure-version={structureVersion} />
-		</div>
+			{nodePicker && (
+				<div className="node-picker" style={{ left: nodePicker.x, top: nodePicker.y }} onPointerDown={event => event.stopPropagation()}>
+					{nodeTypes.map(([name, type]) => (
+						<div key={name} className="node-picker-item" onClick={() => { editor.addNode(type, nodePicker.position); setNodePicker(null); }}>
+							{name}
+						</div>
+					))}
+				</div>
+			)}
+		</div >
 	);
 };

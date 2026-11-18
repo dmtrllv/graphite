@@ -1,6 +1,6 @@
 
 import { GraphEditorToolBase, type GraphPointerEvent } from "./tool";
-import { MoveNodesAction, type NodePositionChange } from "../actions/actions";
+import { MoveNodesAction, type NodePositionChange } from "../actions/move-nodes";
 import { Selection } from "../editor-state";
 import type { GraphNode } from "../nodes";
 import { Vec2 } from "../types";

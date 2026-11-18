@@ -1,7 +1,6 @@
 import { GraphEditorView } from "../app/graph";
 import { VectorMathNode } from "../graph";
 import { observable } from "../reactive";
-import { toRaw } from "../reactive/proxy";
 import type { Editor } from "./editor";
 import { Project, ProjectInfo } from "./project";
 import { serializeProject, deserializeProject } from "./project-serializer";

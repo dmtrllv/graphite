@@ -8,7 +8,7 @@ import { Toggle } from "../inputs/toggle";
 import "./styles/settings.scss";
 
 const Preferences = ({ settings }: { settings: Settings }) => {
-	const preferences = useObservable(settings.preferences);
+	const preferences = settings.preferences;
 
 	return (
 		<>
@@ -28,9 +28,8 @@ const SETTINGS = {
 } as const;
 
 export const SettingsView = memo(({ projectManager }: { projectManager: ProjectManager }) => {
-	useObservable(projectManager);
-
-	const settings = useObservable(projectManager.activeProject.settings, { recursive: true });
+	const manager = useObservable(projectManager, { recursive: true });
+	const settings = manager.activeProject.settings;
 
 	const [active, setActive] = useState<keyof typeof SETTINGS>("Preferences");
 

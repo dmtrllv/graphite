@@ -1,4 +1,4 @@
-import { DeleteEdgesAction } from "../actions/actions";
+import { DeleteEdgesAction } from "../actions/delete-edges";
 import { EdgeSlice } from "../editor-state";
 import { GraphEditorToolBase, type GraphPointerEvent } from "./tool";
 import type { NodeEdge } from "../graph";
