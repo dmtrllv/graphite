@@ -22,7 +22,8 @@ export const NodePropView = ({ node, editor, layout, name, withInput, withOutput
 			layout.setPortElement(node, "input", name, element);
 	}, [node, layout, name, withInput]);
 
-	const prop = node[name as keyof typeof node];
+	const prop = useObservable(node[name as keyof typeof node] as any);
+	
 	const hasInput = withInput && !!node.getInputEdge(name);
 	const exposedOutputs = outputNames ?? (withOutput ? [name] : []);
 	const Input = NodePropInputs.get(prop.constructor as any);

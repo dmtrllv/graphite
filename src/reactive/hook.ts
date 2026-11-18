@@ -28,15 +28,18 @@ const getStore = (target: object): Store => {
 	return store;
 };
 
+
 export const useObservable = <T extends object>(value: T | (() => T), options: ObservableOptions = { recursive: false }): T => {
+	const recursive = options.recursive ?? false;
 	const [target] = useState(() => {
 		value = typeof value === "function" ? value() : value;
+
 		try {
-			if (getState(value).observables.size > 0)
-				return value;
+			getState(toRaw(value));
+			return value;
 		} catch { }
 
-		return createProxy(value, value, "", options.recursive) as T;
+		return createProxy(value, value, "", recursive) as T;
 	});
 
 	const store = getStore(toRaw(target));
@@ -50,17 +53,14 @@ export const useObservable = <T extends object>(value: T | (() => T), options: O
 		const state = getState(toRaw(target));
 		const unsubscribers: (() => void)[] = [];
 
-		for (const key of state.observables) {
-			unsubscribers.push(
-				register(toRaw(target), "subscribers", key, true, update)
-			);
-		}
+		for (const key of state.observables)
+			unsubscribers.push(register(toRaw(target), "subscribers", key, recursive, update));
 
 		return () => {
 			for (const unsubscribe of unsubscribers)
 				unsubscribe();
 		};
-	}, [store, target]);
+	}, [store, target, recursive]);
 
 	const getSnapshot = useCallback(() => store.version, [store]);
 

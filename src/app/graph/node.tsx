@@ -16,6 +16,7 @@ type GraphNodeViewProps = {
 
 export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
+	const position = useObservable(node.position);
 
 	const root = useRef<HTMLDivElement>(null);
 	const { inputs, options, outputs } = GraphNode.getInterface(node);
@@ -31,10 +32,10 @@ export const GraphNodeView = ({ node, editor, layout, selected, onNodePointerDow
 	}
 
 	const style = useMemo<React.CSSProperties>(() => ({
-		left: `calc(50% + ${node.position.x}px)`,
-		top: `calc(50% + ${-node.position.y}px)`,
+		left: `calc(50% + ${position.x}px)`,
+		top: `calc(50% + ${-position.y}px)`,
 		transform: "translate(-50%, -50%)"
-	}), [node.position.x, node.position.y]);
+	}), [position.x, position.y]);
 
 	useLayoutEffect(() => {
 		const element = root.current;
