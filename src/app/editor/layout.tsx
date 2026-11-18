@@ -49,11 +49,13 @@ const SplitHandle = ({ layout, index }: { layout: EditorLayout; index: number })
 		const delta = position - previousPosition.current;
 		previousPosition.current = position;
 
-		const rect = event.currentTarget.parentElement?.getBoundingClientRect();
-		if (!rect)
+		const first = event.currentTarget.previousElementSibling?.getBoundingClientRect();
+		const second = event.currentTarget.nextElementSibling?.getBoundingClientRect();
+		if (!first || !second)
 			return;
 
-		const totalSize = layout.direction === "horizontal" ? rect.width : rect.height;
+		const totalSize = layout.direction === "horizontal" ? first.width + second.width : first.height + second.height;
+
 		layout.resize(index, delta, totalSize);
 	};
 

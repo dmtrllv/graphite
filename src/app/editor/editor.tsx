@@ -19,15 +19,69 @@ type DragState = {
 	moved: boolean;
 };
 
-const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose, onResizeEnd }: {
+type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: {
 	floatingWindow: Window;
 	onWindowDrag: (window: Window, event: ReactPointerEvent) => void;
 	onClose: (window: Window) => void;
-	onResizeEnd: (window: Window, element: HTMLDivElement) => void;
 }) => {
 	useObservable(floatingWindow);
 
+	const resizeRef = useRef<{
+		direction: ResizeDirection;
+		startX: number;
+		startY: number;
+		bounds: Window["bounds"];
+	} | null>(null);
+
 	const Component = floatingWindow.Component;
+
+	const onResizeStart = (direction: ResizeDirection, event: ReactPointerEvent<HTMLDivElement>) => {
+		event.preventDefault();
+		event.stopPropagation();
+		event.currentTarget.setPointerCapture(event.pointerId);
+
+		resizeRef.current = {
+			direction,
+			startX: event.clientX,
+			startY: event.clientY,
+			bounds: { ...floatingWindow.bounds }
+		};
+	};
+
+	const onResizeMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+		const resize = resizeRef.current;
+		if (!resize)
+			return;
+
+		const { direction, bounds } = resize;
+		const deltaX = event.clientX - resize.startX;
+		const deltaY = event.clientY - resize.startY;
+		const minWidth = 180;
+		const minHeight = 120;
+
+		let { x, y, width, height } = bounds;
+
+		if (direction.includes("e"))
+			width = Math.max(minWidth, bounds.width + deltaX);
+		if (direction.includes("s"))
+			height = Math.max(minHeight, bounds.height + deltaY);
+		if (direction.includes("w")) {
+			width = Math.max(minWidth, bounds.width - deltaX);
+			x = bounds.x + bounds.width - width;
+		}
+		if (direction.includes("n")) {
+			height = Math.max(minHeight, bounds.height - deltaY);
+			y = bounds.y + bounds.height - height;
+		}
+
+		floatingWindow.bounds = { ...bounds, x, y, width, height };
+	};
+
+	const onResizeEnd = () => resizeRef.current = null;
+
+	const directions: ResizeDirection[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
 	return (
 		<div
@@ -38,7 +92,6 @@ const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose, onResizeEnd
 				width: floatingWindow.bounds.width,
 				height: floatingWindow.bounds.height
 			}}
-			onPointerUp={event => onResizeEnd(floatingWindow, event.currentTarget)}
 		>
 			<div className="floating-title" onPointerDown={event => onWindowDrag(floatingWindow, event)}>
 				<span>{floatingWindow.title}</span>
@@ -47,6 +100,16 @@ const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose, onResizeEnd
 			<div className="floating-content">
 				<Component {...floatingWindow.props} />
 			</div>
+			{directions.map(direction => (
+				<div
+					key={direction}
+					className={`resize-handle resize-${direction}`}
+					onPointerDown={event => onResizeStart(direction, event)}
+					onPointerMove={onResizeMove}
+					onPointerUp={onResizeEnd}
+					onPointerCancel={onResizeEnd}
+				/>
+			))}
 		</div>
 	);
 };
@@ -162,7 +225,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 			const rect = content.getBoundingClientRect();
 			const localX = x - rect.left;
 			const localY = y - rect.top;
-			const edge = Math.min(rect.width, rect.height) * 0.22;
+			const edge = Math.min(120, Math.min(rect.width, rect.height) * 0.22);
 
 			const distances: [DockPosition, number][] = [
 				["left", localX],
@@ -213,6 +276,14 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 				}
 			}
 
+			if (drag.sourceState === "floating" && drag.moved) {
+				targetWindow.bounds = {
+					...drag.originBounds,
+					x: drag.originBounds.x + pointerEvent.clientX - drag.startX,
+					y: drag.originBounds.y + pointerEvent.clientY - drag.startY
+				};
+			}
+
 			if (moveFrameRef.current !== null) {
 				cancelAnimationFrame(moveFrameRef.current);
 				moveFrameRef.current = null;
@@ -240,19 +311,6 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 							floatingWindow={floatingWindow}
 							onWindowDrag={onWindowDrag}
 							onClose={window => editor.windowManager.close(window)}
-							onResizeEnd={(window, element) => {
-								const rect = element.getBoundingClientRect();
-								const workspace = workspaceRef.current?.getBoundingClientRect();
-								if (!workspace)
-									return;
-
-								window.bounds = {
-									x: rect.left - workspace.left,
-									y: rect.top - workspace.top,
-									width: rect.width,
-									height: rect.height
-								};
-							}}
 						/>
 					))}
 				</div>
