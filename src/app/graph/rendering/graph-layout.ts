@@ -16,6 +16,7 @@ type PortElement = {
 
 export class GraphLayout {
 	private ports = new Map<string, PortPosition>();
+	private portVersions = new Map<string, number>();
 	private portElements = new Map<string, PortElement>();
 	private nodeElements = new Map<number, { node: GraphNode; element: HTMLDivElement }>();
 
@@ -66,6 +67,15 @@ export class GraphLayout {
 		return changed;
 	}
 
+	public updateAll(graph: Graph, canvas: HTMLCanvasElement): boolean {
+		let changed = false;
+
+		for (const { node } of this.nodeElements.values())
+			changed = this.updateNode(node, graph, canvas) || changed;
+
+		return changed;
+	}
+
 	private updatePort(node: GraphNode, direction: PortDirection, key: string, position: Vec2): boolean {
 		const id = this.getPortKey(node, direction, key);
 		const port = this.ports.get(id);
@@ -73,10 +83,9 @@ export class GraphLayout {
 		if (port && port.position.distance(position) < 0.01)
 			return false;
 
-		this.ports.set(id, {
-			position,
-			version: (port?.version ?? 0) + 1
-		});
+		const version = (this.portVersions.get(id) ?? 0) + 1;
+		this.portVersions.set(id, version);
+		this.ports.set(id, { position, version });
 
 		return true;
 	}

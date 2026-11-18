@@ -35,6 +35,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	const graph = editor.graph;
 	const root = useRef<HTMLDivElement>(null);
 	const canvas = useRef<HTMLCanvasElement>(null);
+	const pan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 	const [structureVersion, setStructureVersion] = useState(graph.structureVersion);
 	const [editorVersion, setEditorVersion] = useState(0);
 	const store = useMemo(() => new GraphRendererStore(editor), [editor]);
@@ -112,6 +113,13 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	}) as GraphPointerEvent;
 
 	const onPointerDown = (event: React.PointerEvent) => {
+		if (event.button === 1) {
+			event.preventDefault();
+			pan.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+			root.current?.setPointerCapture(event.pointerId);
+			return;
+		}
+
 		if ((event.target as HTMLElement).closest(".graph-node"))
 			return;
 
@@ -127,6 +135,9 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	};
 
 	const onNodePointerDown = (event: React.PointerEvent, node: GraphNode) => {
+		if (event.button !== 0)
+			return;
+
 		event.preventDefault();
 		event.stopPropagation();
 		root.current?.setPointerCapture(event.pointerId);
@@ -135,6 +146,20 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	};
 
 	const onPointerMove = (event: React.PointerEvent) => {
+		const activePan = pan.current;
+
+		if (activePan?.pointerId === event.pointerId) {
+			const deltaX = event.clientX - activePan.x;
+			const deltaY = event.clientY - activePan.y;
+
+			activePan.x = event.clientX;
+			activePan.y = event.clientY;
+
+			graph.offset.x += deltaX;
+			graph.offset.y -= deltaY;
+			return;
+		}
+
 		if (editor.draggingEdge)
 			editor.updateEdgeDrag(new Vec2(event.clientX, event.clientY));
 
@@ -142,6 +167,11 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 	};
 
 	const onPointerUp = (event: React.PointerEvent) => {
+		if (pan.current?.pointerId === event.pointerId) {
+			pan.current = null;
+			return;
+		}
+
 		const port = layout.getPortAt(event.clientX, event.clientY);
 
 		if (editor.draggingEdge && port)
@@ -194,7 +224,10 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 			onPointerDown={onPointerDown}
 			onPointerMove={onPointerMove}
 			onPointerUp={onPointerUp}
-			onPointerCancel={() => {
+			onPointerCancel={event => {
+				if (pan.current?.pointerId === event.pointerId)
+					pan.current = null;
+
 				editor.activeTool?.cancel();
 				editor.cancelEdgeDrag();
 				editor.setTool(selectTool);
@@ -216,7 +249,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 					/>
 				))}
 			</div>
-			<div className="selection" style={selectionStyle} data-version={editorVersion} />
+			<div className="selection" style={selectionStyle} data-version={editorVersion} data-structure-version={structureVersion} />
 		</div>
 	);
 };

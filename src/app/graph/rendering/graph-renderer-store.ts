@@ -1,5 +1,5 @@
 import { subscribe } from "../../../reactive";
-import type { Graph } from "../../../graph";
+import type { Graph, GraphNode } from "../../../graph";
 import type { GraphEditor } from "../../../graph/editor";
 import { GraphLayout } from "./graph-layout";
 import { GraphCanvasRenderer } from "./renderer";
@@ -28,6 +28,7 @@ export class GraphRendererStore {
 			subscribe(this.graph, "offset", { recursive: true }, this.invalidate),
 			subscribe(this.graph, "scale", this.invalidate),
 			subscribe(this.graph, "structureVersion", this.invalidate),
+			subscribe(this.editor, "selectedNodes", { recursive: true }, this.invalidate),
 			subscribe(this.editor, "draggingEdge", { recursive: true }, this.invalidate),
 			subscribe(this.editor, "slice", { recursive: true }, this.invalidate)
 		];
@@ -49,7 +50,7 @@ export class GraphRendererStore {
 		this.scheduler.invalidate();
 	};
 
-	public updateNode(node: import("../../../graph/nodes").GraphNode): void {
+	public updateNode(node: GraphNode): void {
 		if (!this.canvas)
 			return;
 
@@ -57,7 +58,7 @@ export class GraphRendererStore {
 			this.invalidate();
 	}
 
-	public removeNode(node: import("../../../graph/nodes").GraphNode): void {
+	public removeNode(node: GraphNode): void {
 		this.layout.removeNode(node);
 		this.invalidate();
 	}
@@ -66,6 +67,7 @@ export class GraphRendererStore {
 		if (!this.canvas)
 			return;
 
+		this.layout.updateAll(this.graph, this.canvas);
 		this.renderer.render(this.graph, this.editor, this.canvas, this.layout);
 	}
 }
