@@ -34,6 +34,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 		const previous = dropTargetRef.current;
 		if (previous?.panelId === target?.panelId && previous?.position === target?.position)
 			return;
+
 		dropTargetRef.current = target;
 		setDropTarget(target);
 	};
@@ -53,6 +54,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 			sourceState: targetWindow.state,
 			moved: false
 		};
+
 		dragRef.current = drag;
 
 		const onMove = (pointerEvent: PointerEvent) => {
@@ -94,9 +96,9 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 				["bottom", rect.height - y]
 			];
 			const nearest = distances.reduce((a, b) => a[1] < b[1] ? a : b);
-
 			const position = nearest[1] < edge ? nearest[0] : "center";
 			const panelId = Number(panelElement.dataset["panelId"]);
+
 			updateDropTarget(editor.windowManager.getPanel(panelId) ? { panelId, position } : null);
 		};
 
@@ -122,6 +124,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 					});
 				} else {
 					const rect = workspaceRef.current?.getBoundingClientRect();
+
 					if (rect && pointerEvent.clientX >= rect.left && pointerEvent.clientX <= rect.right && pointerEvent.clientY >= rect.top && pointerEvent.clientY <= rect.bottom)
 						editor.windowManager.dockToRoot(targetWindow);
 				}
@@ -142,38 +145,43 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 			<div className="editor-workspace" ref={workspaceRef}>
 				<LayoutView layout={editor.layout} onWindowDrag={onWindowDrag} dropTarget={dropTarget} />
 				<div className="floating-windows">
-					{editor.windowManager.floatingWindows.map(floatingWindow => (
-						<div
-							key={floatingWindow.id}
-							className="floating-window"
-							style={{
-								left: floatingWindow.bounds.x,
-								top: floatingWindow.bounds.y,
-								width: floatingWindow.bounds.width,
-								height: floatingWindow.bounds.height
-							}}
-							onPointerUp={event => {
-								const rect = event.currentTarget.getBoundingClientRect();
-								const workspace = workspaceRef.current?.getBoundingClientRect();
-								if (!workspace)
-									return;
-								floatingWindow.bounds = {
-									x: rect.left - workspace.left,
-									y: rect.top - workspace.top,
-									width: rect.width,
-									height: rect.height
-								};
-							}}
-						>
-							<div className="floating-title" onPointerDown={event => onWindowDrag(floatingWindow, event)}>
-								<span>{floatingWindow.title}</span>
-								<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => editor.windowManager.close(floatingWindow)}>×</button>
+					{editor.windowManager.floatingWindows.map(floatingWindow => {
+						const Component = floatingWindow.Component;
+
+						return (
+							<div
+								key={floatingWindow.id}
+								className="floating-window"
+								style={{
+									left: floatingWindow.bounds.x,
+									top: floatingWindow.bounds.y,
+									width: floatingWindow.bounds.width,
+									height: floatingWindow.bounds.height
+								}}
+								onPointerUp={event => {
+									const rect = event.currentTarget.getBoundingClientRect();
+									const workspace = workspaceRef.current?.getBoundingClientRect();
+									if (!workspace)
+										return;
+
+									floatingWindow.bounds = {
+										x: rect.left - workspace.left,
+										y: rect.top - workspace.top,
+										width: rect.width,
+										height: rect.height
+									};
+								}}
+							>
+								<div className="floating-title" onPointerDown={event => onWindowDrag(floatingWindow, event)}>
+									<span>{floatingWindow.title}</span>
+									<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => editor.windowManager.close(floatingWindow)}>×</button>
+								</div>
+								<div className="floating-content">
+									<Component {...floatingWindow.props} />
+								</div>
 							</div>
-							<div className="floating-content">
-								<floatingWindow.Component {...floatingWindow.props} />
-							</div>
-						</div>
-					))}
+						);
+					})}
 				</div>
 			</div>
 		</div>

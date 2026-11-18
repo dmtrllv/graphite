@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { LayoutPanel } from "../../editor/editor-layout";
 import type { DockPosition } from "../../editor/window-manager";
 import type { Window } from "../../editor/window";
@@ -7,12 +8,13 @@ import "./styles/panel.scss";
 
 export const PanelView = ({ panel, onWindowDrag, dropPosition }: {
 	panel: LayoutPanel;
-	onWindowDrag: (window: Window, event: React.PointerEvent) => void;
+	onWindowDrag: (window: Window, event: ReactPointerEvent) => void;
 	dropPosition: DockPosition | null;
 }) => {
 	useObservable(panel);
 
 	const activeWindow = panel.tabs[panel.activeTab];
+	const Component = activeWindow?.Component;
 
 	return (
 		<div
@@ -34,7 +36,11 @@ export const PanelView = ({ panel, onWindowDrag, dropPosition }: {
 				))}
 			</div>
 			<div className="tabs">
-				{activeWindow && <div className="tab active"><activeWindow.Component {...activeWindow.props} /></div>}
+				{activeWindow && Component && (
+					<div className="tab active">
+						<Component {...activeWindow.props} />
+					</div>
+				)}
 			</div>
 		</div>
 	);

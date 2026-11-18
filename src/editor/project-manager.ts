@@ -1,4 +1,3 @@
-
 import { GraphEditorView } from "../app/graph";
 import { VectorMathNode } from "../graph";
 import { observable } from "../reactive";
@@ -38,8 +37,7 @@ export class ProjectManager {
 		const graph = p.graphManager.add("World");
 		graph.addNode(VectorMathNode);
 		const editor = p.graphManager.openEditor(graph);
-		const window = this.editor.windowManager.open(graph.name, GraphEditorView, { editor });
-		this.editor.layout.addPanel(window);
+		this.editor.windowManager.open(graph.name, GraphEditorView, { editor });
 		return p;
 	}
 

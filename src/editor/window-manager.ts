@@ -1,6 +1,6 @@
 import type { ComponentProps, ComponentType } from "react";
 import { observable } from "../reactive";
-import { EditorLayout, LayoutPanel, type LayoutNode } from "./editor-layout";
+import { EditorLayout, LayoutPanel } from "./editor-layout";
 import { Window, type WindowBounds } from "./window";
 
 export type DockPosition = "center" | "left" | "right" | "top" | "bottom";
@@ -47,6 +47,7 @@ export class WindowManager {
 			}
 			return null;
 		};
+
 		return find(this.layout);
 	}
 
@@ -75,15 +76,16 @@ export class WindowManager {
 
 	public dockToRoot(window: Window): void {
 		this.detach(window);
-		const panel = new LayoutPanel(this.layout, [window]);
-		this.layout.children.push(panel);
+		this.layout.children.push(new LayoutPanel(this.layout, [window]));
 		window.state = "docked";
 	}
 
 	public float(window: Window, bounds?: Partial<WindowBounds>): void {
 		this.detach(window);
+
 		if (bounds)
 			window.bounds = { ...window.bounds, ...bounds };
+
 		this.floatingWindows.push(window);
 		window.state = "floating";
 	}
@@ -124,6 +126,7 @@ export class WindowManager {
 			}
 			return null;
 		};
+
 		return find(this.layout);
 	}
 
@@ -139,6 +142,7 @@ export class WindowManager {
 			return;
 
 		panel.tabs.splice(index, 1);
+
 		if (panel.activeTab >= panel.tabs.length)
 			panel.activeTab = panel.tabs.length - 1;
 		else if (index < panel.activeTab)
@@ -166,19 +170,20 @@ export class WindowManager {
 		if (!parent)
 			return;
 
-		if (layout.children.length === 1) {
-			const child = layout.children[0];
-			const index = parent.children.indexOf(layout);
+		const index = parent.children.indexOf(layout);
+		if (index === -1)
+			return;
+
+		const child = layout.children[0];
+
+		if (child) {
 			child.parent = parent;
 			child.size = layout.size;
 			parent.children[index] = child;
 			this.normalize(parent);
-		} else if (layout.children.length === 0) {
-			const index = parent.children.indexOf(layout);
-			if (index !== -1)
-				parent.children.splice(index, 1);
+		} else {
+			parent.children.splice(index, 1);
 			this.normalize(parent);
 		}
 	}
-
 }

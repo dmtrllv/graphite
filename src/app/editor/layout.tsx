@@ -12,7 +12,7 @@ type DropTarget = { panelId: number; position: DockPosition } | null;
 
 export const LayoutView = ({ layout, onWindowDrag, dropTarget }: {
 	layout: EditorLayout;
-	onWindowDrag: (window: Window, event: React.PointerEvent) => void;
+	onWindowDrag: (window: Window, event: ReactPointerEvent) => void;
 	dropTarget: DropTarget;
 }) => {
 	useObservable(layout);
@@ -20,7 +20,7 @@ export const LayoutView = ({ layout, onWindowDrag, dropTarget }: {
 	return (
 		<div className={`layout ${layout.direction}`} style={{ flex: `${layout.size} 1 0px` }}>
 			{layout.children.map((child, index) => (
-				<Fragment key={child.id}>
+				<Fragment key={`${child instanceof EditorLayout ? "layout" : "panel"}-${child.id}`}>
 					{child instanceof EditorLayout
 						? <LayoutView layout={child} onWindowDrag={onWindowDrag} dropTarget={dropTarget} />
 						: <PanelView panel={child} onWindowDrag={onWindowDrag} dropPosition={dropTarget?.panelId === child.id ? dropTarget.position : null} />}
@@ -51,7 +51,10 @@ const SplitHandle = ({ layout, index }: { layout: EditorLayout; index: number })
 		const delta = position - previousPosition.current;
 		previousPosition.current = position;
 
-		const rect = event.currentTarget.parentElement!.getBoundingClientRect();
+		const rect = event.currentTarget.parentElement?.getBoundingClientRect();
+		if (!rect)
+			return;
+
 		const totalSize = layout.direction === "horizontal" ? rect.width : rect.height;
 		layout.resize(index, delta, totalSize);
 	};
