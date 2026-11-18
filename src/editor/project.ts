@@ -7,18 +7,18 @@ export class Project {
 	public readonly manager: ProjectManager;
 	public readonly info: ProjectInfo;
 	public readonly settings: Settings;
-	public readonly graphManager;
+
+	public readonly graphManager: GraphManager;
 
 	public get isSaved() {
 		return !!this.manager.projects.find(info => info.name === this.info.name);
 	}
 
-	public constructor(manager: ProjectManager, info: ProjectInfo, settings: Settings) {
+	public constructor(manager: ProjectManager, info: ProjectInfo, settings: Settings, graphManager: GraphManager = new GraphManager()) {
 		this.manager = manager;
 		this.info = info;
 		this.settings = settings;
-		this.graphManager = new GraphManager();
-		
+		this.graphManager = graphManager;
 	}
 }
 

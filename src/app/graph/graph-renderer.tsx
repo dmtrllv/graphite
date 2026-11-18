@@ -7,20 +7,19 @@ import { subscribe } from "../../reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
 
-import "./graph.scss";
-
-const getSelectionStyle = (editor: GraphEditor): React.CSSProperties => {
+const getSelectionStyle = (editor: GraphEditor, root: HTMLDivElement | null): React.CSSProperties => {
 	const style: React.CSSProperties = {};
 	const selection = editor.selection;
 
-	if (!selection)
+	if (!selection || !root)
 		return style;
 
+	const rect = root.getBoundingClientRect();
 	const d = selection.downPos;
 	const m = selection.mousePos;
 
-	style.left = Math.min(d.x, m.x);
-	style.top = Math.min(d.y, m.y);
+	style.left = Math.min(d.x, m.x) - rect.left;
+	style.top = Math.min(d.y, m.y) - rect.top;
 	style.width = Math.abs(d.x - m.x);
 	style.height = Math.abs(d.y - m.y);
 	style.border = "1px solid red";
@@ -65,7 +64,7 @@ export const GraphRenderer = ({ editor }: { editor: GraphEditor }) => {
 		transform: `translate(-50%, -50%) scale(${graph.scale})`
 	}), [graph.offset.x, graph.offset.y, graph.scale]);
 
-	const selectionStyle = getSelectionStyle(editor);
+	const selectionStyle = getSelectionStyle(editor, root.current);
 
 	useEffect(() => {
 		const element = canvas.current;

@@ -10,7 +10,7 @@ export const EditorView = ({ editor }: { editor: Editor }) => {
 	
 	return (
 		<>
-			<MenuBarView />
+			<MenuBarView editor={editor} />
 			<LayoutView layout={editor.layout} />
 		</>
 	);

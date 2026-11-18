@@ -14,7 +14,7 @@ export class Window<T extends React.FC<P>, P extends {}> {
 	@observable
 	public accessor state: WindowState = WindowState.Docked;
 
-	public constructor(manager: WindowManager, title: string, props: P, Component: T) {
+	public constructor(manager: WindowManager, title: string, Component: T, props: P) {
 		this.manager = manager;
 		this.title = title;
 		this.props = props;

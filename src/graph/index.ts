@@ -7,3 +7,4 @@ export * from "./editor";
 export * from "./editor-state";
 export * from "./actions";
 export * from "./tools";
+export * from "./graph-serializer";

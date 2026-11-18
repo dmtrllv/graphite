@@ -1,6 +1,7 @@
 import { EditorLayout } from "./editor-layout";
 import { ProjectManager } from "./project-manager";
 import { SettingsManager } from "./settings-manager";
+import { WindowManager } from "./window-manager";
 
 export class Editor {
 	private static _instance: Editor | null;
@@ -15,6 +16,7 @@ export class Editor {
 	}
 
 	public readonly settings: SettingsManager = new SettingsManager();
+	public readonly windowManager: WindowManager = new WindowManager();
 	public readonly layout: EditorLayout = new EditorLayout(null);
 	public readonly projectManager: ProjectManager = new ProjectManager(this);
 
