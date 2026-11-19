@@ -1,7 +1,8 @@
 import { observable } from "../../reactive";
+import { Subgraph } from "../graph";
 import { GraphNode, GraphNodeCategory } from "./node";
 
-@GraphNode.register(GraphNodeCategory.SubGraph,"Subgraph")
+@GraphNode.register(GraphNodeCategory.SubGraph, "Subgraph")
 export class SubgraphNode extends GraphNode {
 	@observable
 	private accessor _graphId: number | null = null;
@@ -14,8 +15,8 @@ export class SubgraphNode extends GraphNode {
 		const manager = this.graph.manager;
 		const definition = value === null ? undefined : manager?.get(value);
 
-		if (definition?.isWorldGraph)
-			throw new Error("The World Graph cannot be used as a subgraph!");
+		if (definition && !(definition instanceof Subgraph))
+			throw new Error("Only Subgraphs can be used as SubgraphNodes!");
 
 		if (definition && manager?.hasRecursiveReference(this.graph, definition))
 			throw new Error("A graph cannot reference itself or one of its parent graphs!");
@@ -27,16 +28,12 @@ export class SubgraphNode extends GraphNode {
 		manager?.notifySubgraphTopologyChanged();
 	}
 
-	public get definition() {
+	public get definition(): Subgraph | undefined {
 		if (this.graphId === null)
 			return undefined;
 
 		const graph = this.graph.manager?.get(this.graphId);
-
-		if (!graph || graph.isWorldGraph)
-			return undefined;
-
-		return graph;
+		return graph instanceof Subgraph ? graph : undefined;
 	}
 
 	public override getInterface() {

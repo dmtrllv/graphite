@@ -1,4 +1,4 @@
-import { Graph, SubgraphNode, type GraphNode, type NodeEdge } from "../graph";
+import { Graph, SimulationGraph, Subgraph, SubgraphNode, WorldGraph, type GraphNode, type NodeEdge } from "../graph";
 import { observable } from "../reactive";
 import { GraphEditor } from "./editor";
 import { Vec2 } from "./types";
@@ -24,8 +24,8 @@ export class GraphManager {
 		this.catalogVersion++;
 	}
 
-	public get worldGraph(): Graph {
-		const graph = this.graphs.values().next().value;
+	public get worldGraph(): WorldGraph {
+		const graph = [...this.graphs.values()].find(graph => graph instanceof WorldGraph);
 
 		if (!graph)
 			throw new Error("GraphManager does not contain a World Graph!");
@@ -58,14 +58,19 @@ export class GraphManager {
 			throw new DuplicateGraphNameError(name);
 
 		const id = this._idCounter++;
-		const graph = new Graph(id, name, offset, nodes, edges, this.graphs.size === 0);
+		const graph = this.graphs.size === 0 ? new WorldGraph(id, name, offset, nodes, edges) : new Subgraph(id, name, offset, nodes, edges);
+
+		return this.register(graph);
+	}
+
+	private register(graph: Graph): Graph {
 		graph.setManager(this);
-		this.graphs.set(id, graph);
+		this.graphs.set(graph.id, graph);
 
 		try {
 			this.validateReferences();
 		} catch (error) {
-			this.graphs.delete(id);
+			this.graphs.delete(graph.id);
 			throw error;
 		}
 
@@ -80,10 +85,11 @@ export class GraphManager {
 		if (this.get(graph.name))
 			throw new DuplicateGraphNameError(graph.name);
 
-		if (this.graphs.size === 0)
-			graph.setWorldGraph(true);
-		else if (graph.isWorldGraph)
+		if (graph instanceof WorldGraph && [...this.graphs.values()].some(item => item instanceof WorldGraph))
 			throw new Error("A GraphManager can only contain one World Graph!");
+
+		if (!(graph instanceof WorldGraph) && this.graphs.size === 0)
+			throw new Error("The first graph must be a World Graph!");
 
 		graph.setManager(this);
 		this.graphs.set(graph.id, graph);
@@ -113,14 +119,25 @@ export class GraphManager {
 		}
 	}
 
-	public createSubgraph(): Graph {
+	public createSubgraph(): Subgraph {
 		let index = 1;
 		let name = `Subgraph ${index}`;
 
 		while (this.get(name))
 			name = `Subgraph ${++index}`;
 
-		return this.add(name);
+		return this.add(name) as Subgraph;
+	}
+
+	public createSimulationGraph(): SimulationGraph {
+		let index = 1;
+		let name = `Simulation ${index}`;
+
+		while (this.get(name))
+			name = `Simulation ${++index}`;
+
+		const graph = new SimulationGraph(this._idCounter++, name, new Vec2());
+		return this.register(graph) as SimulationGraph;
 	}
 
 	public rename(graph: Graph, name: string): void {
@@ -134,7 +151,7 @@ export class GraphManager {
 		if (existing && existing !== graph)
 			throw new DuplicateGraphNameError(normalized);
 
-		if (graph.isWorldGraph)
+		if (graph instanceof WorldGraph)
 			throw new Error("The World Graph cannot be renamed!");
 
 		graph.name = normalized;
@@ -170,7 +187,7 @@ export class GraphManager {
 	}
 
 	public removeGraph(graph: Graph): void {
-		if (graph.isWorldGraph)
+		if (graph instanceof WorldGraph)
 			throw new Error("The World Graph cannot be removed!");
 
 		if (this.graphs.get(graph.id) !== graph)
@@ -207,12 +224,12 @@ export class GraphManager {
 		}
 	}
 
-	public getAvailableSubgraphs(parent: Graph): Graph[] {
-		return [...this.graphs.values()].filter(graph =>
-			!graph.isWorldGraph &&
-			graph !== parent &&
-			!this.hasRecursiveReference(parent, graph)
-		);
+	public getAvailableSubgraphs(parent: Graph): Subgraph[] {
+		const isSubGraph = (graph: Graph): graph is Subgraph => {
+			return graph instanceof Subgraph && graph !== parent && !this.hasRecursiveReference(parent, graph);
+		};
+	
+		return [...this.graphs.values()].filter(isSubGraph);
 	}
 }
 

@@ -1,4 +1,5 @@
-import { Graph, NodeEdge } from "./graph";
+import { NodeEdge } from "./edge";
+import { Graph, SimulationGraph, Subgraph, WorldGraph } from "./graph";
 import { GraphManager } from "./graph-manager";
 import { GraphNode, NodeOption } from "./nodes";
 import { F16, F32, U32, I32, Bool, Scalar, Vec2, Vec3, Vec4, Matrix, Type, type TypeCtor } from "./types";
@@ -64,7 +65,8 @@ interface SerializedEdge {
 interface SerializedGraph {
 	id: number;
 	name: string;
-	isWorldGraph: boolean;
+	type?: string;
+	isWorldGraph?: boolean;
 	offset: [number, number];
 	scale: number;
 	nodes: SerializedNode[];
@@ -231,7 +233,7 @@ const serializeGraph = (graph: Graph): SerializedGraph => {
 	return {
 		id: graph.id,
 		name: graph.name,
-		isWorldGraph: graph.isWorldGraph,
+		type: graph.constructor.name,
 		offset: [graph.offset.x, graph.offset.y],
 		scale: graph.scale,
 		nodes: [...graph.nodes.values()].map(serializeNode),
@@ -251,12 +253,23 @@ const serializeGraph = (graph: Graph): SerializedGraph => {
 			id: port.id,
 			name: port.name,
 			type: serializeType(port.type)
-		})),
+		}))
 	};
 };
 
+const deserializeGraphType = (name: string): typeof Graph => {
+	switch(name) {
+		case WorldGraph.name: return WorldGraph;
+		case Subgraph.name: return Subgraph;
+		case SimulationGraph.name: return SimulationGraph;
+	}
+	throw new Error("Unknown graph type " + name);
+}
+
 const deserializeGraph = (json: SerializedGraph): Graph => {
-	const graph = new Graph(json.id, json.name, new Vec2(...json.offset), undefined, undefined, json.isWorldGraph);
+	const type = json.type ?? (json.isWorldGraph ? "world" : "subgraph");
+	const GraphType = deserializeGraphType(type);
+	const graph = new GraphType(json.id, json.name, new Vec2(...json.offset));
 	
 	graph.scale = json.scale;
 

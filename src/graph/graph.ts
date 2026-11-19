@@ -4,6 +4,7 @@ import { Vec2 } from "./types";
 import { GraphIndex } from "./graph-index";
 import type { GraphManager } from "./graph-manager";
 import { F32, Type } from "./types";
+import { NodeEdge } from "./edge";
 
 const RECONCILING_GRAPHS = new WeakSet<Graph>();
 
@@ -16,7 +17,6 @@ export type GraphInterfacePort = {
 export class Graph {
 	private _nodeIdCounter = 0;
 	private _edgeIdCounter = 0;
-	private _isWorldGraph: boolean;
 
 	private _manager?: GraphManager;
 
@@ -52,19 +52,12 @@ export class Graph {
 
 	public readonly index = new GraphIndex();
 
-	public get isWorldGraph(): boolean {
-		return this._isWorldGraph;
-	}
-
-	public constructor(id: number, name: string, offset: Vec2);
-	public constructor(id: number, name: string, offset: Vec2, nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>, isWorldGraph?: boolean);
-	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map(), isWorldGraph = false) {
+	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
 		this.id = id;
 		this.name = name;
 		this.offset = offset;
 		this.nodes = nodes;
 		this.edges = edges;
-		this._isWorldGraph = isWorldGraph;
 
 		for (const node of this.nodes.values())
 			this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
@@ -73,10 +66,6 @@ export class Graph {
 			this.index.add(edge);
 			this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
 		}
-	}
-
-	public setWorldGraph(value: boolean): void {
-		this._isWorldGraph = value;
 	}
 
 	public setManager(manager: GraphManager): void {
@@ -278,26 +267,8 @@ export class Graph {
 	}
 }
 
-export class NodeEdge {
-	public readonly id: number;
+export class WorldGraph extends Graph { }
 
-	@observable
-	public accessor source: GraphNode;
+export class Subgraph extends Graph { }
 
-	@observable
-	public accessor sourceOutput: string;
-
-	@observable
-	public accessor target: GraphNode;
-
-	@observable
-	public accessor targetInput: string;
-
-	public constructor(id: number, source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string) {
-		this.id = id;
-		this.source = source;
-		this.sourceOutput = sourceOutput;
-		this.target = target;
-		this.targetInput = targetInput;
-	}
-}
+export class SimulationGraph extends Graph { }
