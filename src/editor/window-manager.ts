@@ -27,7 +27,7 @@ export class WindowManager {
 
 	public open<T extends ComponentType<any>>(title: string, Component: T, props: Omit<ComponentProps<T>, "window">, { float, check, ...options }: OpenOptions): Window<ComponentProps<T>> {
 		const found = this.windows.find(w => check ? check(w) : (w.Component === Component) && w.isSingleInstance);
-		console.log({ found });
+		
 		if (found)
 			return found;
 

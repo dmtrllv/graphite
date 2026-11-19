@@ -1,6 +1,7 @@
-import { useObservable } from "../../reactive";
+import { subscribe, useObservable } from "../../reactive";
 import { Bool, F16, F32, I32, U32, Vec2, Vec3, Vec4, type Graph, type GraphInterfacePort, type Type } from "../../graph";
 import { useWindow } from "../editor/window";
+import { useEffect, useMemo, useState } from "react";
 
 const types = {
 	F16,
@@ -48,9 +49,22 @@ const InterfacePortView = ({ graph, direction, port }: { graph: Graph; direction
 
 export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGraph: (graph: Graph) => void; }) => {
 	useObservable(graph, { recursive: true });
-	useObservable(graph.manager!, { recursive: false });
+	
+	const manager = graph.manager!;
+	const [graphsVersion, setGraphsVersion] = useState(0);
 
-	const availableSubgraphs = graph.isWorldGraph ? graph.manager!.getAvailableSubgraphs(graph) : [];
+	useEffect(() => {
+		if (!graph.isWorldGraph)
+			return;
+
+		return subscribe(manager, "graphs", { recursive: true }, () => {
+			setGraphsVersion(version => version + 1);
+		});
+	}, [manager, graph.isWorldGraph]);
+
+	const availableSubgraphs = useMemo(() => {
+		return graph.isWorldGraph ? manager.getAvailableSubgraphs(graph) : [];
+	}, [manager, graph, graphsVersion, graph.structureVersion]);
 
 	const window = useWindow();
 

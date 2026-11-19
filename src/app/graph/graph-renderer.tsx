@@ -39,8 +39,7 @@ type NodePickerState = {
 
 export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { projectManager: ProjectManager, editor: GraphEditor, onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void; }) => {
 	const graph = editor.graph;
-	const manager = useObservable(graph.manager!, { recursive: false });
-	const availableSubgraphs = manager.getAvailableSubgraphs(graph);
+
 	const root = useRef<HTMLDivElement>(null);
 	const canvas = useRef<HTMLCanvasElement>(null);
 	const pan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -54,6 +53,20 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 	const [isHovering, setHovering] = useState(false);
 
 	const layout = store.layout;
+
+	const manager = graph.manager!;
+	
+	const [graphsVersion, setGraphsVersion] = useState(0);
+
+	useEffect(() => {
+		return subscribe(manager, "graphs", { recursive: true }, () => {
+			setGraphsVersion(version => version + 1);
+		});
+	}, [manager]);
+
+	const availableSubgraphs = useMemo(() => {
+		return nodePicker ? manager.getAvailableSubgraphs(graph) : [];
+	}, [manager, graph, nodePicker, graphsVersion, structureVersion]);
 
 	const invalidate = useCallback(() => store.invalidate(), [store]);
 
