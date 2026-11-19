@@ -110,6 +110,11 @@
 					}
 
 					.option {
+
+						.toggle {
+							float: right;
+						}
+
 						position: relative;
 						&:not(:last-child) {
 							margin-bottom: 5px;
@@ -279,25 +284,6 @@
 			button {
 				flex-shrink: 0;
 			}
-		}
-
-		input,
-		select {
-			background-color: var(--bg-2);
-			border: 1px solid var(--border-1);
-			border-radius: 4px;
-			color: var(--fg-1);
-			padding: 5px;
-			outline: none;
-		}
-
-		button {
-			background-color: var(--bg-2);
-			border: 1px solid var(--border-1);
-			border-radius: 4px;
-			color: var(--fg-1);
-			cursor: pointer;
-			padding: 4px 8px;
 		}
 	}
 }

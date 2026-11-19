@@ -44,13 +44,13 @@ export const getTypeConversion = (source: Type, target: Type): TypeConversion | 
 		};
 	}
 
-	const sourceDimension = source instanceof Scalar && isNumericScalar(source) ? 1 : getVectorDimension(source);
+	const sourceDimension = source instanceof Scalar && (isNumericScalar(source) || source instanceof Bool) ? 1 : getVectorDimension(source);
 	const targetDimension = getVectorDimension(target);
 
 	if (sourceDimension === undefined || targetDimension === undefined)
 		return null;
 
-	if (source instanceof Scalar && !isNumericScalar(source))
+	if (source instanceof Scalar && !isNumericScalar(source) && !(source instanceof Bool))
 		return null;
 
 	if (sourceDimension < targetDimension)
@@ -90,7 +90,7 @@ export const emitTypeConversion = (source: Type, target: Type, expression: strin
 			return `select(${conversion.target}(0), ${conversion.target}(1), ${expression} != ${source.constructor.name.toLowerCase()}(0))`;
 
 		case "vector-extend": {
-			const value = source instanceof Scalar ? `f32(${expression})` : expression;
+			const value = source instanceof Bool ? `select(0.0, 1.0, ${expression})` : source instanceof Scalar ? `f32(${expression})` : expression;
 			const zeros = Array.from({ length: conversion.to - conversion.from }, () => "0.0");
 			return `vec${conversion.to}<f32>(${[value, ...zeros].join(", ")})`;
 		}

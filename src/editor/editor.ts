@@ -45,7 +45,12 @@ export class Editor {
 
 		]),
 		new MenuItem("view", "View", undefined, [
-			new MenuItem("world_graph", "World Graph", () => {}),
+			new MenuItem("world_graph", "World Graph", () =>{
+				const manager = this.projectManager.activeProject.graphManager;
+				const graph = manager.worldGraph;
+				const editor = manager.openEditor(graph);
+				this.projectManager.openGraph(editor);
+			}),
 		]),
 	]);
 

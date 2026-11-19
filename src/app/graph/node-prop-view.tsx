@@ -1,8 +1,9 @@
 import React, { useCallback, useRef } from "react";
-import { F16, F32, GraphNode, I32, SelectOption, SubgraphNode, Type, U32, Vec2, Vec3, Vec4, type NodeOption, type NodeOptionType, type TypeCtor } from "../../graph";
+import { Bool, F16, F32, GraphNode, I32, SelectOption, SubgraphNode, Type, U32, Vec2, Vec3, Vec4, type NodeOption, type NodeOptionType, type TypeCtor } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { useObservable } from "../../reactive/hook";
 import type { GraphLayout } from "./rendering";
+import { Toggle } from "../inputs/toggle";
 
 type NodePropViewProps = {
 	node: GraphNode;
@@ -95,6 +96,10 @@ type NodeInputProps<T extends Type | NodeOption<any>> = {
 	readonly disabled: boolean;
 	readonly node: GraphNode;
 };
+
+registerNodePropInput(Bool, ({ prop, disabled }) => (
+	<Toggle value={prop.value} onChange={v => prop.value = v} disabled={disabled} />
+));
 
 registerNodePropInput([F32, F16, U32, I32], ({ prop, name, disabled }) => (
 	<input type="number" value={prop.value} placeholder={name} disabled={disabled} onChange={e => prop.value = +e.target.value} />

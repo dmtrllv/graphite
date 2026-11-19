@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import "./styles/toggle.scss";
 
-export const Toggle = ({ className, id, label, value, onChange }: ToggleProps) => {
+export const Toggle = ({ className, id, label, value, onChange, disabled }: ToggleProps) => {
 	const [val, setValue] = useState(value);
 
 	const toggle = () => {
@@ -16,14 +16,15 @@ export const Toggle = ({ className, id, label, value, onChange }: ToggleProps) =
 	}, [value]);
 
 	return (
-		<div className={`toggle ${className} ${val ? "active" : ""}`} id={id} onClick={toggle}>
+		<div className={`toggle ${className ?? ""} ${val ? "active" : ""} ${disabled ? "disabled" : ""}`} id={id} onClick={toggle}>
 			{label && <label>{label}</label>}
 			<div />
 		</div>
-	)
-}
+	);
+};
 
 export type ToggleProps = {
+	disabled?: boolean;
 	id?: string;
 	className?: string;
 	label?: string;

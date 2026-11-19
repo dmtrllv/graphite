@@ -3,7 +3,7 @@ import type { GraphEditor } from "../../graph/editor";
 import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
 import { mapChildren } from "../../utils";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { subscribe, useSubscribe } from "../../reactive";
+import { subscribe } from "../../reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
 import type { ProjectManager } from "../../editor/project-manager";
@@ -364,62 +364,60 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 				))}
 			</div>
 			<div className="selection" style={selectionStyle} data-version={editorVersion} data-structure-version={structureVersion} />
-			{
-				nodePicker && (
-					<div className="node-picker" style={{ left: nodePicker.x, top: nodePicker.y }} onPointerDown={event => event.stopPropagation()} onWheel={e => e.stopPropagation()}>
-						{availableSubgraphs.map(definition => (
-							<div key={definition.id} className="node-picker-item" onClick={() => {
-								const node = editor.addNode(SubgraphNode, nodePicker.position) as SubgraphNode;
-								node.graphId = definition.id;
-								setNodePicker(null);
-							}}>
-								{definition.name}
-							</div>
-						))}
-						{mapChildren(GraphNodeCategory, (_, category): any => {
-							if (category === GraphNodeCategory.Unknown)
-								return null;
-
-							return (
-								<React.Fragment key={category}>
-									<div>{category}</div>
-									{nodeTypes.map(([name, type]) => (type as any).category === category && (
-										<div key={name} className="node-picker-item" onClick={() => {
-											editor.addNode(type, nodePicker.position);
-											setNodePicker(null);
-										}}>
-											{name}
-										</div>
-									))}
-								</React.Fragment>
-							);
-						})}
-						{editor.graph.inputs.length > 0 && <div>Sub Graph Inputs</div>}
-						{editor.graph.inputs.map(port => (
-							<div key={`input-${port.id}`} className="node-picker-item" onClick={() => {
-								const node = editor.addNode(GraphInputNode, nodePicker.position) as GraphInputNode;
-								node.interfaceId = port.id;
-								setNodePicker(null);
-							}}>
-								Input: {port.name}
-							</div>
-						))}
-						{editor.graph.outputs.length > 0 && <div>Sub Graph Outputs</div>}
-						{editor.graph.outputs.map(port => (
-							<div key={`output-${port.id}`} className="node-picker-item" onClick={() => {
-								const node = editor.addNode(GraphOutputNode, nodePicker.position) as GraphOutputNode;
-								node.interfaceId = port.id;
-								setNodePicker(null);
-							}}>
-								Output: {port.name}
-							</div>
-						))}
-						<div className="node-picker-item" onClick={newSubGraph}>
-							New Subgraph
+			{nodePicker && (
+				<div className="node-picker" style={{ left: nodePicker.x, top: nodePicker.y }} onPointerDown={event => event.stopPropagation()} onWheel={e => e.stopPropagation()}>
+					{availableSubgraphs.map(definition => (
+						<div key={definition.id} className="node-picker-item" onClick={() => {
+							const node = editor.addNode(SubgraphNode, nodePicker.position) as SubgraphNode;
+							node.graphId = definition.id;
+							setNodePicker(null);
+						}}>
+							{definition.name}
 						</div>
+					))}
+					{mapChildren(GraphNodeCategory, (_, category): any => {
+						if (category === GraphNodeCategory.Unknown)
+							return null;
+
+						return (
+							<React.Fragment key={category}>
+								<div>{category}</div>
+								{nodeTypes.map(([name, type]) => (type as any).category === category && (
+									<div key={name} className="node-picker-item" onClick={() => {
+										editor.addNode(type, nodePicker.position);
+										setNodePicker(null);
+									}}>
+										{name}
+									</div>
+								))}
+							</React.Fragment>
+						);
+					})}
+					{editor.graph.inputs.length > 0 && <div>Sub Graph Inputs</div>}
+					{editor.graph.inputs.map(port => (
+						<div key={`input-${port.id}`} className="node-picker-item" onClick={() => {
+							const node = editor.addNode(GraphInputNode, nodePicker.position) as GraphInputNode;
+							node.interfaceId = port.id;
+							setNodePicker(null);
+						}}>
+							Input: {port.name}
+						</div>
+					))}
+					{editor.graph.outputs.length > 0 && <div>Sub Graph Outputs</div>}
+					{editor.graph.outputs.map(port => (
+						<div key={`output-${port.id}`} className="node-picker-item" onClick={() => {
+							const node = editor.addNode(GraphOutputNode, nodePicker.position) as GraphOutputNode;
+							node.interfaceId = port.id;
+							setNodePicker(null);
+						}}>
+							Output: {port.name}
+						</div>
+					))}
+					<div className="node-picker-item" onClick={newSubGraph}>
+						New Subgraph
 					</div>
-				)
-			}
+				</div>
+			)}
 		</div >
 	);
 };
