@@ -17,7 +17,7 @@ type GraphNodeViewProps = {
 	definitionVersion: number;
 };
 
-export const GraphNodeView = React.memo(({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
+export const GraphNodeView = React.memo(({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange, definitionVersion }: GraphNodeViewProps) => {
 	node = useObservable(node);
 	const position = useObservableProp(node, "position");
 

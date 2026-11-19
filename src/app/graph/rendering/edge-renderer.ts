@@ -3,18 +3,19 @@ import type { GraphEditor } from "../../../graph/editor";
 import { Vec2 } from "../../../graph";
 import { EdgeGeometryCache } from "./edge-geometry";
 import { GraphLayout } from "./graph-layout";
+import type { GraphSettings } from "../../../editor/settings";
 
 export class EdgeRenderer {
 	private geometry = new EdgeGeometryCache();
 
-	public render(graph: Graph, editor: GraphEditor, layout: GraphLayout, ctx: CanvasRenderingContext2D): void {
+	public render(graph: Graph, editor: GraphEditor, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
 		this.geometry.retain(graph.edges.values());
 
 		for (const edge of graph.edges.values())
-			this.renderEdge(edge, layout, ctx);
+			this.renderEdge(edge, layout, ctx, settings);
 
 		if (editor.draggingEdge)
-			this.renderDraggingEdge(graph, editor.draggingEdge, layout, ctx);
+			this.renderDraggingEdge(graph, editor.draggingEdge, layout, ctx, settings);
 
 		if (editor.edgeCut) {
 			const start = graph.getCanvasMousePosition(editor.edgeCut.downPos, ctx.canvas);
@@ -79,7 +80,7 @@ export class EdgeRenderer {
 		this.geometry.clear();
 	}
 
-	private renderEdge(edge: NodeEdge, layout: GraphLayout, ctx: CanvasRenderingContext2D): void {
+	private renderEdge(edge: NodeEdge, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
 		const geometry = this.geometry.get(edge, layout);
 
 		if (!geometry)
@@ -94,13 +95,24 @@ export class EdgeRenderer {
 		gradient.addColorStop(1, this.getEdgeColor(targetKind ?? ""));
 
 		ctx.strokeStyle = gradient;
+
+		const curve = Math.max(0, Math.min(1, settings.curve));
+		const controlStart = new Vec2(
+			geometry.start.x + (geometry.controlStart.x - geometry.start.x) * curve,
+			geometry.start.y + (geometry.controlStart.y - geometry.start.y) * curve
+		);
+		const controlEnd = new Vec2(
+			geometry.end.x + (geometry.controlEnd.x - geometry.end.x) * curve,
+			geometry.end.y + (geometry.controlEnd.y - geometry.end.y) * curve
+		);
+
 		ctx.beginPath();
 		ctx.moveTo(geometry.start.x, geometry.start.y);
-		ctx.bezierCurveTo(geometry.controlStart.x, geometry.controlStart.y, geometry.controlEnd.x, geometry.controlEnd.y, geometry.end.x, geometry.end.y);
+		ctx.bezierCurveTo(controlStart.x, controlStart.y, controlEnd.x, controlEnd.y, geometry.end.x, geometry.end.y);
 		ctx.stroke();
 	}
 
-	private renderDraggingEdge(graph: Graph, edge: NonNullable<GraphEditor["draggingEdge"]>, layout: GraphLayout, ctx: CanvasRenderingContext2D): void {
+	private renderDraggingEdge(graph: Graph, edge: NonNullable<GraphEditor["draggingEdge"]>, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
 		const port = layout.getPort(edge.node, edge.from, edge.key);
 
 		if (!port)
@@ -113,13 +125,13 @@ export class EdgeRenderer {
 		ctx.beginPath();
 		ctx.moveTo(port.position.x, port.position.y);
 
-		const tangent = Math.max(40, Math.abs(mouse.x - port.position.x) * 0.5);
+		const curve = Math.max(0, Math.min(1, settings.curve));
+		const tangent = Math.max(40, Math.abs(mouse.x - port.position.x) * 0.5) * curve;
 
-		if (edge.from === "output") {
+		if (edge.from === "output")
 			ctx.bezierCurveTo(port.position.x + tangent, port.position.y, mouse.x - tangent, mouse.y, mouse.x, mouse.y);
-		} else {
+		else
 			ctx.bezierCurveTo(port.position.x - tangent, port.position.y, mouse.x + tangent, mouse.y, mouse.x, mouse.y);
-		}
 
 		ctx.stroke();
 	}

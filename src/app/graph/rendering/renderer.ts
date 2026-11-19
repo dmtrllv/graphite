@@ -3,11 +3,12 @@ import type { GraphEditor } from "../../../graph/editor";
 import { Vec2, type NodeEdge } from "../../../graph";
 import { EdgeRenderer } from "./edge-renderer";
 import { GraphLayout } from "./graph-layout";
+import type { GraphSettings } from "../../../editor/settings";
 
 export class GraphCanvasRenderer {
 	private edges = new EdgeRenderer();
 
-	public render(graph: Graph, editor: GraphEditor, canvas: HTMLCanvasElement, layout: GraphLayout): void {
+	public render(graph: Graph, editor: GraphEditor, canvas: HTMLCanvasElement, layout: GraphLayout, settings: GraphSettings): void {
 		const rect = canvas.getBoundingClientRect();
 		const dpr = window.devicePixelRatio || 1;
 		const width = Math.round(rect.width * dpr);
@@ -28,12 +29,12 @@ export class GraphCanvasRenderer {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		ctx.save();
 		ctx.setTransform(dpr * graph.scale, 0, 0, -dpr * graph.scale, dpr * (rect.width / 2 + graph.offset.x), dpr * (rect.height / 2 - graph.offset.y));
-		ctx.lineWidth = 1 / graph.scale;
+		ctx.lineWidth = settings.lineWidth;
 		ctx.lineCap = "round";
 		ctx.lineJoin = "round";
 		ctx.strokeStyle = "white";
 
-		this.edges.render(graph, editor, layout, ctx);
+		this.edges.render(graph, editor, layout, ctx, settings);
 		ctx.restore();
 	}
 

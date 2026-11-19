@@ -1,4 +1,4 @@
-import { Preferences, Settings } from "./settings";
+import { GraphSettings, Preferences, Settings } from "./settings";
 
 const settingKey = (name: string) => `graphite:settings:${name}`;
 
@@ -18,5 +18,5 @@ export class SettingsManager {
 }
 
 const deserializeSettings = (json: Record<string, any>) => {
-	return new Settings(Preferences.deserialize(json["preferences"]));
+	return new Settings(Preferences.deserialize(json["preferences"]), GraphSettings.deserialize(json["graph"]));
 }

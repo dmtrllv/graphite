@@ -2,14 +2,17 @@ import { computed, observable } from "../reactive";
 
 export class Settings {
 	public readonly preferences: Preferences;
+	public readonly graph: GraphSettings;
 	
-	public constructor(preferences: Preferences = new Preferences()) {
+	public constructor(preferences: Preferences = new Preferences(), graph: GraphSettings = new GraphSettings()) {
 		this.preferences = preferences;
+		this.graph = graph;
 	}
 
 	public serialize() {
 		return {
-			preferences: this.preferences.serialize()
+			preferences: this.preferences.serialize(),
+			graph: this.graph.serialize()
 		};
 	}
 
@@ -56,5 +59,36 @@ export class Preferences {
 
 	public clone(): Preferences {
 		return new Preferences(this.autoHideMenu, this._accentColor);
+	}
+}
+
+
+export class GraphSettings {
+	public static deserialize(json: Record<string, any> | undefined): GraphSettings {
+		if (!json)
+			return new GraphSettings();
+		return new GraphSettings(json?.["lineWidth"], json?.["curve"])
+	}
+
+	@observable
+	public accessor lineWidth: number;
+
+	@observable
+	public accessor curve: number;
+
+	public constructor(lineWidth: number = 1.5, curve: number = 1) {
+		this.lineWidth = lineWidth;
+		this.curve = curve;
+	}
+
+	public serialize() {
+		return {
+			lineWidth: this.lineWidth,
+			curve: this.curve
+		};
+	}
+
+	public clone(): GraphSettings {
+		return new GraphSettings(this.lineWidth, this.curve);
 	}
 }

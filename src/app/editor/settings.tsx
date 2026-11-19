@@ -23,8 +23,26 @@ const Preferences = ({ settings }: { settings: Settings }) => {
 	);
 };
 
+const Graph = ({ settings }: { settings: Settings }) => {
+	const graph = settings.graph;
+
+	return (
+		<>
+			<div className="input-field">
+				<label>Line Width:</label>
+				<input type="number" value={graph.lineWidth} onChange={(e) => graph.lineWidth = +e.target.value} />
+			</div>
+			<div className="input-field">
+				<label>Curve:</label>
+				<input type="number" value={graph.curve} onChange={(e) => graph.curve = +e.target.value} />
+			</div>
+		</>
+	);
+};
+
 const SETTINGS = {
-	Preferences
+	Preferences,
+	Graph,
 } as const;
 
 export const SettingsView = memo(({ projectManager }: { projectManager: ProjectManager }) => {

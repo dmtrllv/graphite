@@ -3,7 +3,7 @@ import type { GraphEditor } from "../../graph/editor";
 import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
 import { mapChildren } from "../../utils";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { subscribe } from "../../reactive";
+import { subscribe, useSubscribe } from "../../reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
 import type { ProjectManager } from "../../editor/project-manager";
@@ -38,7 +38,9 @@ type NodePickerState = {
 	position: Vec2
 } | null
 
-export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { projectManager: ProjectManager, editor: GraphEditor, onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void; }) => {
+type GraphRendererProps = { projectManager: ProjectManager, editor: GraphEditor, onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void; };
+
+export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: GraphRendererProps) => {
 	const graph = editor.graph;
 
 	const root = useRef<HTMLDivElement>(null);
@@ -47,7 +49,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 	const [structureVersion, setStructureVersion] = useState(graph.structureVersion);
 	const [editorVersion, setEditorVersion] = useState(0);
 	const [, setGraphVersion] = useState(0);
-	const store = useMemo(() => new GraphRendererStore(editor), [editor]);
+	const store = useMemo(() => new GraphRendererStore(editor, projectManager.activeProject.settings.graph), [editor, projectManager.activeProject]);
 	const [nodePicker, setNodePicker] = useState<NodePickerState>(null);
 	const mousePosition = useRef<Vec2 | null>(null);
 	const nodeTypes = useMemo(() => [...GraphNode.getRegisteredNodes().entries()].filter(([name]) => !["Subgraph", "Graph Input", "Graph Output"].includes(name)).sort(([a], [b]) => a.localeCompare(b)), []);
@@ -315,6 +317,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 		graph.offset.x = mouse.x - (mouse.x - graph.offset.x) * ratio;
 		graph.offset.y = mouse.y - (mouse.y - graph.offset.y) * ratio;
 		graph.scale = nextScale;
+		store.invalidate();
 	};
 
 	useEffect(() => {
@@ -333,105 +336,90 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 		setHovering(false);
 	};
 
+	const newSubGraph = () => {
+		if (nodePicker) {
+			onCreateSubgraph(editor, nodePicker.position);
+			setNodePicker(null);
+		}
+	};
+
+	const onPointerCancel = (event: React.PointerEvent) => {
+		if (pan.current?.pointerId === event.pointerId)
+			pan.current = null;
+
+		editor.activeTool?.cancel();
+		editor.cancelEdgeDrag();
+		editor.setTool(selectTool);
+		layout.setHoveredPort();
+	};
+
+	const definitionVersion = (node: GraphNode) => node instanceof SubgraphNode ? node.definition?.structureVersion ?? 0 : 0;
 
 	return (
-		<div
-			ref={root}
-			className="graph-renderer"
-			onPointerDown={onPointerDown}
-			onPointerMove={onPointerMove}
-			onPointerUp={onPointerUp}
-			onPointerCancel={event => {
-				if (pan.current?.pointerId === event.pointerId)
-					pan.current = null;
-
-				editor.activeTool?.cancel();
-				editor.cancelEdgeDrag();
-				editor.setTool(selectTool);
-				layout.setHoveredPort();
-			}}
-			onWheel={onWheel}
-			onContextMenu={event => event.preventDefault()}
-			onMouseLeave={onMouseLeave}
-		>
+		<div ref={root} className="graph-renderer" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel} onWheel={onWheel} onContextMenu={event => event.preventDefault()} onMouseLeave={onMouseLeave}>
 			<canvas ref={canvas} />
 			<div className="graph" style={style}>
 				{mapChildren(graph.nodes, (key, node) => (
-					<GraphNodeView
-						key={`${graph.id}:${key}`}
-						node={node}
-						editor={editor}
-						layout={layout}
-						selected={editor.isSelected(node)}
-						onNodePointerDown={onNodePointerDown}
-						onLayoutChange={updateNodeLayout}
-						projectManager={projectManager}
-						definitionVersion={node instanceof SubgraphNode ? node.definition?.structureVersion ?? 0 : 0}
-					/>
+					<GraphNodeView key={`${graph.id}:${key}`} node={node} editor={editor} layout={layout} selected={editor.isSelected(node)} onNodePointerDown={onNodePointerDown} onLayoutChange={updateNodeLayout} projectManager={projectManager} definitionVersion={definitionVersion(node)} />
 				))}
 			</div>
 			<div className="selection" style={selectionStyle} data-version={editorVersion} data-structure-version={structureVersion} />
-			{nodePicker && (
-				<div className="node-picker" style={{ left: nodePicker.x, top: nodePicker.y }} onPointerDown={event => event.stopPropagation()}>
-					<div className="node-picker-item" onClick={() => {
-						onCreateSubgraph(editor, nodePicker.position);
-						setNodePicker(null);
-					}}>
-						Subgraph
+			{
+				nodePicker && (
+					<div className="node-picker" style={{ left: nodePicker.x, top: nodePicker.y }} onPointerDown={event => event.stopPropagation()} onWheel={e => e.stopPropagation()}>
+						{availableSubgraphs.map(definition => (
+							<div key={definition.id} className="node-picker-item" onClick={() => {
+								const node = editor.addNode(SubgraphNode, nodePicker.position) as SubgraphNode;
+								node.graphId = definition.id;
+								setNodePicker(null);
+							}}>
+								{definition.name}
+							</div>
+						))}
+						{mapChildren(GraphNodeCategory, (_, category): any => {
+							if (category === GraphNodeCategory.Unknown)
+								return null;
+
+							return (
+								<React.Fragment key={category}>
+									<div>{category}</div>
+									{nodeTypes.map(([name, type]) => (type as any).category === category && (
+										<div key={name} className="node-picker-item" onClick={() => {
+											editor.addNode(type, nodePicker.position);
+											setNodePicker(null);
+										}}>
+											{name}
+										</div>
+									))}
+								</React.Fragment>
+							);
+						})}
+						{editor.graph.inputs.length > 0 && <div>Sub Graph Inputs</div>}
+						{editor.graph.inputs.map(port => (
+							<div key={`input-${port.id}`} className="node-picker-item" onClick={() => {
+								const node = editor.addNode(GraphInputNode, nodePicker.position) as GraphInputNode;
+								node.interfaceId = port.id;
+								setNodePicker(null);
+							}}>
+								Input: {port.name}
+							</div>
+						))}
+						{editor.graph.outputs.length > 0 && <div>Sub Graph Outputs</div>}
+						{editor.graph.outputs.map(port => (
+							<div key={`output-${port.id}`} className="node-picker-item" onClick={() => {
+								const node = editor.addNode(GraphOutputNode, nodePicker.position) as GraphOutputNode;
+								node.interfaceId = port.id;
+								setNodePicker(null);
+							}}>
+								Output: {port.name}
+							</div>
+						))}
+						<div className="node-picker-item" onClick={newSubGraph}>
+							New Subgraph
+						</div>
 					</div>
-					{availableSubgraphs.map(definition => (
-						<div key={definition.id} className="node-picker-item" onClick={() => {
-							const node = editor.addNode(SubgraphNode, nodePicker.position) as SubgraphNode;
-							node.graphId = definition.id;
-							setNodePicker(null);
-						}}>
-							{definition.name}
-						</div>
-					))}
-					{mapChildren(GraphNodeCategory, (category) => {
-						console.log(category);
-						return (
-							<React.Fragment key={category}>
-								<div>{category}</div>
-								{nodeTypes.map(([name, type]) => (type as any).category === category && (
-									<div key={name} className="node-picker-item" onClick={() => {
-										editor.addNode(type, nodePicker.position);
-										setNodePicker(null);
-									}}>
-										{name}
-									</div>
-								))}
-							</React.Fragment>
-						)
-					})}
-					{/*{nodeTypes.map(([name, type]) => (
-						<div key={name} className="node-picker-item" onClick={() => {
-							editor.addNode(type, nodePicker.position);
-							setNodePicker(null);
-						}}>
-							{name}
-						</div>
-					))}*/}
-					{editor.graph.inputs.map(port => (
-						<div key={`input-${port.id}`} className="node-picker-item" onClick={() => {
-							const node = editor.addNode(GraphInputNode, nodePicker.position) as GraphInputNode;
-							node.interfaceId = port.id;
-							setNodePicker(null);
-						}}>
-							Input: {port.name}
-						</div>
-					))}
-					{editor.graph.outputs.map(port => (
-						<div key={`output-${port.id}`} className="node-picker-item" onClick={() => {
-							const node = editor.addNode(GraphOutputNode, nodePicker.position) as GraphOutputNode;
-							node.interfaceId = port.id;
-							setNodePicker(null);
-						}}>
-							Output: {port.name}
-						</div>
-					))}
-				</div>
-			)}
+				)
+			}
 		</div >
 	);
 };

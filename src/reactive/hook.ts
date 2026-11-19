@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { getState, register } from "./state";
 import { createProxy, toRaw } from "./proxy";
 import type { Interceptor, ObservableOptions, RecursiveInterceptor, RecursiveKey, RecursiveSubscriber, SubscribeOptions, Subscriber } from "./types";
@@ -31,7 +31,7 @@ const getStore = (target: object): Store => {
 
 export const useObservable = <T extends object>(value: T | (() => T), options: ObservableOptions = { recursive: false }): T => {
 	const recursive = options.recursive ?? false;
-	const [target] = useState(() => {
+	const target = useMemo(() => {
 		value = typeof value === "function" ? value() : value;
 
 		try {
@@ -40,7 +40,7 @@ export const useObservable = <T extends object>(value: T | (() => T), options: O
 		} catch { }
 
 		return createProxy(value, value, "", recursive) as T;
-	});
+	}, [value, recursive]);
 
 	const store = getStore(toRaw(target));
 
