@@ -1,12 +1,10 @@
-import { GraphInputNode, GraphNode, GraphNodeCategory, GraphOutputNode, SubgraphNode, Vec2 } from "../../graph";
-import type { GraphEditor } from "../../graph/editor";
-import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
+import { type GraphEditor, GraphInputNode, GraphNode, GraphNodeCategory, GraphOutputNode, SubgraphNode, Vec2, CutEdgesTool, SelectTool, type GraphPointerEvent } from "@editor";
 import { mapChildren } from "../../utils";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { subscribe } from "../../reactive";
+import { subscribe } from "@reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
-import type { ProjectManager } from "../../editor/project-manager";
+import type { ProjectManager } from "@editor";
 import React from "react";
 
 const getSelectionStyle = (editor: GraphEditor, root: HTMLDivElement | null): React.CSSProperties => {

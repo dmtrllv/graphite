@@ -1,9 +1,8 @@
-import type { GraphEditor } from "../../graph/editor";
-import { useObservable } from "../../reactive";
+import type { GraphEditor, Vec2 } from "@editor";
+import { useObservable } from "@reactive";
 import { GraphRenderer } from "./graph-renderer";
 import { GraphProperties } from "./graph-properties";
-import type { ProjectManager } from "../../editor/project-manager";
-import type { Vec2 } from "../../graph";
+import type { ProjectManager } from "@editor";
 
 import "./styles/graph.scss";
 

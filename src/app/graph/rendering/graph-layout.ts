@@ -1,4 +1,4 @@
-import { Vec2, type Graph, type GraphNode } from "../../../graph";
+import { Vec2, type Graph, type GraphNode } from "@editor";
 
 export type PortDirection = "input" | "output";
 

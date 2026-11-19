@@ -1,11 +1,10 @@
-import { SaveProjectView } from "../app/editor/projects";
+import { SaveProjectView } from "../app/editor/windows/projects";
 import { GraphEditorView } from "../app/graph";
-import { VectorMathNode } from "../graph";
+import { VectorMathNode, SubgraphNode, Vec2, type GraphEditor } from "./graph";
 import { observable } from "../reactive";
 import type { Editor } from "./editor";
 import { Project, ProjectInfo } from "./project";
 import { serializeProject, deserializeProject } from "./project-serializer";
-import { SubgraphNode, Vec2, type GraphEditor } from "../graph";
 
 const PROJECTS_KEY = "graphite:projects";
 

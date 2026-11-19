@@ -1,10 +1,8 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { GraphNode, NodeOption, SubgraphNode } from "../../graph";
-import type { GraphEditor } from "../../graph/editor";
-import { useObservable, useObservableProp } from "../../reactive/hook";
+import { GraphEditor, GraphNode, NodeOption, SubgraphNode, type ProjectManager } from "@editor";
+import { useObservable, useObservableProp } from "@reactive";
 import { GraphLayout } from "./rendering";
 import { NodePropView } from "./node-prop-view";
-import type { ProjectManager } from "../../editor/project-manager";
 
 type GraphNodeViewProps = {
 	node: GraphNode;
@@ -17,7 +15,7 @@ type GraphNodeViewProps = {
 	definitionVersion: number;
 };
 
-export const GraphNodeView = React.memo(({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange, definitionVersion }: GraphNodeViewProps) => {
+export const GraphNodeView = React.memo(({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
 	const position = useObservableProp(node, "position");
 

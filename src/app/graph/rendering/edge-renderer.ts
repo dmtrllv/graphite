@@ -1,6 +1,4 @@
-import type { Graph, NodeEdge } from "../../../graph";
-import type { GraphEditor } from "../../../graph/editor";
-import { Vec2 } from "../../../graph";
+import { Vec2, type GraphEditor, type Graph, type NodeEdge } from "@editor";
 import { EdgeGeometryCache } from "./edge-geometry";
 import { GraphLayout } from "./graph-layout";
 import type { GraphSettings } from "../../../editor/settings";

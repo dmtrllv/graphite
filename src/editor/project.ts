@@ -1,4 +1,4 @@
-import { GraphManager } from "../graph";
+import { GraphManager } from "./graph";
 import { observable, subscribe, type Unsubscriber } from "../reactive";
 import type { ProjectManager } from "./project-manager";
 import { Settings } from "./settings";

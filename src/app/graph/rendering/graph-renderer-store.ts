@@ -1,6 +1,5 @@
-import { subscribe } from "../../../reactive";
-import type { Graph, GraphNode } from "../../../graph";
-import type { GraphEditor } from "../../../graph/editor";
+import { subscribe } from "@reactive";
+import type { Graph, GraphNode, GraphEditor } from "@editor";
 import { GraphLayout } from "./graph-layout";
 import { GraphCanvasRenderer } from "./renderer";
 import { RenderScheduler } from "./render-scheduler";

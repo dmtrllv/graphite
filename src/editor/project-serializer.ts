@@ -2,7 +2,7 @@ import { Project } from "./project";
 import { ProjectInfo } from "./project";
 import type { ProjectManager } from "./project-manager";
 import { Settings } from "./settings";
-import { serializeGraphManager, deserializeGraphManager, type SerializedGraphManager } from "../graph";
+import { serializeGraphManager, deserializeGraphManager, type SerializedGraphManager } from "./graph";
 
 export interface SerializedProject {
 	version: number;

@@ -1,6 +1,4 @@
-import type { Graph } from "../../../graph";
-import type { GraphEditor } from "../../../graph/editor";
-import { Vec2, type NodeEdge } from "../../../graph";
+import { Vec2, type NodeEdge, type GraphEditor, Graph } from "@editor";
 import { EdgeRenderer } from "./edge-renderer";
 import { GraphLayout } from "./graph-layout";
 import type { GraphSettings } from "../../../editor/settings";

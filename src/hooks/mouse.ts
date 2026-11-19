@@ -1,12 +1,20 @@
-import { Vec2 } from "../graph";
 import { useObservable } from "../reactive/hook";
 import { useEvent } from "./event";
+
+type Vec2 = {
+	x: number,
+	y: number
+}
+
+const cloneVec2 = ({ x, y }: Vec2) => {
+	return { x, y };
+}
 
 export const useMouseMove = (startPosition: Vec2, onMove: (newPosition: Vec2, offset: Vec2) => void, scale: number, inverseY: boolean = false, button: 0 | 1 | 2 = 0) => {
 	const moveState = useObservable(() => ({
 		isDown: false,
-		downPosition: new Vec2(0, 0),
-		startOffset: startPosition.clone(),
+		downPosition: { x: 0, y: 0 },
+		startOffset: cloneVec2(startPosition),
 	}));
 
 	const onMouseDown = (e: React.MouseEvent) => {
@@ -14,8 +22,8 @@ export const useMouseMove = (startPosition: Vec2, onMove: (newPosition: Vec2, of
 			return;
 		e.stopPropagation();
 		moveState.isDown = true;
-		moveState.startOffset = startPosition.clone();
-		moveState.downPosition = new Vec2(e.clientX, e.clientY);
+		moveState.startOffset = cloneVec2(startPosition);
+		moveState.downPosition = { x: e.clientX, y: e.clientY };
 	};
 
 	useEvent("mousemove", (e) => {
@@ -24,11 +32,13 @@ export const useMouseMove = (startPosition: Vec2, onMove: (newPosition: Vec2, of
 
 		let delta;
 		if (inverseY)
-			delta = new Vec2(e.clientX - moveState.downPosition.x, moveState.downPosition.y - e.clientY);
+			delta = { x: e.clientX - moveState.downPosition.x, y: moveState.downPosition.y - e.clientY };
 		else
-			delta = new Vec2(e.clientX, e.clientY).sub(moveState.downPosition);
-		const d = delta.mul(scale).clone();
-		onMove(delta.add(moveState.startOffset), d);
+			delta = { x: e.clientX - moveState.downPosition.x, y: e.clientY - moveState.downPosition.y };
+		delta.x *= scale;
+		delta.y *= scale;
+		const d = cloneVec2(delta);
+		onMove({ x: delta.x + moveState.startOffset.x, y: delta.y + moveState.startOffset.y }, d);
 	}, undefined, [scale]);
 
 	useEvent("mouseup", e => {

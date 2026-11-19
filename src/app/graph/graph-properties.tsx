@@ -1,7 +1,7 @@
-import { subscribe } from "../../reactive";
-import { Bool, F16, F32, I32, U32, Vec2, Vec3, Vec4, type Graph, type GraphInterfacePort, type Type } from "../../graph";
-import { useWindow } from "../editor/window";
-import { useEffect, useState } from "react";
+import { subscribe } from "@reactive";
+import { Bool, F16, F32, I32, U32, Vec2, Vec3, Vec4, WorldGraph, type Graph, type GraphInterfacePort, type Type } from "@editor";
+import { useWindow } from "../editor/layout";
+import { useEffect, useMemo, useState } from "react";
 
 const types = {
 	F16,
@@ -51,6 +51,8 @@ export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGr
 	const manager = graph.manager!;
 	const [, setGraphVersion] = useState(0);
 	const [catalogVersion, setCatalogVersion] = useState(manager.catalogVersion);
+	
+	const isWorldGraph = useMemo(() => graph instanceof WorldGraph, [graph]);
 
 	useEffect(() => {
 		const update = () => setGraphVersion(version => version + 1);
@@ -64,20 +66,17 @@ export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGr
 	}, [graph]);
 
 	useEffect(() => {
-		if (!graph.isWorldGraph)
+		if (isWorldGraph)
 			return;
 
 		return subscribe(manager, "catalogVersion", () => {
 			setCatalogVersion(manager.catalogVersion);
 		});
-	}, [manager, graph.isWorldGraph]);
+	}, [manager, isWorldGraph]);
 
-	const availableSubgraphs = graph.isWorldGraph
-		? manager.getAvailableSubgraphs(graph)
-		: [];
+	const availableSubgraphs = isWorldGraph  ? manager.getAvailableSubgraphs(graph)  : [];
 
 	const window = useWindow();
-
 
 	const removeGraph = () => {
 		graph.manager!.removeGraph(graph);
@@ -92,9 +91,9 @@ export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGr
 
 	return (
 		<div className="graph-properties" data-catalog-version={catalogVersion}>
-			<div className="graph-properties-header">{graph.isWorldGraph ? "World" : "Graph Properties"}</div>
-			{!graph.isWorldGraph && <button onClick={removeGraph}>×</button>}
-			{graph.isWorldGraph && (
+			<div className="graph-properties-header">{isWorldGraph ? "World" : "Graph Properties"}</div>
+			{!isWorldGraph && <button onClick={removeGraph}>×</button>}
+			{isWorldGraph && (
 				<div className="graph-properties-group">
 					<div className="graph-properties-title">
 						<span>Subgraphs</span>
@@ -106,7 +105,7 @@ export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGr
 					))}
 				</div>
 			)}
-			{!graph.isWorldGraph && (
+			{!isWorldGraph && (
 				<>
 					<div className="graph-properties-section">
 						<input value={graph.name} onChange={rename} />

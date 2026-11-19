@@ -1,5 +1,5 @@
-import { ProjectList } from "../app/editor/projects";
-import { SettingsView } from "../app/editor/settings";
+import { ProjectList } from "../app/editor/windows/projects";
+import { SettingsView } from "../app/editor/windows/settings";
 import { EditorLayout } from "./editor-layout";
 import { Menubar, MenuItem, MenuSeparator } from "./menubar";
 import { ProjectManager } from "./project-manager";

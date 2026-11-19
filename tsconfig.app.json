@@ -13,6 +13,23 @@
 		"moduleDetection": "force",
 		"noEmit": true,
 		"jsx": "react-jsx",
+		"paths": {
+			"@reactive": [
+				"./src/reactive/index.ts"
+			],
+			"@editor": [
+				"./src/editor/index.ts"
+			],
+			"@editor/*": [
+				"./src/editor/*"
+			],
+			"@utils": [
+				"./src/utils/index.ts"
+			],
+			"@utils/*": [
+				"./src/utils/*"
+			],
+		}
 	},
 	"include": [ "src" ],
 	"extends": "@tsconfig/strictest"
