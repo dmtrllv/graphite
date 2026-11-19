@@ -267,7 +267,7 @@ const deserializeGraphType = (name: string): typeof Graph => {
 }
 
 const deserializeGraph = (json: SerializedGraph): Graph => {
-	const type = json.type ?? (json.isWorldGraph ? "world" : "subgraph");
+	const type = json.type ?? (json.isWorldGraph ? WorldGraph.name : Subgraph.name);
 	const GraphType = deserializeGraphType(type);
 	const graph = new GraphType(json.id, json.name, new Vec2(...json.offset));
 	

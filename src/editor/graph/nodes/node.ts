@@ -30,6 +30,7 @@ export const GraphNodeCategory = {
 	Value: "Values",
 	Math: "Math",
 	SubGraph: "Sub Graphs",
+	Simulation: "Simulation",
 	Unknown: "Unknown"
 } as const;
 

@@ -9,3 +9,4 @@ export * from "./settings-manager";
 export * from "./settings";
 export * from "./window-manager";
 export * from "./window";
+export * from "./simulation";

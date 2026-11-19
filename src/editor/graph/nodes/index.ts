@@ -3,3 +3,4 @@ export * from "./math";
 export * from "./scalar";
 export * from "./graph-io";
 export * from "./subgraph";
+export * from "./simulation";
