@@ -1,63 +1,99 @@
-import type { GraphEditor } from "../editor";
+
 import { GraphEditorToolBase, type GraphPointerEvent } from "./tool";
-import { MoveNodesTool, type NodeDragLayout } from "./move-nodes";
+import { MoveNodesAction, type NodePositionChange } from "../actions/move-nodes";
 import { Selection } from "../editor-state";
+import type { GraphNode } from "../nodes";
 import { Vec2 } from "../types";
+import type { GraphEditor } from "../editor";
+
+type GraphSelectionHitTest = {
+	getNodesInRect(left: number, top: number, right: number, bottom: number): GraphNode[];
+};
 
 export class SelectTool extends GraphEditorToolBase {
-	private start = new Vec2();
-	private moving = false;
-	private moveTool: MoveNodesTool;
+	private layout: GraphSelectionHitTest;
+	private downPosition: Vec2 | null = null;
+	private changes: NodePositionChange[] = [];
+	private dragging = false;
 
-	public constructor(editor: GraphEditor, layout: NodeDragLayout, invalidate: () => void) {
+	public constructor(editor: GraphEditor, layout: GraphSelectionHitTest) {
 		super(editor);
-		this.moveTool = new MoveNodesTool(editor, layout, invalidate);
+		this.layout = layout;
 	}
 
 	public override pointerDown(event: GraphPointerEvent): void {
-		if (event.button !== 0) return;
+		if (event.button !== 0)
+			return;
 
-		this.start = new Vec2(event.clientX, event.clientY);
-		this.moving = false;
+		this.downPosition = event.graphPosition.clone();
+		this.dragging = false;
 
-		if (this.editor.selectedNodes.length) {
-			this.editor.selection = new Selection(this.start.clone(), this.start.clone());
-		}
-	}
+		if (event.node) {
+			if (!this.editor.isSelected(event.node))
+				this.editor.selectedNodes = event.shiftKey ? [...this.editor.selectedNodes, event.node] : [event.node];
 
-	public override pointerMove(event: GraphPointerEvent): void {
-		if (!this.editor.selection) return;
+			this.changes = this.editor.selectedNodes.map(node => ({
+				node,
+				before: node.position.clone(),
+				after: node.position.clone()
+			}));
 
-		const current = new Vec2(event.clientX, event.clientY);
-
-		if (!this.moving && current.distance(this.start) > 3) {
-			this.moving = true;
-			this.moveTool.pointerDown({
-				...event,
-				clientX: this.start.x,
-				clientY: this.start.y
-			});
-		}
-
-		if (this.moving) {
-			this.moveTool.pointerMove(event);
 			return;
 		}
 
-		this.editor.selection.mousePos = current;
+		this.editor.selectedNodes = [];
+		this.editor.selection = new Selection(new Vec2(event.clientX, event.clientY), new Vec2(event.clientX, event.clientY));
 	}
 
-	public override pointerUp(event: GraphPointerEvent): void {
-		if (this.moving)
-			this.moveTool.pointerUp(event);
+	public override pointerMove(event: GraphPointerEvent): void {
+		if (!this.downPosition)
+			return;
+
+		if (this.changes.length) {
+			const delta = event.graphPosition.clone().sub(this.downPosition);
+
+			if (!this.dragging && delta.distance(new Vec2()) > 0)
+				this.dragging = true;
+
+			if (!this.dragging)
+				return;
+
+			for (const change of this.changes) {
+				change.node.position.set(change.before.clone().add(delta));
+				change.after = change.node.position.clone();
+			}
+
+			return;
+		}
+
+		if (this.editor.selection) {
+			this.editor.selection.mousePos = new Vec2(event.clientX, event.clientY);
+			this.editor.selectedNodes = this.layout.getNodesInRect(
+				this.editor.selection.downPos.x,
+				this.editor.selection.downPos.y,
+				event.clientX,
+				event.clientY
+			);
+		}
+	}
+
+	public override pointerUp(_event: GraphPointerEvent): void {
+		if (this.dragging && this.changes.length)
+			this.editor.history.recordApplied(new MoveNodesAction(this.changes));
 
 		this.editor.selection = null;
-		this.moving = false;
+		this.downPosition = null;
+		this.changes = [];
+		this.dragging = false;
 	}
 
 	public override cancel(): void {
-		this.moveTool.cancel();
+		for (const change of this.changes)
+			change.node.position = change.before.clone();
+
 		this.editor.selection = null;
-		this.moving = false;
+		this.downPosition = null;
+		this.changes = [];
+		this.dragging = false;
 	}
 }
