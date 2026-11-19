@@ -263,6 +263,7 @@ export const MenuBarView = ({ menubar, autoHide }: { menubar: Menubar, autoHide?
 
 	return (
 		<div ref={rootRef} className={`menu-bar${active ? " active" : ""} ${!active && autoHide ? "hidden" : ""}`} role="menubar" style={style}>
+			<div className="icon" />
 			{menubar.items.map((item, index) => {
 				const onPointerEnter = () => {
 					if (active && isOpen) {
