@@ -1,4 +1,4 @@
-import { useMemo, type PointerEvent as ReactPointerEvent } from "react";
+import React, { useMemo } from "react";
 import { LayoutPanel, type DockPosition, type Window } from "@editor";
 import { useObservable } from "@reactive";
 import { WindowContext } from "./window";
@@ -8,7 +8,7 @@ import "./styles/panel.scss";
 type PanelViewProps = {
 	panel: LayoutPanel;
 	dropPosition: DockPosition | null;
-	onWindowDrag: (window: Window, event: ReactPointerEvent) => void;
+	onWindowDrag: (window: Window, event: React.PointerEvent) => void;
 };
 
 export const PanelView = ({ panel, onWindowDrag, dropPosition }: PanelViewProps) => {

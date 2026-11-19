@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { MenuItem, type Menubar } from "@editor";
 import { useObservable } from "@reactive";
-import { useEvent } from "../../../hooks";
+import { useEvent } from "@hooks";
 import { getChildrenAtPath, getFirstItem, getLastItem } from "./utils";
 import { MenuItems } from "./items";
 

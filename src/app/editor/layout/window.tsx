@@ -1,5 +1,4 @@
-import { createContext, useContext, useRef } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import React, { createContext, useContext, useRef } from "react";
 import { Window } from "@editor/window";
 import { useObservable } from "@reactive";
 
@@ -7,7 +6,7 @@ type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 export type FloatingWindowProps = {
 	floatingWindow: Window;
-	onWindowDrag: (window: Window, event: ReactPointerEvent) => void;
+	onWindowDrag: (window: Window, event: React.PointerEvent) => void;
 	onClose: (window: Window) => void;
 };
 
@@ -25,7 +24,7 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 
 	const Component = floatingWindow.Component;
 
-	const onResizeStart = (direction: ResizeDirection, event: ReactPointerEvent<HTMLDivElement>) => {
+	const onResizeStart = (direction: ResizeDirection, event: React.PointerEvent<HTMLDivElement>) => {
 		event.preventDefault();
 		event.stopPropagation();
 		event.currentTarget.setPointerCapture(event.pointerId);
@@ -38,7 +37,7 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 		};
 	};
 
-	const onResizeMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+	const onResizeMove = (event: React.PointerEvent<HTMLDivElement>) => {
 		const resize = resizeRef.current;
 		if (!resize)
 			return;

@@ -1,5 +1,4 @@
-import { Fragment, useRef } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import React, { Fragment, useRef } from "react";
 import  { type Window, EditorLayout, type DropTarget } from "@editor";
 import { useObservable } from "@reactive";
 import { PanelView } from "./panel";
@@ -8,7 +7,7 @@ import "./styles/layout.scss";
 
 type LayoutViewProps = {
 	layout: EditorLayout;
-	onWindowDrag: (window: Window, event: ReactPointerEvent) => void;
+	onWindowDrag: (window: Window, event: React.PointerEvent) => void;
 	dropTarget: DropTarget;
 };
 
@@ -32,7 +31,7 @@ export const LayoutView = ({ layout, onWindowDrag, dropTarget }: LayoutViewProps
 const SplitHandle = ({ layout, index }: { layout: EditorLayout; index: number }) => {
 	const previousPosition = useRef<number | null>(null);
 
-	const getPosition = (event: ReactPointerEvent) => layout.direction === "horizontal" ? event.clientX : event.clientY;
+	const getPosition = (event: React.PointerEvent) => layout.direction === "horizontal" ? event.clientX : event.clientY;
 
 	const props: React.HTMLProps<HTMLDivElement> = {
 		onPointerDown: e => {
