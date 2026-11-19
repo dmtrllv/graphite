@@ -3,7 +3,7 @@ import type { GraphEditor } from "../../graph/editor";
 import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
 import { mapChildren } from "../../utils";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { subscribe, useObservable } from "../../reactive";
+import { subscribe } from "../../reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
 import type { ProjectManager } from "../../editor/project-manager";
@@ -55,18 +55,20 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 	const layout = store.layout;
 
 	const manager = graph.manager!;
-	
-	const [graphsVersion, setGraphsVersion] = useState(0);
+	const [catalogVersion, setCatalogVersion] = useState(manager.catalogVersion);
 
 	useEffect(() => {
-		return subscribe(manager, "graphs", { recursive: true }, () => {
-			setGraphsVersion(version => version + 1);
+		if (!nodePicker)
+			return;
+
+		return subscribe(manager, "catalogVersion", () => {
+			setCatalogVersion(manager.catalogVersion);
 		});
-	}, [manager]);
+	}, [manager, !!nodePicker]);
 
 	const availableSubgraphs = useMemo(() => {
 		return nodePicker ? manager.getAvailableSubgraphs(graph) : [];
-	}, [manager, graph, nodePicker, graphsVersion, structureVersion]);
+	}, [manager, graph, nodePicker, catalogVersion]);
 
 	const invalidate = useCallback(() => store.invalidate(), [store]);
 

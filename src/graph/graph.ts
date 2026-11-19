@@ -91,6 +91,8 @@ export class Graph {
 		const node = new type(this._nodeIdCounter++, this, position);
 		this.nodes.set(node.id, node);
 		this.structureVersion++;
+		if ("graphId" in node && node.graphId !== null)
+			this._manager?.notifySubgraphTopologyChanged();
 		return node;
 	}
 
@@ -101,6 +103,8 @@ export class Graph {
 		this.nodes.set(node.id, node);
 		this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
 		this.structureVersion++;
+		if ("graphId" in node && node.graphId !== null)
+			this._manager?.notifySubgraphTopologyChanged();
 	}
 
 	public removeNode(id: number): void;
@@ -116,6 +120,8 @@ export class Graph {
 
 		this.nodes.delete(node.id);
 		this.structureVersion++;
+		if ("graphId" in node && node.graphId !== null)
+			this._manager?.notifySubgraphTopologyChanged();
 	}
 
 	public addEdge(source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string): NodeEdge | null {

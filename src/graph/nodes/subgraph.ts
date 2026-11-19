@@ -20,7 +20,11 @@ export class SubgraphNode extends GraphNode {
 		if (definition && manager?.hasRecursiveReference(this.graph, definition))
 			throw new Error("A graph cannot reference itself or one of its parent graphs!");
 
+		if (this._graphId === value)
+			return;
+
 		this._graphId = value;
+		manager?.notifySubgraphTopologyChanged();
 	}
 
 	public get definition() {

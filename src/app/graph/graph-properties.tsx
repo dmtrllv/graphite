@@ -1,7 +1,7 @@
-import { subscribe, useObservable } from "../../reactive";
+import { subscribe } from "../../reactive";
 import { Bool, F16, F32, I32, U32, Vec2, Vec3, Vec4, type Graph, type GraphInterfacePort, type Type } from "../../graph";
 import { useWindow } from "../editor/window";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 const types = {
 	F16,
@@ -48,23 +48,33 @@ const InterfacePortView = ({ graph, direction, port }: { graph: Graph; direction
 };
 
 export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGraph: (graph: Graph) => void; }) => {
-	useObservable(graph, { recursive: true });
-	
 	const manager = graph.manager!;
-	const [graphsVersion, setGraphsVersion] = useState(0);
+	const [, setGraphVersion] = useState(0);
+	const [catalogVersion, setCatalogVersion] = useState(manager.catalogVersion);
+
+	useEffect(() => {
+		const update = () => setGraphVersion(version => version + 1);
+		const unsubscribers = [
+			subscribe(graph, "name", update),
+			subscribe(graph, "inputs", update),
+			subscribe(graph, "outputs", update)
+		];
+
+		return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+	}, [graph]);
 
 	useEffect(() => {
 		if (!graph.isWorldGraph)
 			return;
 
-		return subscribe(manager, "graphs", { recursive: true }, () => {
-			setGraphsVersion(version => version + 1);
+		return subscribe(manager, "catalogVersion", () => {
+			setCatalogVersion(manager.catalogVersion);
 		});
 	}, [manager, graph.isWorldGraph]);
 
-	const availableSubgraphs = useMemo(() => {
-		return graph.isWorldGraph ? manager.getAvailableSubgraphs(graph) : [];
-	}, [manager, graph, graphsVersion, graph.structureVersion]);
+	const availableSubgraphs = graph.isWorldGraph
+		? manager.getAvailableSubgraphs(graph)
+		: [];
 
 	const window = useWindow();
 
@@ -81,7 +91,7 @@ export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGr
 	}
 
 	return (
-		<div className="graph-properties">
+		<div className="graph-properties" data-catalog-version={catalogVersion}>
 			<div className="graph-properties-header">{graph.isWorldGraph ? "World" : "Graph Properties"}</div>
 			{!graph.isWorldGraph && <button onClick={removeGraph}>×</button>}
 			{graph.isWorldGraph && (

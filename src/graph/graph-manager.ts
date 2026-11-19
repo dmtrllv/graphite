@@ -12,9 +12,16 @@ export class GraphManager {
 	@observable
 	public accessor editors = new Map<Graph, GraphEditor>();
 
+	@observable
+	public accessor catalogVersion = 0;
+
 	public constructor(createWorldGraph = true) {
 		if (createWorldGraph)
 			this.add("World");
+	}
+
+	public notifySubgraphTopologyChanged(): void {
+		this.catalogVersion++;
 	}
 
 	public get worldGraph(): Graph {
@@ -62,6 +69,7 @@ export class GraphManager {
 			throw error;
 		}
 
+		this.catalogVersion++;
 		return graph;
 	}
 
@@ -87,6 +95,8 @@ export class GraphManager {
 			this.graphs.delete(graph.id);
 			throw error;
 		}
+
+		this.catalogVersion++;
 	}
 
 	public notifyInterfaceChanged(graph: Graph): void {
@@ -128,6 +138,7 @@ export class GraphManager {
 			throw new Error("The World Graph cannot be renamed!");
 
 		graph.name = normalized;
+		this.catalogVersion++;
 	}
 
 	public hasRecursiveReference(parent: Graph, definition: Graph): boolean {
@@ -184,6 +195,7 @@ export class GraphManager {
 		}
 
 		this.graphs.delete(graph.id);
+		this.catalogVersion++;
 	}
 
 	private validateReferences(): void {
