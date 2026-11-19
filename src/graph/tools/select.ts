@@ -1,6 +1,6 @@
 import type { GraphEditor } from "../editor";
 import { GraphEditorToolBase, type GraphPointerEvent } from "./tool";
-import { MoveNodesTool } from "./move-nodes";
+import { MoveNodesTool, type NodeDragLayout } from "./move-nodes";
 import { Selection } from "../editor-state";
 import { Vec2 } from "../types";
 
@@ -9,9 +9,9 @@ export class SelectTool extends GraphEditorToolBase {
 	private moving = false;
 	private moveTool: MoveNodesTool;
 
-	public constructor(editor: GraphEditor) {
+	public constructor(editor: GraphEditor, layout: NodeDragLayout, invalidate: () => void) {
 		super(editor);
-		this.moveTool = new MoveNodesTool(editor);
+		this.moveTool = new MoveNodesTool(editor, layout, invalidate);
 	}
 
 	public override pointerDown(event: GraphPointerEvent): void {
@@ -48,9 +48,8 @@ export class SelectTool extends GraphEditorToolBase {
 	}
 
 	public override pointerUp(event: GraphPointerEvent): void {
-		if (this.moving) {
+		if (this.moving)
 			this.moveTool.pointerUp(event);
-		}
 
 		this.editor.selection = null;
 		this.moving = false;

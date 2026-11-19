@@ -1,16 +1,27 @@
 import { GraphEditorToolBase, type GraphPointerEvent } from "./tool";
 import { MoveNodesAction, type NodePositionChange } from "../actions/move-nodes";
+import type { GraphNode } from "../nodes";
 import { Vec2 } from "../types";
+
+export type NodeDragLayout = {
+	setNodeDragOffset(node: GraphNode, offset: Vec2 | null): void;
+};
 
 export class MoveNodesTool extends GraphEditorToolBase {
 	private changes: NodePositionChange[] = [];
 	private downPosition = new Vec2();
+	private delta = new Vec2();
+
+	public constructor(editor: ConstructorParameters<typeof GraphEditorToolBase>[0], private layout: NodeDragLayout, private invalidate: () => void) {
+		super(editor);
+	}
 
 	public override pointerDown(event: GraphPointerEvent): void {
 		const nodes = this.editor.selectedNodes;
 		if (!nodes.length) return;
 
 		this.downPosition = new Vec2(event.clientX, event.clientY);
+		this.delta = new Vec2();
 
 		this.changes = nodes.map(node => ({
 			node,
@@ -23,26 +34,41 @@ export class MoveNodesTool extends GraphEditorToolBase {
 		if (!this.changes.length) return;
 
 		const graph = this.editor.graph;
-		const delta = new Vec2(
+		this.delta = new Vec2(
 			(event.clientX - this.downPosition.x) / graph.scale,
 			-(event.clientY - this.downPosition.y) / graph.scale
 		);
 
-		for (const change of this.changes) {
-			change.node.position.set({
-				x: change.before.x + delta.x,
-				y: change.before.y + delta.y
-			});
-		}
+		for (const change of this.changes)
+			this.layout.setNodeDragOffset(change.node, this.delta);
+
+		this.invalidate();
 	}
 
-	public override pointerUp(_event: GraphPointerEvent): void {
+	public override pointerUp(event: GraphPointerEvent): void {
 		if (!this.changes.length) return;
 
-		const changes = this.changes;
+		this.pointerMove(event);
+
+		const changes = this.changes.map(change => ({
+			node: change.node,
+			before: change.before,
+			after: new Vec2(
+				change.before.x + this.delta.x,
+				change.before.y + this.delta.y
+			)
+		}));
+
 		this.changes = [];
 
-		if (changes.every(change => change.before.distance(change.node.position) === 0))
+		for (const change of changes) {
+			change.node.position.set(change.after);
+			this.layout.setNodeDragOffset(change.node, null);
+		}
+
+		this.invalidate();
+
+		if (changes.every(change => change.before.distance(change.after) === 0))
 			return;
 
 		this.editor.history.recordApplied(new MoveNodesAction(changes));
@@ -50,8 +76,10 @@ export class MoveNodesTool extends GraphEditorToolBase {
 
 	public override cancel(): void {
 		for (const change of this.changes)
-			change.node.position.set(change.before);
+			this.layout.setNodeDragOffset(change.node, null);
 
 		this.changes = [];
+		this.delta = new Vec2();
+		this.invalidate();
 	}
 }

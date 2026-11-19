@@ -21,6 +21,7 @@ export class GraphLayout {
 	private nodePorts = new Map<number, Set<string>>();
 	private nodeElements = new Map<number, { node: GraphNode; element: HTMLDivElement }>();
 	private hoveredPort: HTMLDivElement | null = null;
+	private nodeDragOffsets = new Map<number, Vec2>();
 
 	private getPortKey(node: GraphNode, direction: PortDirection, key: string): string {
 		return `${node.id}:${direction}:${key}`;
@@ -183,6 +184,7 @@ export class GraphLayout {
 		}
 
 		this.nodePorts.delete(node.id);
+		this.nodeDragOffsets.delete(node.id);
 	}
 
 	public getPortAt(x: number, y: number): { node: GraphNode; direction: PortDirection; key: string } | undefined {
@@ -194,5 +196,43 @@ export class GraphLayout {
 		}
 
 		return undefined;
+	}
+
+	public setNodeDragOffset(node: GraphNode, offset: Vec2 | null): void {
+		const previous = this.nodeDragOffsets.get(node.id) ?? new Vec2();
+		const current = offset ?? new Vec2();
+		const delta = new Vec2(current.x - previous.x, current.y - previous.y);
+		const element = this.nodeElements.get(node.id)?.element;
+
+		if (offset) {
+			this.nodeDragOffsets.set(node.id, current);
+			element?.style.setProperty("--drag-x", `${current.x}px`);
+			element?.style.setProperty("--drag-y", `${-current.y}px`);
+		} else {
+			this.nodeDragOffsets.delete(node.id);
+			element?.style.removeProperty("--drag-x");
+			element?.style.removeProperty("--drag-y");
+		}
+
+		if (delta.x === 0 && delta.y === 0)
+			return;
+
+		const ports = this.nodePorts.get(node.id);
+
+		if (!ports)
+			return;
+
+		for (const id of ports) {
+			const port = this.ports.get(id);
+			const element = this.portElements.get(id);
+
+			if (!port || !element)
+				continue;
+
+			this.updatePort(node, element.direction, element.key, new Vec2(
+				port.position.x + delta.x,
+				port.position.y + delta.y
+			));
+		}
 	}
 }

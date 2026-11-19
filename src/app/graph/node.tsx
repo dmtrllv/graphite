@@ -38,7 +38,7 @@ export const GraphNodeView = React.memo(({ projectManager, node, editor, layout,
 	const style = useMemo<React.CSSProperties>(() => ({
 		left: `calc(50% + ${position.x}px)`,
 		top: `calc(50% + ${-position.y}px)`,
-		transform: "translate(-50%, -50%)"
+		transform: "translate(calc(-50% + var(--drag-x, 0px)), calc(-50% + var(--drag-y, 0px)))"
 	}), [position.x, position.y]);
 
 	useLayoutEffect(() => {

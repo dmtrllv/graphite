@@ -76,7 +76,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 		store.updateNode(node);
 	}, [store]);
 
-	const selectTool = useMemo(() => new SelectTool(editor, layout), [editor, layout]);
+	const selectTool = useMemo(() => new SelectTool(editor, layout, store.invalidate), [editor, layout, store]);
 
 	const cutTool = useMemo(() => new CutEdgesTool(editor, (start, end) => {
 		const canvasElement = canvas.current;
