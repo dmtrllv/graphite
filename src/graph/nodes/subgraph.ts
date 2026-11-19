@@ -1,7 +1,7 @@
 import { observable } from "../../reactive";
-import { GraphNode } from "./node";
+import { GraphNode, GraphNodeCategory } from "./node";
 
-@GraphNode.register("Subgraph")
+@GraphNode.register(GraphNodeCategory.SubGraph,"Subgraph")
 export class SubgraphNode extends GraphNode {
 	@observable
 	private accessor _graphId: number | null = null;

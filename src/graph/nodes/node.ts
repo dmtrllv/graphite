@@ -7,6 +7,7 @@ import { getTypeConversion } from "../types/cast";
 const INPUTS = Symbol("INPUTS");
 const OUTPUTS = Symbol("OUTPUTS");
 const OPTIONS = Symbol("OPTIONS");
+const CATEGORY = Symbol("CATEGORY");
 
 export type NodeVariant = {
 	inputs?: readonly string[];
@@ -24,21 +25,35 @@ const getOwnMetadata = <T>(metadata: object, key: symbol): T => {
 	return target[key] as T;
 };
 
+export const GraphNodeCategory = {
+	Value: "Values",
+	Math: "Math",
+	SubGraph: "Sub Graphs",
+	Unknown: "Unknown"
+} as const;
+
+type GraphNodeCategory = (typeof GraphNodeCategory)[keyof typeof GraphNodeCategory];
+
 export abstract class GraphNode {
 	declare private static [INPUTS]?: Record<string, NodeProp>;
 	declare private static [OUTPUTS]?: Record<string, NodeProp>;
 	declare private static [OPTIONS]?: Record<string, NodeProp>;
+	declare private static [CATEGORY]?: GraphNodeCategory;
 
 	static readonly #registry = new Map<string, GraphNodeType<any>>();
+	
+	public static get category(): GraphNodeCategory {
+		return this[CATEGORY] || GraphNodeCategory.Unknown;
+	}
 
 	public static getRegisteredNodes = (): ReadonlyMap<string, GraphNodeType<any>> => {
 		return this.#registry;
 	}
 
-	public static register = (name: string) => (target: GraphNodeType<any>, _: ClassDecoratorContext) => {
+	public static register = (category: GraphNodeCategory, name: string) => (target: GraphNodeType<any>, _: ClassDecoratorContext) => {
 		if (GraphNode.#registry.has(name))
 			throw new Error(`GraphNode with name ${name} is already registered!`);
-		GraphNode.#registry.set(name, target);
+		GraphNode.#registry.set(name, Object.assign(target, { [CATEGORY]: category }));
 	}
 
 	public static getInputs<T extends typeof GraphNode | Function>(target: T): Record<string, NodeProp> {

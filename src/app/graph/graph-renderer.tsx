@@ -1,4 +1,4 @@
-import { GraphInputNode, GraphNode, GraphOutputNode, SubgraphNode, Vec2 } from "../../graph";
+import { GraphInputNode, GraphNode, GraphNodeCategory, GraphOutputNode, SubgraphNode, Vec2 } from "../../graph";
 import type { GraphEditor } from "../../graph/editor";
 import { CutEdgesTool, SelectTool, type GraphPointerEvent } from "../../graph/tools";
 import { mapChildren } from "../../utils";
@@ -7,6 +7,7 @@ import { subscribe } from "../../reactive";
 import { GraphNodeView } from "./node";
 import { GraphRendererStore } from "./rendering";
 import type { ProjectManager } from "../../editor/project-manager";
+import React from "react";
 
 const getSelectionStyle = (editor: GraphEditor, root: HTMLDivElement | null): React.CSSProperties => {
 	const style: React.CSSProperties = {};
@@ -76,7 +77,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 		store.updateNode(node);
 	}, [store]);
 
-	const selectTool = useMemo(() => new SelectTool(editor, layout, store.invalidate), [editor, layout, store]);
+	const selectTool = useMemo(() => new SelectTool(editor, layout), [editor, layout, store]);
 
 	const cutTool = useMemo(() => new CutEdgesTool(editor, (start, end) => {
 		const canvasElement = canvas.current;
@@ -387,14 +388,30 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: { pr
 							{definition.name}
 						</div>
 					))}
-					{nodeTypes.map(([name, type]) => (
+					{mapChildren(GraphNodeCategory, (category) => {
+						console.log(category);
+						return (
+							<React.Fragment key={category}>
+								<div>{category}</div>
+								{nodeTypes.map(([name, type]) => (type as any).category === category && (
+									<div key={name} className="node-picker-item" onClick={() => {
+										editor.addNode(type, nodePicker.position);
+										setNodePicker(null);
+									}}>
+										{name}
+									</div>
+								))}
+							</React.Fragment>
+						)
+					})}
+					{/*{nodeTypes.map(([name, type]) => (
 						<div key={name} className="node-picker-item" onClick={() => {
 							editor.addNode(type, nodePicker.position);
 							setNodePicker(null);
 						}}>
 							{name}
 						</div>
-					))}
+					))}*/}
 					{editor.graph.inputs.map(port => (
 						<div key={`input-${port.id}`} className="node-picker-item" onClick={() => {
 							const node = editor.addNode(GraphInputNode, nodePicker.position) as GraphInputNode;

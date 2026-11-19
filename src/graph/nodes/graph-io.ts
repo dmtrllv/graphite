@@ -1,5 +1,5 @@
 import { observable } from "../../reactive";
-import { GraphNode } from "./node";
+import { GraphNode, GraphNodeCategory } from "./node";
 
 abstract class GraphIONode extends GraphNode {
 	@observable
@@ -19,7 +19,7 @@ abstract class GraphIONode extends GraphNode {
 	}
 }
 
-@GraphNode.register("Graph Input")
+@GraphNode.register(GraphNodeCategory.SubGraph, "Graph Input")
 export class GraphInputNode extends GraphIONode {
 	public override getInterface() {
 		const port = this.graph.inputs.find(item => item.id === this.interfaceId);
@@ -37,7 +37,7 @@ export class GraphInputNode extends GraphIONode {
 	}
 }
 
-@GraphNode.register("Graph Output")
+@GraphNode.register(GraphNodeCategory.SubGraph, "Graph Output")
 export class GraphOutputNode extends GraphIONode {
 	public override getInterface() {
 		const port = this.graph.outputs.find(item => item.id === this.interfaceId);

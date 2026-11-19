@@ -1,5 +1,5 @@
 import { F32, Scalar, Vec4, type Vector } from "../types";
-import { GraphNode, input, output, option, SelectOption } from "./node";
+import { GraphNode, input, output, option, SelectOption, GraphNodeCategory } from "./node";
 
 export const MathOps = [
 	"add",
@@ -9,7 +9,7 @@ export const MathOps = [
 	"negate"
 ] as const;
 
-@GraphNode.register("Math")
+@GraphNode.register(GraphNodeCategory.Math, "Math")
 export class MathNode extends GraphNode {
 	@input()
 	accessor a: Scalar = new F32(0);
@@ -39,7 +39,7 @@ export const VectorMathOps = [
 	"divide"
 ] as const;
 
-@GraphNode.register("Vector Math")
+@GraphNode.register(GraphNodeCategory.Math,"Vector Math")
 export class VectorMathNode extends GraphNode {
 	@input()
 	accessor a: Vector = new Vec4();
