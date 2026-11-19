@@ -1,7 +1,7 @@
 import { Vec2, type GraphEditor, type Graph, type NodeEdge } from "@editor";
 import { EdgeGeometryCache } from "./edge-geometry";
 import { GraphLayout } from "./graph-layout";
-import type { GraphSettings } from "../../../editor/settings";
+import type { GraphSettings } from "../../../../editor/settings";
 
 export class EdgeRenderer {
 	private geometry = new EdgeGeometryCache();

@@ -1,5 +1,5 @@
 import { type GraphEditor, GraphInputNode, GraphNode, GraphNodeCategory, GraphOutputNode, SubgraphNode, Vec2, CutEdgesTool, SelectTool, type GraphPointerEvent } from "@editor";
-import { mapChildren } from "../../utils";
+import { mapChildren } from "../../../utils";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { subscribe } from "@reactive";
 import { GraphNodeView } from "./node";

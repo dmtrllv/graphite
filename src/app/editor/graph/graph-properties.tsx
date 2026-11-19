@@ -1,6 +1,6 @@
 import { subscribe } from "@reactive";
 import { Bool, F16, F32, I32, U32, Vec2, Vec3, Vec4, WorldGraph, type Graph, type GraphInterfacePort, type Type } from "@editor";
-import { useWindow } from "../editor/layout";
+import { useWindow } from "../layout";
 import { useEffect, useMemo, useState } from "react";
 
 const types = {

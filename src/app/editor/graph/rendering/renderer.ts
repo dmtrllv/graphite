@@ -1,7 +1,7 @@
 import { Vec2, type NodeEdge, type GraphEditor, Graph } from "@editor";
 import { EdgeRenderer } from "./edge-renderer";
 import { GraphLayout } from "./graph-layout";
-import type { GraphSettings } from "../../../editor/settings";
+import type { GraphSettings } from "../../../../editor/settings";
 
 export class GraphCanvasRenderer {
 	private edges = new EdgeRenderer();

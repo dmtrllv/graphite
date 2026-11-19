@@ -3,7 +3,7 @@ import type { Graph, GraphNode, GraphEditor } from "@editor";
 import { GraphLayout } from "./graph-layout";
 import { GraphCanvasRenderer } from "./renderer";
 import { RenderScheduler } from "./render-scheduler";
-import type { GraphSettings } from "../../../editor/settings";
+import type { GraphSettings } from "../../../../editor/settings";
 
 export class GraphRendererStore {
 	public readonly graph: Graph;

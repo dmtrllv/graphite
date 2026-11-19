@@ -2,7 +2,7 @@ import { Bool, F16, F32, GraphNode, I32, SelectOption, SubgraphNode, Type, U32, 
 import React, { useCallback, useRef } from "react";
 import { useObservable } from "@reactive";
 import type { GraphLayout } from "./rendering";
-import { Toggle } from "../inputs/toggle";
+import { Toggle } from "../../inputs/toggle";
 
 type NodePropViewProps = {
 	node: GraphNode;

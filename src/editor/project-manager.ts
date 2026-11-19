@@ -1,5 +1,5 @@
 import { SaveProjectView } from "../app/editor/windows/projects";
-import { GraphEditorView } from "../app/graph";
+import { GraphEditorView } from "../app/editor/graph";
 import { VectorMathNode, SubgraphNode, Vec2, type GraphEditor } from "./graph";
 import { observable } from "../reactive";
 import type { Editor } from "./editor";
