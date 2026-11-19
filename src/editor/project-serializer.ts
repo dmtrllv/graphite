@@ -42,5 +42,5 @@ export const deserializeProject = (manager: ProjectManager, json: SerializedProj
 		? deserializeSimulationManager(json.simulationManager, graphManager)
 		: undefined;
 
-	return new Project(manager, info, settings, graphManager, simulationManager);
+	return new Project({}, manager, info, settings, graphManager, simulationManager);
 };

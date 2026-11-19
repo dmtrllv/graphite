@@ -40,7 +40,7 @@ export class ProjectManager {
 	}
 
 	private createNewProject(name: string = "New Project"): Project {
-		const p = new Project(this, new ProjectInfo(name, currentDateTime()), this.editor.settings.defaultSettings.clone());
+		const p = new Project({}, this, new ProjectInfo(name, currentDateTime()), this.editor.settings.defaultSettings.clone());
 		const graph = p.graphManager.worldGraph;
 		graph.addNode(VectorMathNode);
 		this.openGraph(p.graphManager.openEditor(graph));

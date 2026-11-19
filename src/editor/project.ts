@@ -3,13 +3,26 @@ import { observable, subscribe, type Unsubscriber } from "../reactive";
 import type { ProjectManager } from "./project-manager";
 import { Settings } from "./settings";
 import { SimulationManager } from "./simulation";
+import { serializable, Serializable } from "./serializable";
 
-export class Project {
+@serializable
+export class ProjectInfo extends Serializable {
+	@observable
+	public accessor name!: string;
+
+	@observable
+	public accessor lastSave!: string;
+}
+
+@serializable
+export class Project extends Serializable {
 	public readonly manager: ProjectManager;
 
 	@observable
+	@serializable(ProjectInfo)
 	public accessor info: ProjectInfo;
 
+	@serializable(Settings)
 	public readonly settings: Settings;
 
 	public readonly graphManager: GraphManager;
@@ -20,7 +33,8 @@ export class Project {
 		return !!this.manager.projects.find(info => info.name === this.info.name);
 	}
 
-	public constructor(manager: ProjectManager, info: ProjectInfo, settings: Settings, graphManager: GraphManager = new GraphManager(), simulationManager: SimulationManager = new SimulationManager(graphManager)) {
+	public constructor(data: object, manager: ProjectManager, info: ProjectInfo, settings: Settings, graphManager: GraphManager = new GraphManager(), simulationManager: SimulationManager = new SimulationManager(graphManager)) {
+		super(data);
 		this.manager = manager;
 		this.info = info;
 		this.settings = settings;
@@ -38,18 +52,5 @@ export class Project {
 
 	public dispose() {
 		this.unsubscribeSettings();
-	}
-}
-
-export class ProjectInfo {
-	@observable
-	public accessor name: string;
-
-	@observable
-	public accessor lastSave: string;
-
-	public constructor(name: string, lastSave: string) {
-		this.name = name;
-		this.lastSave = lastSave;
 	}
 }
