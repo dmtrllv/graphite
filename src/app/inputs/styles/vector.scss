@@ -1,0 +1,54 @@
+.vec2,
+.vec3,
+.vec4 {
+	display: inline-block;
+	white-space: nowrap;
+
+	&.disabled > div label {
+		opacity: 0.35;
+	}
+	
+	& > div {
+		position: relative;
+		display: inline-block;
+		width: 50px;
+		label {
+			position: absolute;
+			left: 8px;
+			top: calc(50%);
+			transform: translateY(-50%);
+			&.x {
+				color: rgb(236, 93, 93);
+			}
+			&.y {
+				color: rgb(125, 197, 119);
+			}
+			&.z {
+				color: rgb(139, 155, 242);
+			}
+			&.w {
+				color: rgb(220, 219, 130);
+			}
+		}
+		input[type="number"] {
+			padding-left: 25px;
+			width: 50px;
+			border-top: 1px solid var(--border-1);
+			border-bottom: 1px solid var(--border-1);
+			border-left: 1px solid var(--border-1);
+			border-right: 0px;
+			border-radius: 0px;
+		}
+
+		&:first-of-type input  {
+			border-top-left-radius: 6px;
+			border-bottom-left-radius: 6px;
+		}
+		
+		&:last-of-type input {
+			border-top-right-radius: 6px;
+			border-bottom-right-radius: 6px;
+			border-right: 1px solid var(--border-1);
+		}
+	}
+}

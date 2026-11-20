@@ -1,7 +1,7 @@
 .graph-properties {
 	position: absolute;
 	z-index: 2;
-	width: 360px;
+	min-width: 360px;
 	left: 15px;
 	top: 15px;
 	overflow-y: hidden;
@@ -121,15 +121,16 @@
 		}
 
 		.name {
-			flex: 0 0 120px;
+			flex: 0 0 100px;
 		}
 
 		select {
-			flex: 0 1 50px;
+			flex: 0 1 70px;
 		}
 
 		button {
 			flex: 0 1 28px;
+			margin-left: 15px;
 		}
 
 		.name {
@@ -145,30 +146,6 @@
 				width: 10px;
 				height: 10px;
 				background-color: white;
-			}
-		}
-
-		input,
-		.vec2,
-		.vec3,
-		.vec4 {
-			display: inline-block;
-			input {
-				border-top: 1px solid var(--border-1);
-				border-bottom: 1px solid var(--border-1);
-				border-left: 1px solid var(--border-1);
-				border-right: 0px;
-				border-radius: 0px;
-				width: 50px;
-				&:first-child {
-					border-top-left-radius: 6px;
-					border-bottom-left-radius: 6px;
-				}
-				&:last-child {
-					border-top-right-radius: 6px;
-					border-bottom-right-radius: 6px;
-					border-right: 1px solid var(--border-1);
-				}
 			}
 		}
 

@@ -7,7 +7,32 @@ export const MathOps = [
 	"subtract",
 	"multiply",
 	"divide",
-	"negate"
+	"modulo",
+	"negate",
+	"abs",
+	"sign",
+	"floor",
+	"ceil",
+	"round",
+	"fract",
+	"equal",
+	"not equal",
+	"less",
+	"greater",
+	"less or equal",
+	"greater or equal",
+	"and",
+	"or",
+	"not",
+	"min",
+	"max",
+	"clamp",
+	"lerp",
+	"smoothstep",
+	"sin",
+	"cos",
+	"tan",
+	"atan2"
 ] as const;
 
 @GraphNode.register(GraphNodeCategory.Math, "Math")
@@ -41,7 +66,12 @@ export const VectorMathOps = [
 	"add",
 	"subtract",
 	"multiply",
-	"divide"
+	"divide",
+	"dot",
+	"cross",
+	"length",
+	"normalize",
+	"distance",
 ] as const;
 
 @GraphNode.register(GraphNodeCategory.Math, "Vector Math")

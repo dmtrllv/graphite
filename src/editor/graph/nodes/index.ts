@@ -4,3 +4,5 @@ export * from "./scalar";
 export * from "./graph-io";
 export * from "./subgraph";
 export * from "./simulation";
+export * from "./split";
+export * from "./combine";

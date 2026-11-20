@@ -99,7 +99,7 @@ export class Vec4 extends Vector {
 	@serializable(Number)
 	public accessor w: number;
 
-	public constructor(x: number = 0, y: number = 0, z: number = 0, w: number = 0) {
+	public constructor(x: number = 0, y: number = 0, z: number = 0, w: number = 1) {
 		super("vector");
 		this.x = x;
 		this.y = y;

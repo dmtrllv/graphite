@@ -69,10 +69,10 @@ export const GraphNodeView = React.memo(({ projectManager, node, editor, layout,
 
 		onNodePointerDown(e, node);
 	};
-	
-	
+
+
 	const name = node instanceof SubgraphNode ? node.definition?.name ?? "Subgraph (unnamed)" : node.name;
-	
+
 	const onDoubleClick = () => {
 		if (!node.graph.manager)
 			return;
@@ -84,7 +84,7 @@ export const GraphNodeView = React.memo(({ projectManager, node, editor, layout,
 			projectManager.openGraph(editor);
 		}
 	};
-	
+
 	const isSubGraph = node instanceof SubgraphNode;
 
 	return (
@@ -92,13 +92,13 @@ export const GraphNodeView = React.memo(({ projectManager, node, editor, layout,
 			<div className="name" onPointerDown={onPointerDown} onDoubleClick={onDoubleClick}>{name}</div>
 			<div className="body">
 				{outputs.filter(port => !attachedOutputs.has(port.key)).map(port => (
-					<NodePropView hideInputElement={isSubGraph} key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput outputTypes={outputTypes} />
+					<NodePropView hideInputElement={isSubGraph || !port.editable} key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput outputTypes={outputTypes} />
 				))}
 				{options.map(option => (
-					<NodePropView key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} outputTypes={outputTypes} />
+					<NodePropView hideInputElement={!option.editable} key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} outputTypes={outputTypes} />
 				))}
 				{inputs.map(port => (
-					<NodePropView key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput outputTypes={outputTypes} />
+					<NodePropView hideInputElement={!port.editable}  key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput outputTypes={outputTypes} />
 				))}
 			</div>
 		</div>

@@ -73,15 +73,15 @@ export abstract class GraphNode extends Serializable {
 		return (target[Symbol.metadata]?.[OPTIONS] ?? {}) as Record<string, NodeOptionProp>;
 	}
 
-	public static readonly input = (): AccessorDecorator => (val, context) => {
+	public static readonly input = (editable?: boolean): AccessorDecorator => (val, context) => {
 		const inputs = getOwnMetadata<Record<string, NodeProp>>(context.metadata!, INPUTS);
-		inputs[context.name.toString()] = new NodeProp(context.name.toString());
+		inputs[context.name.toString()] = new NodeProp(context.name.toString(), editable ?? true);
 		return observable(val, context);
 	};
 
-	public static readonly output = (): AccessorDecorator => (val, context) => {
+	public static readonly output = (editable?: boolean): AccessorDecorator => (val, context) => {
 		const outputs = getOwnMetadata<Record<string, NodeProp>>(context.metadata!, OUTPUTS);
-		outputs[context.name.toString()] = new NodeProp(context.name.toString());
+		outputs[context.name.toString()] = new NodeProp(context.name.toString(), editable ?? true);
 		return observable(val, context);
 	};
 
@@ -192,12 +192,13 @@ export abstract class GraphNode extends Serializable {
 			}
 
 			return [...active].map(key => {
+				const prop = props[key]!;
 				const value = this[key as keyof this];
 
 				if (!(value instanceof Type))
 					throw new Error(`Property "${key}" of ${this.constructor.name} is not a Type!`);
 
-				return { key, name: key, direction, value };
+				return { key, name: key, direction, value, editable: prop.editable };
 			});
 		};
 
@@ -219,6 +220,7 @@ export type ResolvedNodePort = {
 	name: string;
 	direction: "input" | "output";
 	value: Type;
+	editable: boolean;
 };
 
 export type GraphNodeType<T extends GraphNode> = new (id: number, graph: Graph, position?: Vec2) => T;
@@ -232,9 +234,11 @@ export type IOType<Node> = (typeof Type) | readonly (typeof Type)[] | ((node: No
 @observable
 export class NodeProp {
 	public readonly name: string;
+	public readonly editable: boolean;
 
-	public constructor(name: string) {
+	public constructor(name: string, editable: boolean) {
 		this.name = name;
+		this.editable = editable;
 	}
 
 	public getKind(node: GraphNode): string {
@@ -260,7 +264,7 @@ export class NodeOptionProp extends NodeProp {
 	public readonly variants: NodeOptionVariants;
 
 	public constructor(name: string, variants: NodeOptionVariants) {
-		super(name);
+		super(name, true);
 		this.variants = variants;
 	}
 

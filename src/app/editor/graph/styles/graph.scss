@@ -56,66 +56,12 @@
 						margin-right: 10px;
 					}
 
-					input,
-					.vec2,
-					.vec3,
-					.vec4 {
-						display: inline-block;
-						input {
-							border-top: 1px solid var(--border-1);
-							border-bottom: 1px solid var(--border-1);
-							border-left: 1px solid var(--border-1);
-							border-right: 0px;
-							border-radius: 0px;
-							width: 50px;
-							&:first-child {
-								border-top-left-radius: 6px;
-								border-bottom-left-radius: 6px;
-							}
-							&:last-child {
-								border-top-right-radius: 6px;
-								border-bottom-right-radius: 6px;
-								border-right: 1px solid var(--border-1);
-							}
-						}
-					}
-
-					input {
-						background-color: var(--bg-2);
-						border-radius: 6px;
-						border: 1px solid var(--border-1);
-						color: var(--fg-1);
-						outline: none;
-						padding: 5px;
-						width: 100px;
-						display: inline-block;
-
-						&:disabled {
-							opacity: 0.2;
-							user-select: none;
-							pointer-events: none;
-						}
-
-						&::-webkit-outer-spin-button,
-						&::-webkit-inner-spin-button {
-							-webkit-appearance: none;
-							appearance: none;
-							margin: 0;
-						}
-
-						&[type="number"] {
-							appearance: textfield;
-							-moz-appearance: textfield;
-						}
-					}
-
 					.option {
+						position: relative;
 
 						.toggle {
 							float: right;
 						}
-
-						position: relative;
 						&:not(:last-child) {
 							margin-bottom: 5px;
 						}
