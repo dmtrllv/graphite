@@ -1,10 +1,11 @@
 import { GraphManager } from "./graph";
-import { observable, subscribe, type Unsubscriber } from "../reactive";
+import { observable, subscribe, type Unsubscribe } from "../reactive";
 import type { ProjectManager } from "./project-manager";
 import { Settings } from "./settings";
 import { SimulationManager } from "./simulation";
 import { Serializable, serializable } from "./serializable";
 
+@observable
 @serializable({ type: "project:info", create: () => new ProjectInfo() })
 export class ProjectInfo extends Serializable {
 	@observable
@@ -16,6 +17,7 @@ export class ProjectInfo extends Serializable {
 	public accessor lastSave!: string;
 }
 
+@observable
 @serializable({
 	type: "project",
 	create: (_, context) => new Project(context["manager"], context["info"], context["settings"], new GraphManager(false))
@@ -34,7 +36,7 @@ export class Project extends Serializable {
 	@serializable(SimulationManager)
 	public readonly simulationManager: SimulationManager;
 
-	private unsubscribeSettings: Unsubscriber[] = [];
+	private unsubscribeSettings: Unsubscribe[] = [];
 
 	public get isSaved() {
 		return !!this.manager.projects.find(info => info.name === this.info.name);

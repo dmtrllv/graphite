@@ -1,5 +1,6 @@
 import { observable } from "../reactive";
 
+@observable
 export class Menubar {
 	@observable
 	public accessor items: MenuItem[];
@@ -9,6 +10,7 @@ export class Menubar {
 	}
 }
 
+@observable
 export class MenuItem {
 	public readonly id: string;
 

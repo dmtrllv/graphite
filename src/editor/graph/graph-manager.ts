@@ -4,6 +4,7 @@ import { observable } from "@reactive";
 import { GraphEditor } from "./editor";
 import { Vec2 } from "./types";
 
+@observable
 @serializable({ type: "graph-manager", create: () => new GraphManager(false) })
 export class GraphManager extends Serializable {
 	private _idCounter = 0;

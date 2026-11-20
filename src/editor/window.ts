@@ -14,6 +14,7 @@ export type WindowOpenOptions = Partial<WindowBounds> & {
 	onClose?: () => void;
 }
 
+@observable
 export class Window<P extends object = any> {
 	private static _idCounter = 0;
 

@@ -16,7 +16,7 @@ export class GraphRendererStore {
 	private bounds: DOMRectReadOnly | null = null;
 	private observer: ResizeObserver | null = null;
 	private scheduler = new RenderScheduler(() => this.render());
-	private unsubscribers: (() => void)[] = [];
+	private unsubscriber: () => void = () => { };
 
 	public constructor(editor: GraphEditor, settings: GraphSettings) {
 		this.editor = editor;
@@ -40,27 +40,30 @@ export class GraphRendererStore {
 
 		this.observer.observe(canvas);
 
-		this.unsubscribers = [
-			subscribe(this.graph, "offset", { recursive: true }, this.invalidateStatic),
-			subscribe(this.graph, "scale", this.invalidateStatic),
-			subscribe(this.graph, "structureVersion", () => {
-				this.renderer.invalidateGraph(this.graph);
-				this.invalidate();
-			}),
-			subscribe(this.editor, "draggingEdge", { recursive: true }, this.invalidate),
-			subscribe(this.editor, "edgeCut", { recursive: true }, this.invalidate),
-			subscribe(this.settings, "lineWidth", { recursive: true }, this.invalidateStatic),
-			subscribe(this.settings, "curve", { recursive: true }, this.invalidateStatic)
-		];
+		this.unsubscriber = subscribe(this.graph, e => {
+			switch (e.key) {
+				case "offset":
+				case "scale":
+				case "lineWidth":
+				case "curve":
+					this.invalidateStatic();
+					break;
+				case "structureVersion":
+					this.renderer.invalidateGraph(this.graph);
+					this.invalidate();
+					break;
+
+				case "draggingEdge":
+				case "edgeCut":
+					this.invalidate();
+			}
+		});
 
 		this.invalidate();
 	}
 
 	public detach(clearLayout = true): void {
-		for (const unsubscribe of this.unsubscribers)
-			unsubscribe();
-
-		this.unsubscribers = [];
+		this.unsubscriber();
 		this.observer?.disconnect();
 		this.observer = null;
 		this.canvas = null;

@@ -1,6 +1,7 @@
 import { observable } from "../reactive";
 import type { Window } from "./window";
 
+@observable
 export class EditorLayout {
 	private static _idCounter = 0;
 
@@ -43,6 +44,7 @@ export class EditorLayout {
 	}
 }
 
+@observable
 export class LayoutPanel {
 	private static _idCounter = 0;
 

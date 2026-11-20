@@ -4,6 +4,7 @@ import { SimulationGraph } from "../graph";
 
 export type SimulationInputBindings = Record<string, string>;
 
+@observable
 @serializable({ type: "simulation", create: data => new Simulation(data.id, data.name, data.graphId) })
 export class Simulation extends Serializable {
 	@serializable(Number)
@@ -21,7 +22,7 @@ export class Simulation extends Serializable {
 	@serializable(Number)
 	public accessor iterations = 1;
 
-	@observable({ recursive: true })
+	@observable
 	@serializable(recordOf(String))
 	public accessor inputBindings: SimulationInputBindings = {};
 

@@ -1,109 +1,35 @@
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { ensureState, getVersion, type ObservableSubscriber, type ObservableInterceptor } from "./state";
+import { intercept, type InterceptOptions } from "./intercept";
+import { subscribe, type SubscribeOptions } from "./subscribe";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { getState, register } from "./state";
-import { createProxy, toRaw } from "./proxy";
-import type { Interceptor, ObservableOptions, RecursiveInterceptor, RecursiveKey, RecursiveSubscriber, SubscribeOptions, Subscriber } from "./types";
-import { subscribe } from "./subscribe";
-import { intercept } from "./intercept";
+export interface ObservableOptions {
+	recursive?: boolean;
+}
 
-type Store = {
-	version: number;
-	listeners: Set<() => void>;
-};
+export const useObservable = <T extends object>(value: T | (() => T), options: ObservableOptions = {}): T => {
+	const target = useMemo(() => typeof value === "function" ? (value as () => T)() : value, [value]);
 
-const STORES = new WeakMap<object, Store>();
-
-const getStore = (target: object): Store => {
-	let store = STORES.get(target);
-
-	if (!store) {
-		store = {
-			version: 0,
-			listeners: new Set()
-		};
-
-		STORES.set(target, store);
-	}
-
-	return store;
-};
-
-
-export const useObservable = <T extends object>(value: T | (() => T), options: ObservableOptions = { recursive: false }): T => {
 	const recursive = options.recursive ?? false;
-	const target = useMemo(() => {
-		value = typeof value === "function" ? value() : value;
 
-		try {
-			getState(toRaw(value));
-			return value;
-		} catch { }
+	ensureState(target);
 
-		return createProxy(value, value, "", recursive) as T;
-	}, [value, recursive]);
+	const subscribeStore = useCallback(
+		(listener: () => void) => subscribe(target, { recursive }, listener),
+		[target, recursive]
+	);
 
-	const store = getStore(toRaw(target));
+	const getSnapshot = useCallback(() => getVersion(target), [target]);
 
-	const subscribeToStore = useCallback((listener: () => void) => {
-		const update = () => {
-			store.version++;
-			listener();
-		};
-
-		const state = getState(toRaw(target));
-		const unsubscribers: (() => void)[] = [];
-
-		for (const key of state.observables)
-			unsubscribers.push(register(toRaw(target), "subscribers", key, recursive, update));
-
-		return () => {
-			for (const unsubscribe of unsubscribers)
-				unsubscribe();
-		};
-	}, [store, target, recursive]);
-
-	const getSnapshot = useCallback(() => store.version, [store]);
-
-	useSyncExternalStore(subscribeToStore, getSnapshot, getSnapshot);
+	useSyncExternalStore(subscribeStore, getSnapshot, getSnapshot);
 
 	return target;
 };
 
-export const useObservableProp = <T extends object, K extends keyof T>(target: T, key: K): T[K] => {
-	const [value, setValue] = useState(() => target[key]);
-
-	useEffect(() => {
-		const update = () => setValue(target[key]);
-		return subscribe(target, key as any, update);
-	}, [target, key]);
-
-	return useObservable(value as T[K] & object) as T[K];
+export const useSubscribe = <T extends object>(target: T, callback: ObservableSubscriber, options: SubscribeOptions = {}): void => {
+	useEffect(() => subscribe(target, options, callback), [target, callback, options.recursive]);
 };
 
-export interface SubscribeHook {
-	<T extends object, K extends RecursiveKey<T>>(obj: T, key: K, subscriber: Subscriber<T, K>): void;
-	<T extends object, K extends RecursiveKey<T>>(obj: T, key: K, options: SubscribeOptions & { recursive: true }, subscriber: RecursiveSubscriber<T, K>): void;
-}
-
-export const useSubscribe: SubscribeHook = (target: any, key: any, callbackOrOptions: any, optionsOrCallback?: any) => {
-	const options = typeof callbackOrOptions === "function" ? optionsOrCallback : callbackOrOptions;
-	const callback = typeof callbackOrOptions === "function" ? callbackOrOptions : optionsOrCallback;
-
-	useEffect(() => {
-		return subscribe(target, key, options, callback);
-	}, [target, key, options, callback]);
-};
-
-export interface InterceptHook {
-	<T extends object, K extends RecursiveKey<T>>(obj: T, key: K, interceptor: Interceptor<T, K>): void;
-	<T extends object, K extends RecursiveKey<T>>(obj: T, key: K, options: SubscribeOptions & { recursive: true }, interceptor: RecursiveInterceptor<T, K>): void;
-}
-
-export const useIntercept: InterceptHook = (target: any, key: any, callbackOrOptions: any, optionsOrCallback?: any) => {
-	const options = typeof callbackOrOptions === "function" ? optionsOrCallback : callbackOrOptions;
-	const callback = typeof callbackOrOptions === "function" ? callbackOrOptions : optionsOrCallback;
-
-	useEffect(() => {
-		return intercept(target, key, options, callback);
-	}, [target, key, options, callback]);
+export const useIntercept = <T extends object>(target: T, callback: ObservableInterceptor, options: InterceptOptions = {}): void => {
+	useEffect(() => intercept(target, options, callback), [target, callback, options.recursive]);
 };

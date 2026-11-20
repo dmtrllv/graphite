@@ -2,10 +2,9 @@ import { observable } from "@reactive";
 import { serializable } from "../../serializable";
 import { Type } from "./type";
 
-export abstract class Vector extends Type {
+export abstract class Vector extends Type { }
 
-}
-
+@observable
 @serializable({ type: "type:vec2", create: () => new Vec2() })
 export class Vec2 extends Vector {
 	@observable
@@ -61,6 +60,7 @@ export class Vec2 extends Vector {
 
 export type Vec2Type = typeof Vec2;
 
+@observable
 @serializable({ type: "type:vec3", create: () => new Vec3() })
 export class Vec3 extends Vector {
 	@observable
@@ -83,6 +83,7 @@ export class Vec3 extends Vector {
 
 export type Vec3Type = typeof Vec3;
 
+@observable
 @serializable({ type: "type:vec4", create: () => new Vec4() })
 export class Vec4 extends Vector {
 	@observable

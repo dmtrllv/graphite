@@ -1,32 +1,45 @@
-import type { InterceptFn, InterceptorDecorator, SubscribeOptions } from "./types";
-import { assertObservable, register } from "./state";
-import { toRaw } from "./proxy";
+import { ensureState, registerInterceptor, type ObservableEvent, type ObservableInterceptor } from "./state";
+import type { Unsubscribe } from "./subscribe";
 
-export const intercept: InterceptFn = ((objOrKey: object | string, keyOrOptions?: any, optionsOrInterceptor?: any, callback?: any) => {
-	if (typeof objOrKey === "string") {
-		const key = objOrKey;
-		const options: SubscribeOptions = keyOrOptions ?? {};
+export interface InterceptOptions {
+	recursive?: boolean;
+}
 
-		return (value: Function, context: ClassMethodDecoratorContext) => {
-			context.addInitializer(function (this: any) {
-				register(this, "interceptors", key, !!options.recursive, event => value.call(this, event));
-			});
-		};
-	}
+export function intercept<T extends object>(
+	target: T,
+	callback: ObservableInterceptor
+): Unsubscribe;
 
-	const obj = toRaw(objOrKey);
-	const key = keyOrOptions as string;
-	const options: SubscribeOptions = typeof optionsOrInterceptor === "function" ? {} : optionsOrInterceptor ?? {};
-	const interceptor = callback ?? optionsOrInterceptor;
+export function intercept<T extends object>(
+	target: T,
+	options: InterceptOptions,
+	callback: ObservableInterceptor
+): Unsubscribe;
 
-	assertObservable(obj, key);
+export function intercept<T extends object>(
+	target: T,
+	optionsOrCallback: InterceptOptions | ObservableInterceptor,
+	callback?: ObservableInterceptor
+): Unsubscribe {
+	ensureState(target);
 
-	return register(obj, "interceptors", key, !!options.recursive, interceptor);
-}) as InterceptFn;
+	const options = typeof optionsOrCallback === "function" ? {} : optionsOrCallback;
+	const interceptor = typeof optionsOrCallback === "function" ? optionsOrCallback : callback;
 
-export const interceptor: InterceptorDecorator = ((key: string, options?: SubscribeOptions) =>
-	(value: Function, context: ClassMethodDecoratorContext) => {
-		context.addInitializer(function (this: any) {
-			register(this, "interceptors", key, !!options?.recursive, event => value.call(this, event));
-		});
-	}) as InterceptorDecorator;
+	if (!interceptor)
+		throw new TypeError("An interceptor callback is required!");
+
+	return registerInterceptor(target, interceptor, options.recursive ?? false);
+}
+
+export function interceptor<This extends object>(
+	method: (this: This, event: ObservableEvent) => boolean | void,
+	context: ClassMethodDecoratorContext<This, (this: This, event: ObservableEvent) => boolean | void>
+): void {
+	if (context.kind !== "method")
+		throw new TypeError("@interceptor can only decorate methods!");
+
+	context.addInitializer(function (this: This) {
+		intercept(this, method.bind(this));
+	});
+}

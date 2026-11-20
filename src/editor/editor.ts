@@ -1,11 +1,13 @@
 import { ProjectList, SaveProjectView } from "../app/editor/windows/projects";
 import { SettingsView } from "../app/editor/windows/settings";
+import { observable } from "../reactive";
 import { EditorLayout } from "./editor-layout";
 import { Menubar, MenuItem, MenuSeparator } from "./menubar";
 import { ProjectManager } from "./project-manager";
 import { SettingsManager } from "./settings-manager";
 import { WindowManager } from "./window-manager";
 
+@observable
 export class Editor {
 	private static _instance: Editor | null;
 
@@ -18,7 +20,9 @@ export class Editor {
 		return this._instance;
 	}
 
-	public readonly settings: SettingsManager = new SettingsManager();
+	@observable
+	public accessor settings: SettingsManager = new SettingsManager();
+	
 	public readonly layout: EditorLayout = new EditorLayout(null);
 	public readonly windowManager: WindowManager = new WindowManager(this.layout);
 	public readonly projectManager: ProjectManager = new ProjectManager(this);

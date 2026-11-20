@@ -12,6 +12,7 @@ export type WindowOptions = WindowOpenOptions & {
 	check?: (window: Window) => boolean | undefined
 }
 
+@observable
 export class WindowManager {
 	public readonly layout: EditorLayout;
 

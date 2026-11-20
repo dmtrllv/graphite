@@ -37,6 +37,8 @@ export const GraphNodeCategory = {
 
 type GraphNodeCategory = (typeof GraphNodeCategory)[keyof typeof GraphNodeCategory];
 
+
+@observable
 export abstract class GraphNode extends Serializable {
 	declare private static [INPUTS]?: Record<string, NodeProp>;
 	declare private static [OUTPUTS]?: Record<string, NodeProp>;
@@ -53,9 +55,10 @@ export abstract class GraphNode extends Serializable {
 		return this.#registry;
 	}
 
-	public static register = (category: GraphNodeCategory, name: string) => (target: GraphNodeType<any>, context: ClassDecoratorContext) => {
+	public static register = (category: GraphNodeCategory, name: string) => (target: GraphNodeType<any>, ctx: ClassDecoratorContext) => {
 		GraphNode.#registry.set(name, Object.assign(target, { [CATEGORY]: category }));
 		registerSerializableType(target, `node:${name}`, (data, context) => new target(data.id, context["graph"], new Vec2()));
+		observable(target, ctx);
 	}
 
 	public static getInputs<T extends typeof GraphNode | Function>(target: T): Record<string, NodeProp> {
@@ -73,19 +76,19 @@ export abstract class GraphNode extends Serializable {
 	public static readonly input = (): AccessorDecorator => (val, context) => {
 		const inputs = getOwnMetadata<Record<string, NodeProp>>(context.metadata!, INPUTS);
 		inputs[context.name.toString()] = new NodeProp(context.name.toString());
-		return observable({ recursive: true })(val, context);
+		return observable(val, context);
 	};
 
 	public static readonly output = (): AccessorDecorator => (val, context) => {
 		const outputs = getOwnMetadata<Record<string, NodeProp>>(context.metadata!, OUTPUTS);
 		outputs[context.name.toString()] = new NodeProp(context.name.toString());
-		return observable({ recursive: true })(val, context);
+		return observable(val, context);
 	};
 
 	public static readonly option = <T, Node extends GraphNode>(variants: NodeOptionVariants): WrappedAccessorDecorator<Node, T> => (val, context) => {
 		const options = getOwnMetadata<Record<string, NodeOptionProp>>(context.metadata!, OPTIONS);
 		options[context.name.toString()] = new NodeOptionProp(context.name.toString(), variants);
-		return observable({ recursive: true })(val, context);
+		return observable(val, context);
 	};
 
 	public static getInterface(node: GraphNode) {
@@ -226,6 +229,7 @@ export const option = GraphNode.option;
 
 export type IOType<Node> = (typeof Type) | readonly (typeof Type)[] | ((node: Node) => Type);
 
+@observable
 export class NodeProp {
 	public readonly name: string;
 
@@ -251,6 +255,7 @@ export type KeyedNodeProp<T extends GraphNode> = NodeProp & {
 	readonly name: keyof T;
 }
 
+@observable
 export class NodeOptionProp extends NodeProp {
 	public readonly variants: NodeOptionVariants;
 
@@ -264,6 +269,7 @@ export class NodeOptionProp extends NodeProp {
 	}
 }
 
+@observable
 @serializable({ type: "option:base", create: () => new SelectOption([]) })
 export abstract class NodeOption<T extends string> extends Serializable {
 	@observable
@@ -278,6 +284,7 @@ export abstract class NodeOption<T extends string> extends Serializable {
 	}
 }
 
+@observable
 @serializable({ type: "option:select", create: data => new SelectOption(data.options) })
 export class SelectOption<T extends readonly string[]> extends NodeOption<T[number]> {
 	@serializable(arrayOf(String))

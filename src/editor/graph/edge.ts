@@ -2,6 +2,7 @@ import { observable } from "@reactive";
 import { Serializable, serializable, reference } from "../serializable";
 import { GraphNode } from "./nodes";
 
+@observable
 @serializable({ type: "graph:edge", create: data => new NodeEdge(data.id, null!, "", null!, "") })
 export class NodeEdge extends Serializable {
 	@serializable(Number)

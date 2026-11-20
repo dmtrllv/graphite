@@ -62,8 +62,9 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		if (!nodePicker)
 			return;
 
-		return subscribe(manager, "catalogVersion", () => {
-			setCatalogVersion(manager.catalogVersion);
+		return subscribe(manager, (e) => {
+			if (e.key === "catalogVersion")
+				setCatalogVersion(manager.catalogVersion);
 		});
 	}, [manager, !!nodePicker]);
 
@@ -114,29 +115,34 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 
 	useEffect(() => {
 		const unsubscribers = [
-			subscribe(graph, "structureVersion", () => {
-				setStructureVersion(graph.structureVersion);
-			}),
-			subscribe(graph, "offset", { recursive: true }, () => {
+			subscribe(graph.offset, { recursive: true }, () => {
 				setGraphVersion(version => version + 1);
 				invalidate();
 			}),
-			subscribe(graph, "scale", () => {
-				setGraphVersion(version => version + 1);
-				invalidate();
-			}),
-			subscribe(editor, "selectedNodes", () => setEditorVersion(version => version + 1)),
-			subscribe(editor, "selection", { recursive: true }, () => {
-				setEditorVersion(version => version + 1);
-				invalidate();
+			editor.selection ? subscribe(editor.selection, { recursive: true }, () => {
+				setEditorVersion(version => version + 1)
+				invalidate()
+			}) : null,
+			subscribe(graph, (e) => {
+				if (e.key === "structureVersion") {
+					setStructureVersion(graph.structureVersion);
+				} else if (e.key === "offset" || e.key === "scale") {
+					setGraphVersion(version => version + 1);
+					invalidate();
+				} else if (e.key === "selectedNodes") {
+					setEditorVersion(version => version + 1)
+				} else if (e.key === "selection") {
+					setEditorVersion(version => version + 1);
+					invalidate();
+				}
 			})
 		];
 
 		return () => {
 			for (const unsubscribe of unsubscribers)
-				unsubscribe();
+				unsubscribe && unsubscribe();
 		};
-	}, [graph, editor, invalidate]);
+	}, [graph, editor, editor.selection, invalidate]);
 
 	useLayoutEffect(() => {
 		const element = canvas.current;

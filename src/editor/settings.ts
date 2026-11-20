@@ -1,6 +1,7 @@
 import { computed, observable } from "@reactive";
 import { Serializable, serializable } from "./serializable";
 
+@observable
 @serializable({ type: "settings:preferences", create: () => new Preferences() })
 export class Preferences extends Serializable {
 	@observable
@@ -32,6 +33,7 @@ export class Preferences extends Serializable {
 	}
 }
 
+@observable
 @serializable({ type: "settings:graph", create: () => new GraphSettings() })
 export class GraphSettings extends Serializable {
 	@observable
@@ -49,6 +51,7 @@ export class GraphSettings extends Serializable {
 	}
 }
 
+@observable
 @serializable({ type: "settings", create: () => new Settings() })
 export class Settings extends Serializable {
 	@serializable(Preferences)

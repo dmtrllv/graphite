@@ -5,7 +5,6 @@ import { observable } from "../reactive";
 import type { Editor } from "./editor";
 import { Project, ProjectInfo } from "./project";
 import { serializeProject, deserializeProject } from "./project-serializer";
-import type { WindowOpenOptions } from "./window";
 import type { WindowOptions } from "./window-manager";
 
 const PROJECTS_KEY = "graphite:projects";
@@ -25,6 +24,7 @@ const createProjectInfo = (name: string, lastSave: string): ProjectInfo => {
 	return info;
 };
 
+@observable
 export class ProjectManager {
 	@observable
 	public accessor projects: ProjectInfo[] = this.loadProjectInfos();

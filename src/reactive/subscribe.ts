@@ -1,54 +1,32 @@
-import type { SubscriberDecorator, SubscribeFn, SubscribeOptions } from "./types";
-import { assertObservable, getState, register, type ChangeHandler } from "./state";
-import { getProxyRoutes, toRaw } from "./proxy";
+import { ensureState, registerSubscriber, type ObservableEvent, type ObservableSubscriber } from "./state";
 
-export const subscribe: SubscribeFn = ((target, keyOrOptionsOrSubscriber, optionsOrSubscriber, callback) => {
-	const obj = toRaw(target);
+export interface SubscribeOptions {
+	recursive?: boolean;
+}
 
-	if (typeof keyOrOptionsOrSubscriber === "string" || Array.isArray(keyOrOptionsOrSubscriber)) {
-		const key = keyOrOptionsOrSubscriber;
-		const options: SubscribeOptions = typeof optionsOrSubscriber === "function" ? {} : optionsOrSubscriber ?? {};
-		const subscriber = callback ?? optionsOrSubscriber;
+export type Unsubscribe = () => void;
 
-		assertObservable(obj, key);
+export function subscribe<T extends object>(target: T, callback: ObservableSubscriber): Unsubscribe;
 
-		return register(obj, "subscribers", key, !!options.recursive, subscriber);
-	}
+export function subscribe<T extends object>(target: T, options: SubscribeOptions, callback: ObservableSubscriber): Unsubscribe;
 
-	const options: SubscribeOptions = typeof keyOrOptionsOrSubscriber === "function" ? {} : keyOrOptionsOrSubscriber ?? {};
-	const subscriber: any = typeof keyOrOptionsOrSubscriber === "function" ? keyOrOptionsOrSubscriber : optionsOrSubscriber;
+export function subscribe<T extends object>(target: T, optionsOrCallback: SubscribeOptions | ObservableSubscriber, callback?: ObservableSubscriber): Unsubscribe {
+	ensureState(target);
 
-	const routes = getProxyRoutes(target) ?? (() => {
-		const state = getState(obj);
+	const options = typeof optionsOrCallback === "function" ? {} : optionsOrCallback;
+	const subscriber = typeof optionsOrCallback === "function" ? optionsOrCallback : callback;
 
-		if (!state.observables.size)
-			throw new Error(`${obj.constructor.name} is not observable!`);
+	if (!subscriber)
+		throw new TypeError("A subscriber callback is required!");
 
-		return [{ owner: obj, path: "" }];
-	})();
+	return registerSubscriber(target, subscriber, options.recursive ?? false);
+}
 
-	const unsubscribers = routes.map(({ owner, path }) => {
-		if (path)
-			assertObservable(owner, path);
+export function subscriber<This extends object>(method: (this: This, event: ObservableEvent) => void, context: ClassMethodDecoratorContext<This, (this: This, event: ObservableEvent) => void>): void {
+	if (context.kind !== "method")
+		throw new TypeError("@subscriber can only decorate methods!");
 
-		const handler: ChangeHandler = event => {
-			const key = path && event.key.startsWith(`${path}.`) ? event.key.slice(path.length + 1) : event.key === path ? "" : event.key;
-			subscriber({ ...event, key } as any);
-		};
-
-		return register(owner, "subscribers", path, !!options.recursive, handler);
+	context.addInitializer(function (this: This) {
+		subscribe(this, method.bind(this));
 	});
-
-	return () => {
-		for (const unsubscribe of unsubscribers)
-			unsubscribe();
-	};
-}) as SubscribeFn;
-
-export const subscriber: SubscriberDecorator = <K extends string, O extends SubscribeOptions | undefined = undefined>(key: K, options?: O) => {
-	return <This extends object>(value: (this: This, event: O extends { recursive: true } ? any : any) => void, context: ClassMethodDecoratorContext<This>) => {
-		context.addInitializer(function (this: This) {
-			register(this, "subscribers", key, !!options?.recursive, event => value.call(this, event));
-		});
-	};
-};
+}

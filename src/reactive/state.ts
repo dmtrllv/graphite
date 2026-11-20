@@ -1,33 +1,77 @@
-import { immutable } from "../utils";
-import type { ChangeEvent, Unsubscriber } from "./types";
-
-export type ChangeHandler = (event: any) => boolean | void;
-
-type Registration = {
+export interface ObservableEvent {
+	target: object;
+	source: object;
 	key: string;
+	path: string;
+	paths: readonly string[];
+	oldValue: unknown;
+	newValue: unknown;
+	operation?: Readonly<Record<string, unknown>>;
+}
+
+export type ObservableSubscriber = (event: ObservableEvent) => void;
+export type ObservableInterceptor = (event: ObservableEvent) => boolean | void;
+
+type SubscriberRegistration = {
+	callback: ObservableSubscriber;
 	recursive: boolean;
-	handler: ChangeHandler;
 };
 
-export type ObservableState = {
-	observables: Set<string>;
-	subscribers: Registration[];
-	interceptors: Registration[];
+type InterceptorRegistration = {
+	callback: ObservableInterceptor;
+	recursive: boolean;
+};
+
+type ParentLink = {
+	parent: object;
+	child: object;
+	segment: string;
+};
+
+type ObservableState = {
+	subscribers: Set<SubscriberRegistration>;
+	interceptors: Set<InterceptorRegistration>;
+	parents: Set<ParentLink>;
+	children: Map<string, ParentLink>;
+	propertyListeners: Map<string, Set<() => void>>;
+	version: number;
+};
+
+type DependencyCollection = {
+	dependencies: Map<object, Set<string>>;
 };
 
 const STATES = new WeakMap<object, ObservableState>();
+const OBSERVABLE_CLASSES = new WeakSet<Function>();
+const TRACKERS: DependencyCollection[] = [];
 
-export const getState = (target: object, create: boolean = false): ObservableState => {
+export const markObservableClass = (type: Function): void => {
+	OBSERVABLE_CLASSES.add(type);
+};
+
+export const isObservableInstance = (value: unknown): value is object => {
+	if (!value || typeof value !== "object")
+		return false;
+
+	const prototype = Object.getPrototypeOf(value);
+
+	return !!prototype && OBSERVABLE_CLASSES.has(prototype.constructor);
+};
+
+export const ensureState = (target: object): ObservableState => {
+	if (!isObservableInstance(target))
+		throw new TypeError(`${(target as any).constructor.name} is not decorated with @observable!`);
+
 	let state = STATES.get(target);
 
 	if (!state) {
-		if (!create)
-			throw new Error(`${target.constructor.name} is not observable!`);
-
 		state = {
-			observables: new Set(),
-			subscribers: [],
-			interceptors: []
+			subscribers: new Set(),
+			interceptors: new Set(),
+			parents: new Set(),
+			children: new Map(),
+			propertyListeners: new Map(),
+			version: 0
 		};
 
 		STATES.set(target, state);
@@ -36,118 +80,229 @@ export const getState = (target: object, create: boolean = false): ObservableSta
 	return state;
 };
 
-export const markObservable = (target: object, key: string): void => {
-	getState(target, true).observables.add(key);
+export const getState = (target: object): ObservableState => {
+	const state = STATES.get(target);
+
+	if (!state)
+		return ensureState(target);
+
+	return state;
 };
 
-export const assertObservable = (target: object, key: string | string[]): void => {
-	if (Array.isArray(key)) {
-		key.forEach((k) => assertObservable(target, k));
-		return;
-	}
+export const getVersion = (target: object): number => getState(target).version;
 
-	const root = key.split(".")[0];
+export const createEvent = (source: object, key: string, oldValue: unknown, newValue: unknown, operation?: Readonly<Record<string, unknown>>): ObservableEvent => Object.freeze({
+	target: source,
+	source,
+	key,
+	path: key,
+	paths: Object.freeze([key]),
+	oldValue,
+	newValue,
+	...(operation ? { operation } : {})
+});
 
-	if (!root)
-		throw new Error(`observable key cannot be empty!`);
+const createScopedEvent = (event: ObservableEvent, target: object, paths: string[]): Readonly<ObservableEvent> => {
+	const frozenPaths = Object.freeze(paths);
 
-	if (!getState(target).observables.has(root))
-		throw new Error(`${target.constructor.name}.${root} is not observable!`);
+	return Object.freeze({
+		...event,
+		target,
+		key: frozenPaths[0],
+		path: frozenPaths[0],
+		paths: frozenPaths
+	}) as Readonly<ObservableEvent>;
 };
 
-export const register = (target: object, type: "subscribers" | "interceptors", key: string | string[], recursive: boolean, handler: ChangeHandler): Unsubscriber => {
-	if (Array.isArray(key)) {
-		const unsubscribers = key.map(k => register(target, type, k, recursive, handler));
-		return () => unsubscribers.forEach(fn => fn());
-	}
-	
-	const registrations = getState(target, true)[type];
-	const registration = { key, recursive, handler };
+const collectRoutes = (source: object, key: string): Map<object, Set<string>> => {
+	const routes = new Map<object, Set<string>>();
 
-	registrations.push(registration);
+	const visit = (target: object, path: string, ancestors: Set<object>): void => {
+		let paths = routes.get(target);
 
-	return () => {
-		const index = registrations.indexOf(registration);
+		if (!paths) {
+			paths = new Set();
+			routes.set(target, paths);
+		}
 
-		if (index === -1)
-			throw new Error(`${target.constructor.name}.${key} is already unsubscribed!`);
+		paths.add(path);
 
-		registrations.splice(index, 1);
+		for (const link of getState(target).parents) {
+			if (ancestors.has(link.parent))
+				continue;
+
+			const nextAncestors = new Set(ancestors);
+			nextAncestors.add(link.parent);
+
+			visit(link.parent, `${link.segment}.${path}`, nextAncestors);
+		}
 	};
+
+	visit(source, key, new Set([source]));
+
+	return routes;
 };
 
-export const createEvent = <K extends string, V>(key: K, oldValue: V, newValue: V): ChangeEvent<any, any> => {
-	return immutable({ key, oldValue, newValue }) as ChangeEvent<any, any>;
-};
+export const dispatchBeforeChange = (source: object, event: ObservableEvent): boolean => {
+	for (const [target, paths] of collectRoutes(source, event.key)) {
+		const state = getState(target);
+		const scopedEvent = createScopedEvent(event, target, [...paths]);
 
-const matches = (registration: Registration, key: string): boolean => registration.key === key || (registration.recursive && (!registration.key || key.startsWith(`${registration.key}.`)));
+		for (const registration of [...state.interceptors]) {
+			if (target !== source && !registration.recursive)
+				continue;
 
-export const runInterceptors = (target: object, event: ChangeEvent<any, any>): boolean => {
-	const state = getState(target);
-
-	for (const registration of [...state.interceptors]) {
-		if (matches(registration, event.key) && registration.handler(event) === false)
-			return false;
+			if (registration.callback(scopedEvent) === false)
+				return false;
+		}
 	}
 
 	return true;
 };
 
-export const notify = (target: object, event: ChangeEvent<any, any>): void => {
-	const state = getState(target);
+export const dispatchChange = (source: object, event: ObservableEvent): void => {
+	const propertyListeners = getState(source).propertyListeners.get(event.key);
 
-	for (const registration of [...state.subscribers]) {
-		if (matches(registration, event.key))
-			registration.handler(event);
+	if (propertyListeners) {
+		for (const listener of [...propertyListeners])
+			listener();
+	}
+
+	for (const [target, paths] of collectRoutes(source, event.key)) {
+		const state = getState(target);
+		const scopedEvent = createScopedEvent(event, target, [...paths]);
+
+		state.version++;
+
+		for (const registration of [...state.subscribers]) {
+			if (target !== source && !registration.recursive)
+				continue;
+
+			registration.callback(scopedEvent);
+		}
 	}
 };
 
-type Dependencies = Map<object, Set<string>>;
+export const setChild = (parent: object, segment: string, value: unknown): void => {
+	const state = ensureState(parent);
+	const previous = state.children.get(segment);
 
-const TRACKERS: Dependencies[] = [];
-
-export const trackDependency = (target: object, key: string): void => {
-	const dependencies = TRACKERS.at(-1);
-
-	if (!dependencies)
+	if (previous?.child === value)
 		return;
 
-	let keys = dependencies.get(target);
+	if (previous) {
+		getState(previous.child).parents.delete(previous);
+		state.children.delete(segment);
+	}
+
+	if (!isObservableInstance(value))
+		return;
+
+	const link: ParentLink = { parent, child: value, segment };
+
+	state.children.set(segment, link);
+	ensureState(value).parents.add(link);
+};
+
+export const removeChild = (parent: object, segment: string): void => {
+	const state = ensureState(parent);
+	const previous = state.children.get(segment);
+
+	if (!previous)
+		return;
+
+	getState(previous.child).parents.delete(previous);
+	state.children.delete(segment);
+};
+
+export const syncChildren = (parent: object, entries: Iterable<readonly [string, unknown]>): void => {
+	const state = ensureState(parent);
+
+	for (const link of state.children.values())
+		getState(link.child).parents.delete(link);
+
+	state.children.clear();
+
+	for (const [segment, value] of entries)
+		setChild(parent, segment, value);
+};
+
+export const registerSubscriber = (
+	target: object,
+	callback: ObservableSubscriber,
+	recursive = false
+): (() => void) => {
+	const registration: SubscriberRegistration = { callback, recursive };
+
+	getState(target).subscribers.add(registration);
+
+	return () => getState(target).subscribers.delete(registration);
+};
+
+export const registerInterceptor = (
+	target: object,
+	callback: ObservableInterceptor,
+	recursive = false
+): (() => void) => {
+	const registration: InterceptorRegistration = { callback, recursive };
+
+	getState(target).interceptors.add(registration);
+
+	return () => getState(target).interceptors.delete(registration);
+};
+
+export const subscribeProperty = (
+	target: object,
+	key: string,
+	callback: () => void
+): (() => void) => {
+	const state = getState(target);
+	let listeners = state.propertyListeners.get(key);
+
+	if (!listeners) {
+		listeners = new Set();
+		state.propertyListeners.set(key, listeners);
+	}
+
+	listeners.add(callback);
+
+	return () => {
+		listeners!.delete(callback);
+
+		if (!listeners!.size)
+			state.propertyListeners.delete(key);
+	};
+};
+
+export const trackDependency = (target: object, key: string): void => {
+	const tracker = TRACKERS.at(-1);
+
+	if (!tracker)
+		return;
+
+	let keys = tracker.dependencies.get(target);
 
 	if (!keys) {
 		keys = new Set();
-		dependencies.set(target, keys);
+		tracker.dependencies.set(target, keys);
 	}
 
 	keys.add(key);
 };
 
-export const trackDependencies = (dependencies: Dependencies): void => {
-	const current = TRACKERS.at(-1);
+export const collectDependencies = <T>(callback: () => T): {
+	value: T;
+	dependencies: Map<object, Set<string>>;
+} => {
+	const tracker: DependencyCollection = { dependencies: new Map() };
 
-	if (!current)
-		return;
-
-	for (const [target, keys] of dependencies) {
-		let currentKeys = current.get(target);
-
-		if (!currentKeys) {
-			currentKeys = new Set();
-			current.set(target, currentKeys);
-		}
-
-		for (const key of keys)
-			currentKeys.add(key);
-	}
-};
-
-export const collectDependencies = <T>(callback: () => T): { value: T; dependencies: Dependencies } => {
-	const dependencies: Dependencies = new Map();
-
-	TRACKERS.push(dependencies);
+	TRACKERS.push(tracker);
 
 	try {
-		return { value: callback(), dependencies };
+		return {
+			value: callback(),
+			dependencies: tracker.dependencies
+		};
 	} finally {
 		TRACKERS.pop();
 	}

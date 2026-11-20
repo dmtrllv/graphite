@@ -3,6 +3,7 @@ import { SimulationGraph, type GraphManager } from "../graph";
 import { Simulation } from "./simulation";
 import { Serializable, serializable, mapOf } from "../serializable";
 
+@observable
 @serializable({ type: "simulation-manager", create: () => new SimulationManager() })
 export class SimulationManager extends Serializable {
 	private _idCounter = 0;

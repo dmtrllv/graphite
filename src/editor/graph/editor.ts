@@ -6,6 +6,7 @@ import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 import { GraphEditorHistory, ConnectNodesAction, AddNodeAction, DeleteNodesAction } from "./actions";
 
+@observable
 export class GraphEditor {
 	public readonly graph: Graph;
 	public readonly history = new GraphEditorHistory();

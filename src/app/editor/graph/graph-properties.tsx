@@ -51,30 +51,25 @@ export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGr
 	const manager = graph.manager!;
 	const [, setGraphVersion] = useState(0);
 	const [catalogVersion, setCatalogVersion] = useState(manager.catalogVersion);
-	
+
 	const isWorldGraph = useMemo(() => graph instanceof WorldGraph, [graph]);
 
 	useEffect(() => {
 		const update = () => setGraphVersion(version => version + 1);
-		const unsubscribers = [
-			subscribe(graph, "name", update),
-			subscribe(graph, "inputs", update),
-			subscribe(graph, "outputs", update)
-		];
-
-		return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+		return subscribe(graph, update);
 	}, [graph]);
 
 	useEffect(() => {
 		if (isWorldGraph)
 			return;
 
-		return subscribe(manager, "catalogVersion", () => {
-			setCatalogVersion(manager.catalogVersion);
+		return subscribe(manager, (e) => {
+			if (e.key === "catalogVersion")
+				setCatalogVersion(manager.catalogVersion);
 		});
 	}, [manager, isWorldGraph]);
 
-	const availableSubgraphs = isWorldGraph  ? manager.getAvailableSubgraphs(graph)  : [];
+	const availableSubgraphs = isWorldGraph ? manager.getAvailableSubgraphs(graph) : [];
 
 	const window = useWindow();
 

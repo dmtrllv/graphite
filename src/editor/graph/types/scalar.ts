@@ -2,10 +2,12 @@ import { observable } from "@reactive";
 import { serializable } from "../../serializable";
 import { Type } from "./type";
 
+@observable
 export abstract class Scalar<T = number | boolean> extends Type {
 	public abstract accessor value: T;
 }
 
+@observable
 export abstract class NumberScalar extends Scalar<number> {
 	@observable
 	@serializable(Number)
@@ -17,18 +19,23 @@ export abstract class NumberScalar extends Scalar<number> {
 	}
 }
 
+@observable
 @serializable({ type: "type:f16", create: () => new F16(0) })
 export class F16 extends NumberScalar { }
 
+@observable
 @serializable({ type: "type:f32", create: () => new F32(0) })
 export class F32 extends NumberScalar { }
 
+@observable
 @serializable({ type: "type:u32", create: () => new U32(0) })
 export class U32 extends NumberScalar { }
 
+@observable
 @serializable({ type: "type:i32", create: () => new I32(0) })
 export class I32 extends NumberScalar { }
 
+@observable
 @serializable({ type: "type:bool", create: () => new Bool(false) })
 export class Bool extends Scalar<Boolean> {
 	@observable

@@ -2,6 +2,7 @@ import { observable } from "@reactive";
 import type { GraphNode } from "./nodes";
 import { Vec2 } from "./types";
 
+@observable
 export class Selection {
 	@observable
 	public accessor downPos: Vec2;
@@ -15,6 +16,7 @@ export class Selection {
 	}
 }
 
+@observable
 export class EdgeSlice {
 	@observable
 	public accessor downPos: Vec2;
@@ -28,6 +30,7 @@ export class EdgeSlice {
 	}
 }
 
+@observable
 export class DraggingEdge {
 	@observable
 	public accessor from: "input" | "output";

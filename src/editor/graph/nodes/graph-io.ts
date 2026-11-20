@@ -2,6 +2,7 @@ import { observable } from "@reactive";
 import { GraphNode, GraphNodeCategory } from "./node";
 import { serializable } from "../../serializable";
 
+@observable
 abstract class GraphIONode extends GraphNode {
 	@observable
 	@serializable(String)

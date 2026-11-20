@@ -9,6 +9,7 @@ import { Serializable, serializable, arrayOf, mapOf } from "../serializable";
 
 const RECONCILING_GRAPHS = new WeakSet<Graph>();
 
+@observable
 @serializable({ type: "graph:port", create: () => new GraphInterfacePort() })
 export class GraphInterfacePort extends Serializable {
 	@serializable(String)
@@ -21,6 +22,8 @@ export class GraphInterfacePort extends Serializable {
 	public type: Type = new F32(0);
 }
 
+
+@observable
 export class Graph extends Serializable {
 	private _nodeIdCounter = 0;
 	private _edgeIdCounter = 0;
@@ -54,11 +57,11 @@ export class Graph extends Serializable {
 	@serializable(mapOf(Number, NodeEdge))
 	public accessor edges: Map<number, NodeEdge>;
 
-	@observable({ recursive: true })
+	@observable
 	@serializable(arrayOf(GraphInterfacePort))
 	public accessor inputs: GraphInterfacePort[] = [];
 
-	@observable({ recursive: true })
+	@observable
 	@serializable(arrayOf(GraphInterfacePort))
 	public accessor outputs: GraphInterfacePort[] = [];
 
@@ -310,11 +313,14 @@ export class Graph extends Serializable {
 	}
 }
 
+@observable
 @serializable({ type: "graph:world", create: data => new WorldGraph(data.id, data.name, new Vec2()) })
 export class WorldGraph extends Graph { }
 
+@observable
 @serializable({ type: "graph:subgraph", create: data => new Subgraph(data.id, data.name, new Vec2()) })
 export class Subgraph extends Graph { }
 
+@observable
 @serializable({ type: "graph:simulation", create: data => new SimulationGraph(data.id, data.name, new Vec2()) })
 export class SimulationGraph extends Graph { }
