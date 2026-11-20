@@ -6,12 +6,25 @@ import type { GraphSettings } from "../../../../editor/settings";
 export class EdgeRenderer {
 	private geometry = new EdgeGeometryCache();
 
-	public render(graph: Graph, editor: GraphEditor, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
+	public sync(graph: Graph): void {
 		this.geometry.retain(graph.edges.values());
+	}
 
-		for (const edge of graph.edges.values())
+	public renderEdges(edges: Iterable<NodeEdge>, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings, filter?: (edge: NodeEdge) => boolean): number {
+		let count = 0;
+
+		for (const edge of edges) {
+			if (filter && !filter(edge))
+				continue;
+
 			this.renderEdge(edge, layout, ctx, settings);
+			count++;
+		}
 
+		return count;
+	}
+
+	public renderInteractive(graph: Graph, editor: GraphEditor, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
 		if (editor.draggingEdge)
 			this.renderDraggingEdge(graph, editor.draggingEdge, layout, ctx, settings);
 
@@ -70,10 +83,6 @@ export class EdgeRenderer {
 		return result;
 	}
 
-	public removeEdge(edge: NodeEdge): void {
-		this.geometry.remove(edge);
-	}
-
 	public clear(): void {
 		this.geometry.clear();
 	}
@@ -86,7 +95,6 @@ export class EdgeRenderer {
 
 		const sourceKind = edge.source.getPropKind(edge.sourceOutput);
 		const targetKind = edge.target.getPropKind(edge.targetInput);
-
 		const gradient = ctx.createLinearGradient(geometry.start.x, geometry.start.y, geometry.end.x, geometry.end.y);
 
 		gradient.addColorStop(0, this.getEdgeColor(sourceKind ?? ""));

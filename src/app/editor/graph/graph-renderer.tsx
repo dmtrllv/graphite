@@ -77,7 +77,12 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		store.updateNode(node);
 	}, [store]);
 
-	const selectTool = useMemo(() => new SelectTool(editor, layout, invalidate), [editor, layout, invalidate]);
+	const selectTool = useMemo(() => new SelectTool(editor, {
+		getNodesInRect: layout.getNodesInRect.bind(layout),
+		setNodeDragOffset: layout.setNodeDragOffset.bind(layout),
+		beginNodeDrag: nodes => store.beginNodeDrag(nodes),
+		endNodeDrag: () => store.endNodeDrag()
+	}, invalidate), [editor, layout, store, invalidate]);
 
 	const cutTool = useMemo(() => new CutEdgesTool(editor, (start, end) => {
 		const canvasElement = canvas.current;
@@ -206,13 +211,16 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [editor, graph, nodePicker, isHovering]);
 
-	const getPointerEvent = (event: React.PointerEvent, node?: GraphNode) => ({
+	const getPointerEvent = (event: React.PointerEvent, node?: GraphNode, rect = root.current!.getBoundingClientRect()) => ({
 		clientX: event.clientX,
 		clientY: event.clientY,
 		button: event.button,
 		shiftKey: event.shiftKey,
 		ctrlKey: event.ctrlKey,
-		graphPosition: graph.getCanvasMousePosition(new Vec2(event.clientX, event.clientY), canvas.current!),
+		graphPosition: new Vec2(
+			(event.clientX - rect.left - rect.width / 2 - graph.offset.x) / graph.scale,
+			(rect.height / 2 - (event.clientY - rect.top) - graph.offset.y) / graph.scale
+		),
 		node
 	}) as GraphPointerEvent;
 
@@ -256,7 +264,8 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		if (!isHovering)
 			setHovering(true);
 
-		mousePosition.current = new Vec2(event.clientX - root.current!.getBoundingClientRect().left, event.clientY - root.current!.getBoundingClientRect().top);
+		const rect = root.current!.getBoundingClientRect();
+		mousePosition.current = new Vec2(event.clientX - rect.left, event.clientY - rect.top);
 
 		const activePan = pan.current;
 
@@ -279,7 +288,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			layout.setHoveredPort();
 		}
 
-		editor.activeTool?.pointerMove(getPointerEvent(event));
+		editor.activeTool?.pointerMove(getPointerEvent(event, undefined, rect));
 	};
 
 	const onPointerUp = (event: React.PointerEvent) => {
@@ -317,18 +326,6 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		graph.scale = nextScale;
 		store.invalidate();
 	};
-
-	useEffect(() => {
-		const element = canvas.current;
-
-		if (!element)
-			return;
-
-		const observer = new ResizeObserver(() => store.invalidateLayout());
-
-		observer.observe(element);
-		return () => observer.disconnect();
-	}, [store]);
 
 	const onMouseLeave = () => {
 		setHovering(false);
