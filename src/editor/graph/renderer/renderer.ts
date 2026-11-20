@@ -1,7 +1,11 @@
-import { Vec2, type NodeEdge, type GraphEditor, Graph, GraphNode } from "@editor";
+import { Vec2 } from "../types";
+import type { Graph } from "../graph";
+import type { NodeEdge } from "../edge";
+import type { GraphEditor } from "../editor";
+import type { GraphNode } from "../nodes";
 import { EdgeRenderer } from "./edge-renderer";
 import { GraphLayout } from "./graph-layout";
-import type { GraphSettings } from "../../../../editor/settings";
+import type { GraphSettings } from "../../settings";
 
 export class GraphCanvasRenderer {
 	private edges = new EdgeRenderer();
@@ -21,7 +25,6 @@ export class GraphCanvasRenderer {
 
 	public render(graph: Graph, editor: GraphEditor, canvas: HTMLCanvasElement, layout: GraphLayout, settings: GraphSettings, rect: DOMRectReadOnly): void {
 		const start = performance.now();
-
 		const dpr = window.devicePixelRatio || 1;
 		const width = Math.round(rect.width * dpr);
 		const height = Math.round(rect.height * dpr);
@@ -55,7 +58,7 @@ export class GraphCanvasRenderer {
 			staticCtx.setTransform(1, 0, 0, 1, 0, 0);
 			staticCtx.clearRect(0, 0, width, height);
 			staticCtx.save();
-			this.setGraphTransform(staticCtx, graph, rect, dpr);
+			this.setGraphTransform(staticCtx, editor, rect, dpr);
 			this.setLineStyle(staticCtx, settings);
 			this.stats.staticEdges = this.edges.renderEdges(graph.edges.values(), layout, staticCtx, settings, edge => !this.dynamicEdges.has(edge.id));
 			staticCtx.restore();
@@ -66,10 +69,10 @@ export class GraphCanvasRenderer {
 		ctx.clearRect(0, 0, width, height);
 		ctx.drawImage(this.staticCanvas, 0, 0);
 		ctx.save();
-		this.setGraphTransform(ctx, graph, rect, dpr);
+		this.setGraphTransform(ctx, editor, rect, dpr);
 		this.setLineStyle(ctx, settings);
 		this.stats.dynamicEdges = this.edges.renderEdges(this.dynamicEdges.values(), layout, ctx, settings);
-		this.edges.renderInteractive(graph, editor, layout, ctx, settings);
+		this.edges.renderInteractive(editor, layout, ctx, settings);
 		ctx.restore();
 		this.stats.renderMs = performance.now() - start;
 	}
@@ -105,8 +108,8 @@ export class GraphCanvasRenderer {
 		this.staticDirty = true;
 	}
 
-	public getIntersectingEdges(graph: Graph, layout: GraphLayout, canvas: HTMLCanvasElement, start: Vec2, end: Vec2): NodeEdge[] {
-		return this.edges.getIntersectingEdges(graph, layout, canvas, start, end);
+	public getIntersectingEdges(graph: Graph, editor: GraphEditor, layout: GraphLayout, canvas: HTMLCanvasElement, start: Vec2, end: Vec2): NodeEdge[] {
+		return this.edges.getIntersectingEdges(graph, editor, layout, canvas, start, end);
 	}
 
 	public clear(): void {
@@ -116,12 +119,14 @@ export class GraphCanvasRenderer {
 		this.staticDirty = true;
 	}
 
-	private setGraphTransform(ctx: CanvasRenderingContext2D, graph: Graph, rect: DOMRectReadOnly, dpr: number): void {
+	private setGraphTransform(ctx: CanvasRenderingContext2D, editor: GraphEditor, rect: DOMRectReadOnly, dpr: number): void {
+		const { offset, scale } = editor.viewport;
+
 		ctx.setTransform(
-			dpr * graph.scale, 0,
-			0, -dpr * graph.scale,
-			dpr * (rect.width / 2 + graph.offset.x),
-			dpr * (rect.height / 2 - graph.offset.y)
+			dpr * scale, 0,
+			0, -dpr * scale,
+			dpr * (rect.width / 2 + offset.x),
+			dpr * (rect.height / 2 - offset.y)
 		);
 	}
 

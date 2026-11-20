@@ -1,4 +1,3 @@
-import type { ComponentProps, ComponentType } from "react";
 import { observable } from "../reactive";
 import { EditorLayout, LayoutPanel } from "./editor-layout";
 import { Window, type WindowBounds, type WindowOpenOptions } from "./window";
@@ -9,8 +8,8 @@ export type DropTarget = { panelId: number; position: DockPosition | "float" } |
 
 export type WindowOptions = WindowOpenOptions & {
 	float?: boolean;
-	check?: (window: Window) => boolean | undefined
-}
+	check?: (window: Window) => boolean | undefined;
+};
 
 @observable
 export class WindowManager {
@@ -26,19 +25,21 @@ export class WindowManager {
 		this.layout = layout;
 	}
 
-	public open<T extends ComponentType<any>>(title: string, Component: T, props: Omit<ComponentProps<T>, "window">, { float, check, ...options }: WindowOptions): Window<ComponentProps<T>> {
-		const found = this.windows.find(w => check ? check(w) : (w.Component === Component) && w.isSingleInstance);
+	public open<P extends object = Record<string, never>>(title: string, component: string, props: P, { float, check, ...options }: WindowOptions = {}): Window<P> {
+		const found = this.windows.find(window => check ? check(window) : window.component === component && window.isSingleInstance);
 
 		if (found)
-			return found;
+			return found as Window<P>;
 
-		const window = new Window(this, title, Component, props, options);
+		const window = new Window(this, title, component, props, options);
 		this.windows.push(window);
+
 		if (float)
 			this.float(window);
 		else
 			this.dockToRoot(window);
-		return window as any;
+
+		return window;
 	}
 
 	public close(window: Window): void {
@@ -47,7 +48,7 @@ export class WindowManager {
 
 		this.detach(window);
 		this.windows = this.windows.filter(item => item !== window);
-		window.onClose?.();
+		window.onClose();
 	}
 
 	public activate(panel: LayoutPanel, window: Window): void {
@@ -59,12 +60,15 @@ export class WindowManager {
 			for (const child of layout.children) {
 				if (child instanceof LayoutPanel && child.id === id)
 					return child;
+
 				if (child instanceof EditorLayout) {
 					const result = find(child);
+
 					if (result)
 						return result;
 				}
 			}
+
 			return null;
 		};
 
@@ -104,12 +108,12 @@ export class WindowManager {
 		this.detach(window);
 
 		if (bounds === "centered") {
-			const x = (globalThis.window.innerWidth / 2) - (window.bounds.width / 2);
-			const y = (globalThis.window.innerHeight / 2) - (window.bounds.width / 2);
+			const x = (globalThis.window?.innerWidth ?? window.bounds.width) / 2 - window.bounds.width / 2;
+			const y = (globalThis.window?.innerHeight ?? window.bounds.height) / 2 - window.bounds.height / 2;
 			window.bounds = { ...window.bounds, x, y };
-		}
-		else if (bounds)
+		} else {
 			window.bounds = { ...window.bounds, ...bounds };
+		}
 
 		this.floatingWindows.push(window);
 		window.state = "floating";
@@ -118,6 +122,7 @@ export class WindowManager {
 	private split(target: LayoutPanel, panel: LayoutPanel, position: Exclude<DockPosition, "center">): void {
 		const parent = target.parent;
 		const index = parent.children.indexOf(target);
+
 		if (index === -1)
 			return;
 
@@ -143,12 +148,15 @@ export class WindowManager {
 			for (const child of layout.children) {
 				if (child instanceof LayoutPanel && child.tabs.includes(window))
 					return child;
+
 				if (child instanceof EditorLayout) {
 					const result = find(child);
+
 					if (result)
 						return result;
 				}
 			}
+
 			return null;
 		};
 
@@ -159,10 +167,12 @@ export class WindowManager {
 		this.floatingWindows = this.floatingWindows.filter(item => item !== window);
 
 		const panel = this.findPanel(window);
+
 		if (!panel)
 			return;
 
 		const index = panel.tabs.indexOf(window);
+
 		if (index === -1)
 			return;
 
@@ -180,6 +190,7 @@ export class WindowManager {
 	private removePanel(panel: LayoutPanel): void {
 		const parent = panel.parent;
 		const index = parent.children.indexOf(panel);
+
 		if (index === -1)
 			return;
 
@@ -193,21 +204,21 @@ export class WindowManager {
 				this.normalize(child);
 		}
 
-		if (layout === this.layout)
-			return;
-
-		if (layout.children.length !== 1)
+		if (layout === this.layout || layout.children.length !== 1)
 			return;
 
 		const parent = layout.parent;
+
 		if (!parent)
 			return;
 
 		const index = parent.children.indexOf(layout);
+
 		if (index === -1)
 			return;
 
 		const child = layout.children[0];
+
 		if (!child)
 			return;
 
@@ -217,9 +228,10 @@ export class WindowManager {
 		this.normalize(parent);
 	}
 
-	public closeAll() {
-		const w = [...this.windows];
-		w.map(w => this.close(w));
+	public closeAll(): void {
+		for (const window of [...this.windows])
+			this.close(window);
+
 		this.windows = [];
 	}
 }

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useRef } from "react";
 import { Window } from "@editor/window";
 import { useObservable } from "@reactive";
+import { WindowComponents } from "../window-components";
 
 type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -15,14 +16,13 @@ type ResizeRef = {
 	startX: number;
 	startY: number;
 	bounds: Window["bounds"];
-} | null
+} | null;
 
 export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: FloatingWindowProps) => {
 	useObservable(floatingWindow);
 
 	const resizeRef = useRef<ResizeRef>(null);
-
-	const Component = floatingWindow.Component;
+	const Component = WindowComponents[floatingWindow.component];
 
 	const onResizeStart = (direction: ResizeDirection, event: React.PointerEvent<HTMLDivElement>) => {
 		event.preventDefault();
@@ -39,6 +39,7 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 
 	const onResizeMove = (event: React.PointerEvent<HTMLDivElement>) => {
 		const resize = resizeRef.current;
+
 		if (!resize)
 			return;
 
@@ -52,12 +53,15 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 
 		if (direction.includes("e"))
 			width = Math.max(minWidth, bounds.width + deltaX);
+
 		if (direction.includes("s"))
 			height = Math.max(minHeight, bounds.height + deltaY);
+
 		if (direction.includes("w")) {
 			width = Math.max(minWidth, bounds.width - deltaX);
 			x = bounds.x + bounds.width - width;
 		}
+
 		if (direction.includes("n")) {
 			height = Math.max(minHeight, bounds.height - deltaY);
 			y = bounds.y + bounds.height - height;
@@ -67,7 +71,6 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 	};
 
 	const onResizeEnd = () => resizeRef.current = null;
-
 	const directions: ResizeDirection[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
 	const style = {
@@ -85,7 +88,7 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 					<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => onClose(floatingWindow)}>×</button>
 				</div>
 				<div className="floating-content">
-					<Component window={floatingWindow} {...floatingWindow.props} />
+					{Component && <Component window={floatingWindow} {...floatingWindow.props} />}
 				</div>
 				{directions.map(direction => (
 					<div key={direction} className={`resize-handle resize-${direction}`} onPointerDown={event => onResizeStart(direction, event)} onPointerMove={onResizeMove} onPointerUp={onResizeEnd} onPointerCancel={onResizeEnd} />

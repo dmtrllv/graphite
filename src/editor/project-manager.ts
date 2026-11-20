@@ -1,5 +1,3 @@
-import { SaveProjectView } from "../app/editor/windows/projects";
-import { GraphEditorView } from "../app/editor/graph";
 import { VectorMathNode, SubgraphNode, Vec2, type GraphEditor } from "./graph";
 import { observable } from "../reactive";
 import type { Editor } from "./editor";
@@ -8,7 +6,6 @@ import { serializeProject, deserializeProject } from "./project-serializer";
 import type { WindowOptions } from "./window-manager";
 
 const PROJECTS_KEY = "graphite:projects";
-
 const projectKey = (name: string) => `graphite:project:${name}`;
 
 const currentDateTime = () => new Intl.DateTimeFormat(undefined, {
@@ -48,21 +45,22 @@ export class ProjectManager {
 		localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects.map(({ name, lastSave }) => ({ name, lastSave }))));
 	}
 
-	private createNewProject(name: string = "New Project"): Project {
+	private createNewProject(name = "New Project"): Project {
 		const info = createProjectInfo(name, currentDateTime());
-		const p = new Project(this, info, this.editor.settings.defaultSettings.clone());
-		const graph = p.graphManager.worldGraph;
-		graph.addNode(VectorMathNode);
-		this.openGraph(p.graphManager.openEditor(graph));
-		return p;
+		const project = new Project(this, info, this.editor.settings.defaultSettings.clone());
+		const graph = project.graphManager.worldGraph;
+		this.openGraph(project.graphManager.openEditor(graph));
+
+		return project;
 	}
 
-	public saveProjectSettings(project: Project) {
+	public saveProjectSettings(project: Project): void {
 		this.editor.settings.saveProjectSettings(project.info.name, project.settings);
 	}
 
 	public newProject(name?: string): void {
 		this.activeProject.dispose();
+		this.editor.windowManager.closeAll();
 		this.activeProject = this.createNewProject(name);
 	}
 
@@ -79,8 +77,9 @@ export class ProjectManager {
 
 	public saveProject(): void {
 		const project = this.activeProject;
+
 		if (!project.isSaved) {
-			this.editor.windowManager.open("Save Project As", SaveProjectView, { manager: this }, { singleInstance: true, float: true });
+			this.editor.windowManager.open("Save Project As", "save-project", { manager: this }, { singleInstance: true, float: true });
 			return;
 		}
 
@@ -100,7 +99,7 @@ export class ProjectManager {
 			return;
 
 		const json = localStorage.getItem(projectKey(name));
-		const info = this.projects.find(p => p.name === name);
+		const info = this.projects.find(project => project.name === name);
 
 		if (!json || !info)
 			throw new Error(`Project '${name}' does not exist.`);
@@ -110,36 +109,47 @@ export class ProjectManager {
 		const oldProject = this.activeProject;
 
 		this.editor.windowManager.closeAll();
-
 		this.activeProject = project;
-		const graph = this.activeProject.graphManager.get("World");
 
-		if (graph) {
-			this.openGraph(this.activeProject.graphManager.openEditor(graph));
-		}
+		const graph = project.graphManager.worldGraph;
+		this.openGraph(project.graphManager.openEditor(graph));
 
 		oldProject.dispose();
 	}
 
 	public openGraph(editor: GraphEditor): void {
 		const graph = editor.graph;
-		const windowOptions: WindowOptions = {
+		const options: WindowOptions = {
 			singleInstance: false,
-			check: w => w.Component === GraphEditorView && w.props["editor"] === editor,
+			check: window => window.component === "graph-editor" && window.props["editor"] === editor,
 			onClose: () => graph.manager?.closeEditor(graph, editor)
 		};
-		this.editor.windowManager.open(graph.name, GraphEditorView, {
+
+		this.editor.windowManager.open(graph.name, "graph-editor", {
 			editor,
-			onCreateSubgraph: (parentEditor, position) => this.createSubgraph(parentEditor, position),
+			onCreateSubgraph: (parentEditor: GraphEditor, position: Vec2) => this.createSubgraph(parentEditor, position),
 			projectManager: this
-		}, windowOptions);
+		}, options);
 	}
 
 	public createSubgraph(editor: GraphEditor, position: Vec2): void {
 		const manager = this.activeProject.graphManager;
 		const graph = manager.createSubgraph();
 		const node = editor.addNode(SubgraphNode, position) as SubgraphNode;
+
 		node.graphId = graph.id;
+		this.openGraph(manager.openEditor(graph));
+	}
+
+	public createPassGraph(): void {
+		const manager = this.activeProject.graphManager;
+		const graph = manager.createPassGraph();
+		this.openGraph(manager.openEditor(graph));
+	}
+
+	public createSimulationGraph(): void {
+		const manager = this.activeProject.graphManager;
+		const graph = manager.createSimulationGraph();
 		this.openGraph(manager.openEditor(graph));
 	}
 }

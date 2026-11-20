@@ -1,8 +1,10 @@
-import { Graph, SimulationGraph, Subgraph, SubgraphNode, WorldGraph, type GraphNode, type NodeEdge } from "../graph";
+import { Graph, PassGraph, SimulationGraph, Subgraph, WorldGraph } from "./graph";
+import { SubgraphNode } from "./nodes";
 import { Serializable, serializable, mapOf } from "../serializable";
 import { observable } from "@reactive";
 import { GraphEditor } from "./editor";
-import { Vec2 } from "./types";
+import { GraphViewport } from "./viewport";
+import { validateSimulationGraph } from "./simulation-graph";
 
 @observable
 @serializable({ type: "graph-manager", create: () => new GraphManager(false) })
@@ -14,34 +16,46 @@ export class GraphManager extends Serializable {
 	public accessor graphs = new Map<number, Graph>();
 
 	@observable
-	public accessor editors = new Map<Graph, GraphEditor>();
+	@serializable(mapOf(Number, GraphViewport))
+	public accessor viewports = new Map<number, GraphViewport>();
+
+	@observable
+	public accessor editors = new Map<number, GraphEditor>();
 
 	@observable
 	public accessor catalogVersion = 0;
 
 	public constructor(createWorldGraph = true) {
-		super()
+		super();
 		if (createWorldGraph)
-			this.add("World");
+			this.createWorldGraph();
 	}
 
 	protected override initialize(): void {
 		this._idCounter = 0;
 
+		if (![...this.graphs.values()].some(graph => graph instanceof WorldGraph))
+			throw new Error("GraphManager must contain a WorldGraph!");
+
 		for (const graph of this.graphs.values()) {
 			graph.setManager(this);
 			this._idCounter = Math.max(this._idCounter, graph.id + 1);
+
+			if (!this.viewports.has(graph.id))
+				this.viewports.set(graph.id, new GraphViewport());
+
+			graph.ensureOutputNode();
+			graph.validate();
+
+			if (graph instanceof SimulationGraph)
+				validateSimulationGraph(graph);
 		}
 
 		this.validateReferences();
 	}
 
-	public notifySubgraphTopologyChanged(): void {
-		this.catalogVersion++;
-	}
-
 	public get worldGraph(): WorldGraph {
-		const graph = [...this.graphs.values()].find(graph => graph instanceof WorldGraph);
+		const graph = [...this.graphs.values()].find((graph): graph is WorldGraph => graph instanceof WorldGraph);
 
 		if (!graph)
 			throw new Error("GraphManager does not contain a World Graph!");
@@ -59,65 +73,91 @@ export class GraphManager extends Serializable {
 	}
 
 	public openEditor(graph: Graph): GraphEditor {
-		let editor = this.editors.get(graph);
+		if (this.graphs.get(graph.id) !== graph)
+			throw new Error("Cannot open a graph that does not belong to this GraphManager!");
+
+		let editor = this.editors.get(graph.id);
 
 		if (!editor) {
-			editor = new GraphEditor(graph);
-			this.editors.set(graph, editor);
+			let viewport = this.viewports.get(graph.id);
+
+			if (!viewport) {
+				viewport = new GraphViewport();
+				this.viewports.set(graph.id, viewport);
+			}
+
+			editor = new GraphEditor(graph, viewport);
+			this.editors.set(graph.id, editor);
 		}
 
 		return editor;
 	}
 
-	public add(name: string, offset: Vec2 = new Vec2(), nodes?: Map<number, GraphNode>, edges?: Map<number, NodeEdge>): Graph {
-		if (this.get(name))
-			throw new DuplicateGraphNameError(name);
+	private createName(prefix: string): string {
+		let index = 1;
+		let name = `${prefix} ${index}`;
 
-		const id = this._idCounter++;
-		const graph = this.graphs.size === 0 ? new WorldGraph(id, name, offset, nodes, edges) : new Subgraph(id, name, offset, nodes, edges);
+		while (this.get(name))
+			name = `${prefix} ${++index}`;
 
-		return this.register(graph);
+		return name;
 	}
 
-	private register(graph: Graph): Graph {
+	public createWorldGraph(name = "World"): WorldGraph {
+		if ([...this.graphs.values()].some(graph => graph instanceof WorldGraph))
+			throw new Error("A GraphManager can only contain one World Graph!");
+
+		const graph = new WorldGraph(this._idCounter++, name);
+		return this.register(graph) as WorldGraph;
+	}
+
+	public createSubgraph(name = this.createName("Subgraph")): Subgraph {
+		return this.register(new Subgraph(this._idCounter++, name)) as Subgraph;
+	}
+
+	public createPassGraph(name = this.createName("Pass")): PassGraph {
+		return this.register(new PassGraph(this._idCounter++, name)) as PassGraph;
+	}
+
+	public createSimulationGraph(name = this.createName("Simulation")): SimulationGraph {
+		return this.register(new SimulationGraph(this._idCounter++, name)) as SimulationGraph;
+	}
+
+	private register<T extends Graph>(graph: T): T {
+		if (this.get(graph.name))
+			throw new DuplicateGraphNameError(graph.name);
+
+		if (this.graphs.has(graph.id))
+			throw new Error(`Graph with ID ${graph.id} already exists!`);
+
+		if (graph instanceof WorldGraph && [...this.graphs.values()].some(item => item instanceof WorldGraph))
+			throw new Error("A GraphManager can only contain one World Graph!");
+
 		graph.setManager(this);
 		this.graphs.set(graph.id, graph);
 
 		try {
+			graph.ensureOutputNode();
+			graph.validate();
+			if (graph instanceof SimulationGraph)
+				validateSimulationGraph(graph);
 			this.validateReferences();
 		} catch (error) {
 			this.graphs.delete(graph.id);
 			throw error;
 		}
 
+		this.viewports.set(graph.id, new GraphViewport());
 		this.catalogVersion++;
 		return graph;
 	}
 
 	public restore(graph: Graph): void {
-		if (this.graphs.has(graph.id))
-			throw new Error(`Graph with ID ${graph.id} already exists!`);
-
-		if (this.get(graph.name))
-			throw new DuplicateGraphNameError(graph.name);
-
-		if (graph instanceof WorldGraph && [...this.graphs.values()].some(item => item instanceof WorldGraph))
-			throw new Error("A GraphManager can only contain one World Graph!");
-
-		if (!(graph instanceof WorldGraph) && this.graphs.size === 0)
-			throw new Error("The first graph must be a World Graph!");
-
-		graph.setManager(this);
-		this.graphs.set(graph.id, graph);
+		this.register(graph);
 		this._idCounter = Math.max(this._idCounter, graph.id + 1);
+	}
 
-		try {
-			this.validateReferences();
-		} catch (error) {
-			this.graphs.delete(graph.id);
-			throw error;
-		}
-
+	public notifySubgraphTopologyChanged(): void {
 		this.catalogVersion++;
 	}
 
@@ -135,27 +175,6 @@ export class GraphManager extends Serializable {
 		}
 	}
 
-	public createSubgraph(): Subgraph {
-		let index = 1;
-		let name = `Subgraph ${index}`;
-
-		while (this.get(name))
-			name = `Subgraph ${++index}`;
-
-		return this.add(name) as Subgraph;
-	}
-
-	public createSimulationGraph(): SimulationGraph {
-		let index = 1;
-		let name = `Simulation ${index}`;
-
-		while (this.get(name))
-			name = `Simulation ${++index}`;
-
-		const graph = new SimulationGraph(this._idCounter++, name, new Vec2());
-		return this.register(graph) as SimulationGraph;
-	}
-
 	public rename(graph: Graph, name: string): void {
 		const normalized = name.trim();
 
@@ -169,6 +188,9 @@ export class GraphManager extends Serializable {
 
 		if (graph instanceof WorldGraph)
 			throw new Error("The World Graph cannot be renamed!");
+
+		if (this.graphs.get(graph.id) !== graph)
+			throw new Error("Graph does not belong to this GraphManager!");
 
 		graph.name = normalized;
 		this.catalogVersion++;
@@ -187,7 +209,7 @@ export class GraphManager extends Serializable {
 			visited.add(graph.id);
 
 			for (const node of graph.nodes.values()) {
-				if (!("graphId" in node) || typeof node.graphId !== "number")
+				if (!(node instanceof SubgraphNode) || node.graphId === null)
 					continue;
 
 				const child = this.get(node.graphId);
@@ -202,6 +224,12 @@ export class GraphManager extends Serializable {
 		return contains(definition);
 	}
 
+	public getAvailableSubgraphs(parent: Graph): Subgraph[] {
+		return [...this.graphs.values()].filter((graph): graph is Subgraph =>
+			graph instanceof Subgraph && graph !== parent && !this.hasRecursiveReference(parent, graph)
+		);
+	}
+
 	public removeGraph(graph: Graph): void {
 		if (graph instanceof WorldGraph)
 			throw new Error("The World Graph cannot be removed!");
@@ -214,43 +242,44 @@ export class GraphManager extends Serializable {
 				continue;
 
 			for (const node of [...candidate.nodes.values()]) {
-				if ("graphId" in node && node.graphId === graph.id)
+				if (node instanceof SubgraphNode && node.graphId === graph.id)
 					candidate.removeNode(node);
 			}
 		}
 
-		const editor = this.editors.get(graph);
+		const editor = this.editors.get(graph.id);
 
 		if (editor)
 			this.closeEditor(graph, editor);
 
 		this.graphs.delete(graph.id);
+		this.viewports.delete(graph.id);
 		this.catalogVersion++;
 	}
 
 	private validateReferences(): void {
 		for (const graph of this.graphs.values()) {
 			for (const node of graph.nodes.values()) {
-				if (node instanceof SubgraphNode && node.graphId !== null)
-					node.graphId = node.graphId;
+				if (!(node instanceof SubgraphNode) || node.graphId === null)
+					continue;
+
+				const definition = this.get(node.graphId);
+
+				if (!(definition instanceof Subgraph))
+					throw new Error(`SubgraphNode ${node.id} references an invalid Subgraph!`);
+
+				if (this.hasRecursiveReference(graph, definition))
+					throw new Error(`SubgraphNode ${node.id} creates a recursive graph reference!`);
 			}
 		}
 	}
 
-	public getAvailableSubgraphs(parent: Graph): Subgraph[] {
-		const isSubGraph = (graph: Graph): graph is Subgraph => {
-			return graph instanceof Subgraph && graph !== parent && !this.hasRecursiveReference(parent, graph);
-		};
-
-		return [...this.graphs.values()].filter(isSubGraph);
-	}
-
 	public closeEditor(graph: Graph, editor: GraphEditor): void {
-		if (this.editors.get(graph) !== editor)
+		if (this.editors.get(graph.id) !== editor)
 			return;
 
 		editor.dispose();
-		this.editors.delete(graph);
+		this.editors.delete(graph.id);
 	}
 }
 

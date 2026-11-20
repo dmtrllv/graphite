@@ -1,7 +1,11 @@
-import { Vec2, type GraphEditor, type Graph, type NodeEdge, GraphNode } from "@editor";
+import { Vec2 } from "../types";
+import type { Graph } from "../graph";
+import type { GraphEditor } from "../editor";
+import type { NodeEdge } from "../edge";
+import { GraphNode } from "../nodes";
 import { EdgeGeometryCache } from "./edge-geometry";
 import { GraphLayout } from "./graph-layout";
-import type { GraphSettings } from "../../../../editor/settings";
+import type { GraphSettings } from "../../settings";
 
 export class EdgeRenderer {
 	private geometry = new EdgeGeometryCache();
@@ -24,13 +28,13 @@ export class EdgeRenderer {
 		return count;
 	}
 
-	public renderInteractive(graph: Graph, editor: GraphEditor, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
+	public renderInteractive(editor: GraphEditor, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
 		if (editor.draggingEdge)
-			this.renderDraggingEdge(graph, editor.draggingEdge, layout, ctx, settings);
+			this.renderDraggingEdge(editor, editor.draggingEdge, layout, ctx, settings);
 
 		if (editor.edgeCut) {
-			const start = graph.getCanvasMousePosition(editor.edgeCut.downPos, ctx.canvas);
-			const end = graph.getCanvasMousePosition(editor.edgeCut.mousePos, ctx.canvas);
+			const start = editor.getCanvasMousePosition(editor.edgeCut.downPos, ctx.canvas);
+			const end = editor.getCanvasMousePosition(editor.edgeCut.mousePos, ctx.canvas);
 
 			ctx.strokeStyle = "red";
 			ctx.beginPath();
@@ -40,9 +44,9 @@ export class EdgeRenderer {
 		}
 	}
 
-	public getIntersectingEdges(graph: Graph, layout: GraphLayout, canvas: HTMLCanvasElement, start: Vec2, end: Vec2): NodeEdge[] {
-		const a = graph.getCanvasMousePosition(start, canvas);
-		const b = graph.getCanvasMousePosition(end, canvas);
+	public getIntersectingEdges(graph: Graph, editor: GraphEditor, layout: GraphLayout, canvas: HTMLCanvasElement, start: Vec2, end: Vec2): NodeEdge[] {
+		const a = editor.getCanvasMousePosition(start, canvas);
+		const b = editor.getCanvasMousePosition(end, canvas);
 		const result: NodeEdge[] = [];
 
 		for (const edge of graph.edges.values()) {
@@ -97,9 +101,8 @@ export class EdgeRenderer {
 		const targetKind = GraphNode.getPort(edge.target, edge.targetInput, "input")?.value.kind;
 		const gradient = ctx.createLinearGradient(geometry.start.x, geometry.start.y, geometry.end.x, geometry.end.y);
 
-		gradient.addColorStop(0, this.getEdgeColor(sourceKind!));
-		gradient.addColorStop(1, this.getEdgeColor(targetKind!));
-
+		gradient.addColorStop(0, this.getEdgeColor(sourceKind ?? ""));
+		gradient.addColorStop(1, this.getEdgeColor(targetKind ?? ""));
 		ctx.strokeStyle = gradient;
 
 		const curve = Math.max(0, Math.min(1, settings.curve));
@@ -118,13 +121,13 @@ export class EdgeRenderer {
 		ctx.stroke();
 	}
 
-	private renderDraggingEdge(graph: Graph, edge: NonNullable<GraphEditor["draggingEdge"]>, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
+	private renderDraggingEdge(editor: GraphEditor, edge: NonNullable<GraphEditor["draggingEdge"]>, layout: GraphLayout, ctx: CanvasRenderingContext2D, settings: GraphSettings): void {
 		const port = layout.getPort(edge.node, edge.from, edge.key);
 
 		if (!port)
 			return;
 
-		const mouse = graph.getCanvasMousePosition(edge.mousePosition, ctx.canvas);
+		const mouse = editor.getCanvasMousePosition(edge.mousePosition, ctx.canvas);
 		const kind = GraphNode.getPort(edge.node, edge.key, edge.from)?.value.kind;
 
 		ctx.strokeStyle = this.getEdgeColor(kind ?? "");
@@ -157,10 +160,9 @@ export class EdgeRenderer {
 	}
 }
 
-
 const EDGE_COLOR_MAP: Record<string, string> = {
 	vector: "#56B6C2",
 	scalar: "#E5A45B",
 	map: "#62b64d",
-	sampler: "#d46363",
+	sampler: "#d46363"
 };

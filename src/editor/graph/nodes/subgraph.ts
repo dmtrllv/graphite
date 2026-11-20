@@ -28,6 +28,7 @@ export class SubgraphNode extends GraphNode {
 
 		this._graphId = value;
 		manager?.notifySubgraphTopologyChanged();
+		this.graph.reconcileEdges();
 	}
 
 	public get definition(): Subgraph | undefined {
@@ -46,13 +47,15 @@ export class SubgraphNode extends GraphNode {
 				key: port.id,
 				name: port.name,
 				direction: "input" as const,
-				value: port.type
+				value: port.type,
+				editable: false
 			})) ?? [],
 			outputs: definition?.outputs.map(port => ({
 				key: port.id,
 				name: port.name,
 				direction: "output" as const,
-				value: port.type
+				value: port.type,
+				editable: false
 			})) ?? [],
 			options: []
 		};

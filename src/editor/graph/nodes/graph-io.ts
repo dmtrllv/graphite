@@ -1,4 +1,5 @@
 import { observable } from "@reactive";
+import { Graph, PassGraph, Subgraph, WorldGraph } from "../graph";
 import { GraphNode, GraphNodeCategory } from "./node";
 import { serializable } from "../../serializable";
 
@@ -16,6 +17,9 @@ abstract class GraphIONode extends GraphNode {
 @GraphNode.register(GraphNodeCategory.SubGraph, "Graph Input")
 export class GraphInputNode extends GraphIONode {
 	public override getInterface() {
+		if (!(this.graph instanceof Subgraph))
+			return { inputs: [], outputs: [], options: [] };
+
 		const port = this.graph.inputs.find(item => item.id === this.interfaceId);
 
 		return {
@@ -24,25 +28,68 @@ export class GraphInputNode extends GraphIONode {
 				key: port.id,
 				name: port.name,
 				direction: "output" as const,
-				value: port.type
+				value: port.type,
+				editable: false
 			}] : [],
 			options: []
 		};
 	}
 }
 
-@GraphNode.register(GraphNodeCategory.SubGraph, "Graph Output")
-export class GraphOutputNode extends GraphIONode {
+@GraphNode.register(GraphNodeCategory.Unknown, "Graph Output")
+export class GraphOutputNode extends GraphNode {
 	public override getInterface() {
-		const port = this.graph.outputs.find(item => item.id === this.interfaceId);
+		if (!(this.graph instanceof Subgraph))
+			return { inputs: [], outputs: [], options: [] };
 
 		return {
-			inputs: port ? [{
+			inputs: this.graph.outputs.map(port => ({
 				key: port.id,
 				name: port.name,
 				direction: "input" as const,
-				value: port.type
-			}] : [],
+				value: port.type,
+				editable: false
+			})),
+			outputs: [],
+			options: []
+		};
+	}
+}
+
+@GraphNode.register(GraphNodeCategory.Unknown, "World Output")
+export class WorldOutputNode extends GraphNode {
+	public override getInterface() {
+		if (!(this.graph instanceof WorldGraph))
+			return { inputs: [], outputs: [], options: [] };
+
+		return {
+			inputs: this.graph.outputs.map(port => ({
+				key: port.id,
+				name: port.name,
+				direction: "input" as const,
+				value: port.type,
+				editable: false
+			})),
+			outputs: [],
+			options: []
+		};
+	}
+}
+
+@GraphNode.register(GraphNodeCategory.Unknown, "Pass Output")
+export class PassOutputNode extends GraphNode {
+	public override getInterface() {
+		if (!(this.graph instanceof PassGraph))
+			return { inputs: [], outputs: [], options: [] };
+
+		return {
+			inputs: [...this.graph.passOutputs.values()].map(port => ({
+				key: port.id,
+				name: port.name,
+				direction: "input" as const,
+				value: port.type,
+				editable: false
+			})),
 			outputs: [],
 			options: []
 		};

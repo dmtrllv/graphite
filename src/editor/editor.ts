@@ -1,5 +1,3 @@
-import { ProjectList, SaveProjectView } from "../app/editor/windows/projects";
-import { SettingsView } from "../app/editor/windows/settings";
 import { observable } from "../reactive";
 import { EditorLayout } from "./editor-layout";
 import { Menubar, MenuItem, MenuSeparator } from "./menubar";
@@ -18,11 +16,11 @@ export class Editor {
 		this._instance = new Editor();
 		await this._instance.init();
 		return this._instance;
-	}
+	};
 
 	@observable
 	public accessor settings: SettingsManager = new SettingsManager();
-	
+
 	public readonly layout: EditorLayout = new EditorLayout(null);
 	public readonly windowManager: WindowManager = new WindowManager(this.layout);
 	public readonly projectManager: ProjectManager = new ProjectManager(this);
@@ -32,31 +30,27 @@ export class Editor {
 			new MenuItem("new_project", "New Project", () => this.projectManager.newProject()),
 			MenuSeparator,
 			new MenuItem("save", "Save", () => this.projectManager.saveProject()),
-			new MenuItem("save_as", "Save As", () => this.windowManager.open("Save Project As", SaveProjectView, { manager: this.projectManager }, { singleInstance: true, float: true })),
+			new MenuItem("save_as", "Save As", () => this.windowManager.open("Save Project As", "save-project", { manager: this.projectManager }, { singleInstance: true, float: true })),
 			MenuSeparator,
-			new MenuItem("open", "Open", () => this.windowManager.open("Projects", ProjectList, { manager: this.projectManager }, { singleInstance: true, float: true })),
-			new MenuItem("open_recent", "Open Recent", undefined, this.projectManager.projects.map(p => {
-				return new MenuItem(p.name, p.name, () => {
-					this.projectManager.loadProject(p.name);
-				});
+			new MenuItem("open", "Open", () => this.windowManager.open("Projects", "projects", { manager: this.projectManager }, { singleInstance: true, float: true })),
+			new MenuItem("open_recent", "Open Recent", undefined, this.projectManager.projects.map(project => {
+				return new MenuItem(project.name, project.name, () => this.projectManager.loadProject(project.name));
 			})),
 			MenuSeparator,
 			new MenuItem("settings", "Settings", () => {
-				this.windowManager.open("Settings", SettingsView, { projectManager: this.projectManager }, { singleInstance: true, float: true });
+				this.windowManager.open("Settings", "settings", { projectManager: this.projectManager }, { singleInstance: true, float: true });
 			})
 		]),
-		new MenuItem("edit", "Edit", undefined, [
-
-		]),
+		new MenuItem("edit", "Edit", undefined, []),
 		new MenuItem("view", "View", undefined, [
 			new MenuItem("world_graph", "World Graph", () => {
 				const manager = this.projectManager.activeProject.graphManager;
-				const graph = manager.worldGraph;
-				const editor = manager.openEditor(graph);
-				this.projectManager.openGraph(editor);
+				this.projectManager.openGraph(manager.openEditor(manager.worldGraph));
 			}),
-		]),
+			new MenuItem("new_pass_graph", "New Pass Graph", () => this.projectManager.createPassGraph()),
+			new MenuItem("new_simulation_graph", "New Simulation Graph", () => this.projectManager.createSimulationGraph())
+		])
 	]);
 
-	public async init() { }
+	public async init(): Promise<void> { }
 }

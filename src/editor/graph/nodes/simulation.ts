@@ -1,4 +1,3 @@
-
 import { observable } from "@reactive";
 import { F32, Type, Vec2 } from "../types";
 import { SimulationGraph } from "../graph";
@@ -20,7 +19,7 @@ abstract class SimulationNode extends GraphNode {
 export class SimulationInputNode extends SimulationNode {
 	@observable
 	@serializable(String)
-	public accessor inputId = crypto.randomUUID() as string;
+	public accessor inputId = crypto.randomUUID();
 
 	@observable
 	@serializable(String)
@@ -39,41 +38,37 @@ export class SimulationInputNode extends SimulationNode {
 	public accessor value: Type = new F32(0);
 
 	public override getInterface() {
+		const graph = this.graph as SimulationGraph;
+		const state = this.inputKind === "state" ? graph.states.get(this.stateId ?? "") : undefined;
+		const value = state?.type ?? this.value;
+
 		return {
 			inputs: [],
 			outputs: [{
 				key: "value",
-				name: this.name,
+				name: state?.name ?? this.name,
 				direction: "output" as const,
-				value: this.value
+				value,
+				editable: this.inputKind === "parameter"
 			}],
 			options: []
 		};
 	}
 }
 
-@GraphNode.register(GraphNodeCategory.Simulation, "Simulation Output")
+@GraphNode.register(GraphNodeCategory.Unknown, "Simulation Output")
 export class SimulationOutputNode extends SimulationNode {
-	@observable
-	@serializable(String)
-	public accessor stateId = crypto.randomUUID();
-
-	@observable
-	@serializable(String)
-	public override accessor name = "State";
-
-	@observable
-	@serializable(Type)
-	public accessor value: Type = new F32(0);
-
 	public override getInterface() {
+		const graph = this.graph as SimulationGraph;
+
 		return {
-			inputs: [{
-				key: "value",
-				name: this.name,
+			inputs: [...graph.states.values()].map(state => ({
+				key: state.id,
+				name: state.name,
 				direction: "input" as const,
-				value: this.value
-			}],
+				value: state.type,
+				editable: false
+			})),
 			outputs: [],
 			options: []
 		};

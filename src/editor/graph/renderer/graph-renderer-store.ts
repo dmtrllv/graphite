@@ -1,9 +1,11 @@
 import { subscribe } from "@reactive";
-import type { Graph, GraphNode, GraphEditor } from "@editor";
+import type { Graph } from "../graph";
+import type { GraphNode } from "../nodes";
+import type { GraphEditor } from "../editor";
 import { GraphLayout } from "./graph-layout";
 import { GraphCanvasRenderer } from "./renderer";
 import { RenderScheduler } from "./render-scheduler";
-import type { GraphSettings } from "../../../../editor/settings";
+import type { GraphSettings } from "../../settings";
 
 export class GraphRendererStore {
 	public readonly graph: Graph;
@@ -41,19 +43,11 @@ export class GraphRendererStore {
 		this.observer.observe(canvas);
 
 		this.unsubscribers = [
-			subscribe(this.graph.offset, { recursive: true }, () => this.invalidateStatic()),
+			subscribe(this.editor.viewport, { recursive: true }, () => this.invalidateStatic()),
 			subscribe(this.graph, e => {
-				switch (e.key) {
-					case "offset":
-						this.invalidateStatic();
-						break;
-					case "scale":
-						this.invalidateStatic();
-						break;
-					case "structureVersion":
-						this.renderer.invalidateGraph(this.graph);
-						this.invalidate();
-						break;
+				if (e.key === "structureVersion") {
+					this.renderer.invalidateGraph(this.graph);
+					this.invalidate();
 				}
 			}),
 			subscribe(this.editor, { recursive: true }, e => {
@@ -98,7 +92,7 @@ export class GraphRendererStore {
 		if (!this.canvas)
 			return;
 
-		if (this.layout.updateNode(node, this.graph, this.canvas))
+		if (this.layout.updateNode(node, this.editor, this.canvas))
 			this.invalidateStatic();
 	}
 

@@ -1,8 +1,8 @@
 import { GraphNode, SelectOption, type NodeOption, type NodeOptionType, type TypeCtor, GraphEditor } from "@editor/graph";
 import { Bool, F16, F32, I32, Type, U32, Vec2, Vec3, Vec4 } from "@editor/graph/types";
+import type { GraphLayout } from "@editor/graph/renderer";
 import React, { useCallback, useRef } from "react";
 import { useObservable } from "@reactive";
-import type { GraphLayout } from "./rendering";
 import { Toggle } from "../../inputs/toggle";
 import { Vec2Input, Vec3Input, Vec4Input } from "../../inputs/vector";
 
@@ -54,7 +54,7 @@ export const NodePropView = ({ node, editor, layout, name, portKey = name, value
 			root.setPointerCapture(event.pointerId);
 
 		if (canvas instanceof HTMLCanvasElement)
-			layout.updateNode(node, editor.graph, canvas);
+			layout.updateNode(node, editor, canvas);
 
 		editor.beginEdgeDrag(from, node, key, new Vec2(event.clientX, event.clientY));
 		layout.setHoveredPort({ node, direction: from, key });

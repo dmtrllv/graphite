@@ -1,4 +1,6 @@
-import { Vec2, type Graph, type GraphNode } from "@editor";
+import { Vec2 } from "../types";
+import type { GraphEditor } from "../editor";
+import type { GraphNode } from "../nodes";
 
 export type PortDirection = "input" | "output";
 
@@ -76,8 +78,10 @@ export class GraphLayout {
 		this.hoveredPort?.classList.add("hovered");
 	}
 
-	public updateNode(node: GraphNode, graph: Graph, canvas: HTMLCanvasElement): boolean {
-		if (graph.scale <= 0)
+	public updateNode(node: GraphNode, editor: GraphEditor, canvas: HTMLCanvasElement): boolean {
+		const viewport = editor.viewport;
+
+		if (viewport.scale <= 0)
 			return false;
 
 		const canvasRect = canvas.getBoundingClientRect();
@@ -98,8 +102,8 @@ export class GraphLayout {
 			const offset = port.direction === "input" ? 0.8 : 0.2;
 
 			const position = new Vec2(
-				(rect.left + rect.width * offset - canvasRect.left - canvasRect.width / 2 - graph.offset.x) / graph.scale,
-				-(rect.top + rect.height / 2 - canvasRect.top - canvasRect.height / 2 + graph.offset.y) / graph.scale
+				(rect.left + rect.width * offset - canvasRect.left - canvasRect.width / 2 - viewport.offset.x) / viewport.scale,
+				-(rect.top + rect.height / 2 - canvasRect.top - canvasRect.height / 2 + viewport.offset.y) / viewport.scale
 			);
 
 			changed = this.updatePort(node, port.direction, port.key, position) || changed;
@@ -108,11 +112,11 @@ export class GraphLayout {
 		return changed;
 	}
 
-	public updateAll(graph: Graph, canvas: HTMLCanvasElement): boolean {
+	public updateAll(editor: GraphEditor, canvas: HTMLCanvasElement): boolean {
 		let changed = false;
 
 		for (const { node } of this.nodeElements.values())
-			changed = this.updateNode(node, graph, canvas) || changed;
+			changed = this.updateNode(node, editor, canvas) || changed;
 
 		return changed;
 	}

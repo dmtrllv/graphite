@@ -1,4 +1,5 @@
-import { Vec2, type NodeEdge } from "@editor/graph";
+import { Vec2 } from "../types";
+import type { NodeEdge } from "../edge";
 import { GraphLayout } from "./graph-layout";
 
 export type EdgeGeometry = {

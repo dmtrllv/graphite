@@ -18,11 +18,12 @@ export class MoveNodesTool extends GraphEditorToolBase {
 
 	public override pointerDown(event: GraphPointerEvent): void {
 		const nodes = this.editor.selectedNodes;
-		if (!nodes.length) return;
+
+		if (!nodes.length)
+			return;
 
 		this.downPosition = new Vec2(event.clientX, event.clientY);
 		this.delta = new Vec2();
-
 		this.changes = nodes.map(node => ({
 			node,
 			before: node.position.clone(),
@@ -31,12 +32,14 @@ export class MoveNodesTool extends GraphEditorToolBase {
 	}
 
 	public override pointerMove(event: GraphPointerEvent): void {
-		if (!this.changes.length) return;
+		if (!this.changes.length)
+			return;
 
-		const graph = this.editor.graph;
+		const scale = this.editor.viewport.scale;
+
 		this.delta = new Vec2(
-			(event.clientX - this.downPosition.x) / graph.scale,
-			-(event.clientY - this.downPosition.y) / graph.scale
+			(event.clientX - this.downPosition.x) / scale,
+			-(event.clientY - this.downPosition.y) / scale
 		);
 
 		for (const change of this.changes)
@@ -46,17 +49,15 @@ export class MoveNodesTool extends GraphEditorToolBase {
 	}
 
 	public override pointerUp(event: GraphPointerEvent): void {
-		if (!this.changes.length) return;
+		if (!this.changes.length)
+			return;
 
 		this.pointerMove(event);
 
 		const changes = this.changes.map(change => ({
 			node: change.node,
 			before: change.before,
-			after: new Vec2(
-				change.before.x + this.delta.x,
-				change.before.y + this.delta.y
-			)
+			after: new Vec2(change.before.x + this.delta.x, change.before.y + this.delta.y)
 		}));
 
 		this.changes = [];

@@ -5,11 +5,21 @@ import { Selection, DraggingEdge, EdgeSlice } from "./editor-state";
 import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
 import { GraphEditorHistory, ConnectNodesAction, AddNodeAction, DeleteNodesAction } from "./actions";
+import { GraphViewport } from "./viewport";
 
 @observable
 export class GraphEditor {
 	public readonly graph: Graph;
+	public readonly viewport: GraphViewport;
 	public readonly history = new GraphEditorHistory();
+
+	public get offset(): Vec2 {
+		return this.viewport.offset;
+	}
+
+	public get scale(): number {
+		return this.viewport.scale;
+	}
 
 	@observable
 	public accessor selectedNodes: GraphNode[] = [];
@@ -26,8 +36,13 @@ export class GraphEditor {
 	@observable
 	public accessor edgeCut: EdgeSlice | null = null;
 
-	public constructor(graph: Graph) {
+	public constructor(graph: Graph, viewport: GraphViewport = new GraphViewport()) {
 		this.graph = graph;
+		this.viewport = viewport;
+	}
+
+	public getCanvasMousePosition(position: Vec2, canvas: HTMLCanvasElement): Vec2 {
+		return this.viewport.getCanvasMousePosition(position, canvas);
 	}
 
 	public setTool(tool: GraphEditorTool | null): void {
@@ -73,8 +88,8 @@ export class GraphEditor {
 			targetInput = dragging.key;
 		}
 
-		const sourcePort = GraphNodePort(source, sourceOutput, "output");
-		const targetPort = GraphNodePort(target, targetInput, "input");
+		const sourcePort = GraphNode.getPort(source, sourceOutput, "output");
+		const targetPort = GraphNode.getPort(target, targetInput, "input");
 
 		if (sourcePort && targetPort) {
 			const replaced = this.graph.index.getInputEdge(target, targetInput);
@@ -112,7 +127,3 @@ export class GraphEditor {
 		this.history.clear();
 	}
 }
-
-const GraphNodePort = (node: GraphNode, key: string, direction: "input" | "output") => {
-	return GraphNode.getPort(node, key, direction);
-};

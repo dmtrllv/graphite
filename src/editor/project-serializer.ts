@@ -8,11 +8,23 @@ export interface SerializedProject {
 	project: {
 		name: string;
 	};
-	data: Record<string, unknown>;
+	data: Record<string, any>;
 }
 
+const CURRENT_VERSION = 1;
+
+const migrateProject = (json: SerializedProject): SerializedProject => {
+	if (json.version > CURRENT_VERSION)
+		throw new Error(`Project version '${json.version}' is newer than supported version '${CURRENT_VERSION}'.`);
+
+	if (json.version !== CURRENT_VERSION)
+		throw new Error(`Unsupported project version '${json.version}'.`);
+
+	return json;
+};
+
 export const serializeProject = (project: Project): SerializedProject => ({
-	version: 1,
+	version: CURRENT_VERSION,
 	project: {
 		name: project.info.name
 	},
@@ -20,12 +32,11 @@ export const serializeProject = (project: Project): SerializedProject => ({
 });
 
 export const deserializeProject = (manager: ProjectManager, json: SerializedProject, lastSave: string, settings: Settings): Project => {
-	if (json.version !== 1)
-		throw new Error(`Unsupported project version '${json.version}'.`);
-
+	const validated = migrateProject(json);
 	const info = new ProjectInfo();
-	info.name = json.project.name;
+
+	info.name = validated.project.name;
 	info.lastSave = lastSave;
 
-	return Project.deserialize(json.data, { manager, info, settings });
+	return Project.deserialize(validated.data, { manager, info, settings });
 };

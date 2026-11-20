@@ -1,7 +1,6 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { GraphEditor, GraphNode, NodeOption, SubgraphNode, type ProjectManager } from "@editor";
+import { GraphEditor, GraphNode, NodeOption, SubgraphNode, type ProjectManager, GraphLayout } from "@editor";
 import { useObservable } from "@reactive";
-import { GraphLayout } from "./rendering";
 import { NodePropView } from "./node-prop-view";
 
 type GraphNodeViewProps = {
@@ -18,7 +17,6 @@ type GraphNodeViewProps = {
 export const GraphNodeView = React.memo(({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
 	const position = useObservable(node.position);
-
 	const root = useRef<HTMLDivElement>(null);
 	const { inputs, options, outputs } = GraphNode.getInterface(node);
 	const outputTypes = new Map(outputs.map(port => [port.key, port.value]));
@@ -61,28 +59,27 @@ export const GraphNodeView = React.memo(({ projectManager, node, editor, layout,
 		onLayoutChange(node);
 	}, [node.position.x, node.position.y, node, onLayoutChange]);
 
-	const onPointerDown = (e: React.PointerEvent) => {
-		const target = e.target as HTMLElement;
+	const onPointerDown = (event: React.PointerEvent) => {
+		const target = event.target as HTMLElement;
 
 		if (target.closest("input, select, textarea, button, .input-point, .output-point"))
 			return;
 
-		onNodePointerDown(e, node);
+		onNodePointerDown(event, node);
 	};
-
 
 	const name = node instanceof SubgraphNode ? node.definition?.name ?? "Subgraph (unnamed)" : node.name;
 
 	const onDoubleClick = () => {
-		if (!node.graph.manager)
+		if (!node.graph.manager || !(node instanceof SubgraphNode) || !node.definition)
 			return;
-		if ((node instanceof SubgraphNode) && node.definition) {
-			const graph = node.graph.manager.get(node.definition.id);
-			if (!graph)
-				return;
-			const editor = node.graph.manager.openEditor(graph);
-			projectManager.openGraph(editor);
-		}
+
+		const graph = node.graph.manager.get(node.definition.id);
+
+		if (!graph)
+			return;
+
+		projectManager.openGraph(node.graph.manager.openEditor(graph));
 	};
 
 	const isSubGraph = node instanceof SubgraphNode;
@@ -98,7 +95,7 @@ export const GraphNodeView = React.memo(({ projectManager, node, editor, layout,
 					<NodePropView hideInputElement={!option.editable} key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} outputTypes={outputTypes} />
 				))}
 				{inputs.map(port => (
-					<NodePropView hideInputElement={!port.editable}  key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput outputTypes={outputTypes} />
+					<NodePropView hideInputElement={!port.editable} key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput outputTypes={outputTypes} />
 				))}
 			</div>
 		</div>

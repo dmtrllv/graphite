@@ -1,9 +1,8 @@
-import { type GraphEditor, GraphInputNode, GraphNode, GraphNodeCategory, GraphOutputNode, SubgraphNode, Vec2, CutEdgesTool, SelectTool, type GraphPointerEvent } from "@editor";
+import { type GraphEditor, GraphInputNode, GraphNode, GraphNodeCategory, Subgraph, SubgraphNode, Vec2, CutEdgesTool, SelectTool, type GraphPointerEvent, GraphRendererStore } from "@editor";
 import { mapChildren } from "../../../utils";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { subscribe } from "@reactive";
 import { GraphNodeView } from "./node";
-import { GraphRendererStore } from "./rendering";
 import type { ProjectManager } from "@editor";
 import React from "react";
 
@@ -33,28 +32,39 @@ const getSelectionStyle = (editor: GraphEditor, root: HTMLDivElement | null): Re
 type NodePickerState = {
 	x: number;
 	y: number;
-	position: Vec2
-} | null
+	position: Vec2;
+} | null;
 
-type GraphRendererProps = { projectManager: ProjectManager, editor: GraphEditor, onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void; };
+type GraphRendererProps = {
+	projectManager: ProjectManager;
+	editor: GraphEditor;
+	onCreateSubgraph: (editor: GraphEditor, position: Vec2) => void;
+};
 
 export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: GraphRendererProps) => {
 	const graph = editor.graph;
+	const viewport = editor.viewport;
 
 	const root = useRef<HTMLDivElement>(null);
 	const canvas = useRef<HTMLCanvasElement>(null);
 	const pan = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 	const [structureVersion, setStructureVersion] = useState(graph.structureVersion);
 	const [editorVersion, setEditorVersion] = useState(0);
-	const [, setGraphVersion] = useState(0);
+	const [, setViewportVersion] = useState(0);
 	const store = useMemo(() => new GraphRendererStore(editor, projectManager.activeProject.settings.graph), [editor, projectManager.activeProject]);
 	const [nodePicker, setNodePicker] = useState<NodePickerState>(null);
 	const mousePosition = useRef<Vec2 | null>(null);
-	const nodeTypes = useMemo(() => [...GraphNode.getRegisteredNodes().entries()].filter(([name]) => !["Subgraph", "Graph Input", "Graph Output"].includes(name)).sort(([a], [b]) => a.localeCompare(b)), []);
+	const nodeTypes = useMemo(() => [...GraphNode.getRegisteredNodes().entries()].filter(([name]) => ![
+		"Subgraph",
+		"Graph Input",
+		"Graph Output",
+		"World Output",
+		"Pass Output",
+		"Simulation Output"
+	].includes(name)).sort(([a], [b]) => a.localeCompare(b)), []);
 	const [isHovering, setHovering] = useState(false);
 
 	const layout = store.layout;
-
 	const manager = graph.manager!;
 	const [catalogVersion, setCatalogVersion] = useState(manager.catalogVersion);
 
@@ -62,7 +72,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		if (!nodePicker)
 			return;
 
-		return subscribe(manager, (e) => {
+		return subscribe(manager, e => {
 			if (e.key === "catalogVersion")
 				setCatalogVersion(manager.catalogVersion);
 		});
@@ -91,14 +101,14 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		if (!canvasElement)
 			return [];
 
-		return store.renderer.getIntersectingEdges(graph, layout, canvasElement, start, end);
+		return store.renderer.getIntersectingEdges(graph, editor, layout, canvasElement, start, end);
 	}), [editor, graph, layout, store]);
 
 	const style = useMemo<React.CSSProperties>(() => ({
-		left: `calc(50% + ${graph.offset.x}px)`,
-		top: `calc(50% + ${-graph.offset.y}px)`,
-		transform: `translate(-50%, -50%) scale(${graph.scale})`
-	}), [graph.offset.x, graph.offset.y, graph.scale]);
+		left: `calc(50% + ${viewport.offset.x}px)`,
+		top: `calc(50% + ${-viewport.offset.y}px)`,
+		transform: `translate(-50%, -50%) scale(${viewport.scale})`
+	}), [viewport.offset.x, viewport.offset.y, viewport.scale]);
 
 	const selectionStyle = getSelectionStyle(editor, root.current);
 
@@ -109,15 +119,12 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			return;
 
 		store.attach(element);
-
 		return () => store.detach();
 	}, [store]);
 
 	useEffect(() => {
 		const unsubscribers = [
-			subscribe(graph.offset, { recursive: true }, () => {
-				setGraphVersion(version => version + 1);
-			}),
+			subscribe(viewport, { recursive: true }, () => setViewportVersion(version => version + 1)),
 			subscribe(editor.selection, { recursive: true }, () => {
 				setEditorVersion(version => version + 1);
 				invalidate();
@@ -125,8 +132,6 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			subscribe(graph, e => {
 				if (e.key === "structureVersion")
 					setStructureVersion(graph.structureVersion);
-				else if (e.key === "offset" || e.key === "scale")
-					setGraphVersion(version => version + 1);
 			}),
 			subscribe(editor, e => {
 				if (e.key === "selectedNodes" || e.key === "selection")
@@ -138,7 +143,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			for (const unsubscribe of unsubscribers)
 				unsubscribe();
 		};
-	}, [graph, editor, editor.selection, invalidate]);
+	}, [graph, editor, viewport, editor.selection, invalidate]);
 
 	useLayoutEffect(() => {
 		const element = canvas.current;
@@ -146,9 +151,9 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		if (!element)
 			return;
 
-		layout.updateAll(graph, element);
+		layout.updateAll(editor, element);
 		invalidate();
-	}, [graph, layout, invalidate])
+	}, [graph, editor, layout, invalidate]);
 
 	useEffect(() => {
 		editor.setTool(selectTool);
@@ -161,6 +166,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 				return;
 
 			const target = event.target as HTMLElement;
+
 			if (target.closest("input, textarea, select, [contenteditable='true']"))
 				return;
 
@@ -179,18 +185,17 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 				event.preventDefault();
 
 				const rect = root.current?.getBoundingClientRect();
+
 				if (!rect)
 					return;
 
 				const position = mousePosition.current ?? new Vec2(rect.width / 2, rect.height / 2);
-				const graphPosition = mousePosition.current
-					? position.clone()
-					: new Vec2(rect.width / 2, rect.height / 2);
+				const graphPosition = mousePosition.current ? position.clone() : new Vec2(rect.width / 2, rect.height / 2);
 
 				setNodePicker({
 					x: position.x,
 					y: position.y,
-					position: graph.getCanvasMousePosition(new Vec2(rect.left + graphPosition.x, rect.top + graphPosition.y), canvas.current!)
+					position: editor.getCanvasMousePosition(new Vec2(rect.left + graphPosition.x, rect.top + graphPosition.y), canvas.current!)
 				});
 				return;
 			}
@@ -211,7 +216,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [editor, graph, nodePicker, isHovering]);
+	}, [editor, nodePicker, isHovering]);
 
 	const getPointerEvent = (event: React.PointerEvent, node?: GraphNode, rect = root.current!.getBoundingClientRect()) => ({
 		clientX: event.clientX,
@@ -219,10 +224,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		button: event.button,
 		shiftKey: event.shiftKey,
 		ctrlKey: event.ctrlKey,
-		graphPosition: new Vec2(
-			(event.clientX - rect.left - rect.width / 2 - graph.offset.x) / graph.scale,
-			(rect.height / 2 - (event.clientY - rect.top) - graph.offset.y) / graph.scale
-		),
+		graphPosition: editor.getCanvasMousePosition(new Vec2(event.clientX, event.clientY), canvas.current!),
 		node
 	}) as GraphPointerEvent;
 
@@ -278,8 +280,8 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			activePan.x = event.clientX;
 			activePan.y = event.clientY;
 
-			graph.offset.x += deltaX;
-			graph.offset.y -= deltaY;
+			viewport.offset.x += deltaX;
+			viewport.offset.y -= deltaY;
 			return;
 		}
 
@@ -319,25 +321,24 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			-(event.clientY - rect.top - rect.height / 2)
 		);
 
-		const scale = graph.scale;
+		const scale = viewport.scale;
 		const nextScale = Math.max(0.1, Math.min(4, scale - scale * (event.deltaY / 1000) * 0.25));
 		const ratio = nextScale / scale;
 
-		graph.offset.x = mouse.x - (mouse.x - graph.offset.x) * ratio;
-		graph.offset.y = mouse.y - (mouse.y - graph.offset.y) * ratio;
-		graph.scale = nextScale;
+		viewport.offset.x = mouse.x - (mouse.x - viewport.offset.x) * ratio;
+		viewport.offset.y = mouse.y - (mouse.y - viewport.offset.y) * ratio;
+		viewport.scale = nextScale;
 		store.invalidate();
 	};
 
-	const onMouseLeave = () => {
-		setHovering(false);
-	};
+	const onMouseLeave = () => setHovering(false);
 
 	const newSubGraph = () => {
-		if (nodePicker) {
-			onCreateSubgraph(editor, nodePicker.position);
-			setNodePicker(null);
-		}
+		if (!nodePicker)
+			return;
+
+		onCreateSubgraph(editor, nodePicker.position);
+		setNodePicker(null);
 	};
 
 	const onPointerCancel = (event: React.PointerEvent) => {
@@ -351,6 +352,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 	};
 
 	const definitionVersion = (node: GraphNode) => node instanceof SubgraphNode ? node.definition?.structureVersion ?? 0 : 0;
+	const isSubgraph = graph instanceof Subgraph;
 
 	return (
 		<div ref={root} className="graph-renderer" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel} onWheel={onWheel} onContextMenu={event => event.preventDefault()} onMouseLeave={onMouseLeave}>
@@ -362,7 +364,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			</div>
 			<div className="selection" style={selectionStyle} data-version={editorVersion} data-structure-version={structureVersion} />
 			{nodePicker && (
-				<div className="node-picker" style={{ left: nodePicker.x, top: nodePicker.y }} onPointerDown={event => event.stopPropagation()} onWheel={e => e.stopPropagation()}>
+				<div className="node-picker" style={{ left: nodePicker.x, top: nodePicker.y }} onPointerDown={event => event.stopPropagation()} onWheel={event => event.stopPropagation()}>
 					{availableSubgraphs.map(definition => (
 						<div key={definition.id} className="node-picker-item" onClick={() => {
 							const node = editor.addNode(SubgraphNode, nodePicker.position) as SubgraphNode;
@@ -390,8 +392,8 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 							</React.Fragment>
 						);
 					})}
-					{editor.graph.inputs.length > 0 && <div>Sub Graph Inputs</div>}
-					{editor.graph.inputs.map(port => (
+					{isSubgraph && graph.inputs.length > 0 && <div>Sub Graph Inputs</div>}
+					{isSubgraph && graph.inputs.map(port => (
 						<div key={`input-${port.id}`} className="node-picker-item" onClick={() => {
 							const node = editor.addNode(GraphInputNode, nodePicker.position) as GraphInputNode;
 							node.interfaceId = port.id;
@@ -400,21 +402,11 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 							Input: {port.name}
 						</div>
 					))}
-					{editor.graph.outputs.length > 0 && <div>Sub Graph Outputs</div>}
-					{editor.graph.outputs.map(port => (
-						<div key={`output-${port.id}`} className="node-picker-item" onClick={() => {
-							const node = editor.addNode(GraphOutputNode, nodePicker.position) as GraphOutputNode;
-							node.interfaceId = port.id;
-							setNodePicker(null);
-						}}>
-							Output: {port.name}
-						</div>
-					))}
 					<div className="node-picker-item" onClick={newSubGraph}>
 						New Subgraph
 					</div>
 				</div>
 			)}
-		</div >
+		</div>
 	);
 };
