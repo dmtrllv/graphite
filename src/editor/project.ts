@@ -21,8 +21,16 @@ export class ProjectInfo extends Serializable<ProjectInfoData> {
 	public accessor lastSave!: string;
 }
 
+type ProjectArgs = [
+	manager: ProjectManager,
+	info: ProjectInfo,
+	settings: Settings,
+	graphManager?: GraphManager,
+	simulationManager?: SimulationManager
+];
+
 @serializable
-export class Project extends Serializable {
+export class Project extends Serializable<SerializableData, ProjectArgs> {
 	public readonly manager: ProjectManager;
 
 	@observable
@@ -34,24 +42,38 @@ export class Project extends Serializable {
 
 	public readonly graphManager: GraphManager;
 	public readonly simulationManager: SimulationManager;
-	private readonly unsubscribeSettings: Unsubscriber[];
+	private unsubscribeSettings: Unsubscriber[] = [];
 
 	public get isSaved() {
 		return !!this.manager.projects.find(info => info.name === this.info.name);
 	}
 
 	public constructor(data: SerializableData, manager: ProjectManager, info: ProjectInfo, settings: Settings, graphManager: GraphManager = new GraphManager(), simulationManager: SimulationManager = new SimulationManager(graphManager)) {
-		super(data);
+		super(data, manager, info, settings, graphManager, simulationManager);
 		this.manager = manager;
 		this.info = info;
 		this.settings = settings;
 		this.graphManager = graphManager;
 		this.simulationManager = simulationManager;
 
+		this.bindSubscriptions();
+	}
+
+	public setInfo(info: ProjectInfo) {
+		this.info = info;
+		this.bindSubscriptions();
+	}
+
+	private bindSubscriptions() {
+		this.unsubscribeSettings.forEach(unsubscribe => unsubscribe());
 		this.unsubscribeSettings = [
 			subscribe(this.settings.preferences, { recursive: true }, this.onSettingsChange),
 			subscribe(this.info, this.onSettingsChange)
 		];
+	}
+
+	protected override afterDeserialize() {
+		this.bindSubscriptions();
 	}
 
 	private readonly onSettingsChange = () => {

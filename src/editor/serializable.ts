@@ -1,10 +1,9 @@
-const metadataKey = Symbol("serializable");
-
 type PrimitiveConstructor = StringConstructor | NumberConstructor | BooleanConstructor;
 
-type SerializableConstructor<T extends Serializable> = new (data: any, ...args: any[]) => T;
+type SerializableConstructor<T extends Serializable<any, any> = Serializable<any, any>> = new (data: any, ...args: any[]) => T;
 
-type ConstructorArgs<T> = T extends new (data: any, ...args: infer A) => any ? A : never;
+type ConstructorData<T> = T extends new (data: infer Data, ...args: any[]) => any ? Data : never;
+type ConstructorArgs<T> = T extends new (data: any, ...args: infer Args) => any ? Args : never;
 
 type ArrayType = {
 	readonly kind: "array";
@@ -12,19 +11,35 @@ type ArrayType = {
 };
 
 type SerializableType = PrimitiveConstructor | SerializableConstructor<any> | ArrayType;
-
 type SerializableMetadata = Map<string | symbol, SerializableType>;
 
-const metadataRegistry = new WeakMap<Function, SerializableMetadata>();
+type SerializablePropertyDecorator<Value> = <This>(
+	value: undefined | ClassAccessorDecoratorTarget<This, Value>,
+	context: ClassFieldDecoratorContext<This, Value> | ClassAccessorDecoratorContext<This, Value>
+) => void;
 
-export const arrayOf = (type: SerializableType): ArrayType => ({ kind: "array", type });
+const metadataKey = Symbol("serializable");
+const metadataRegistry = new WeakMap<Function, SerializableMetadata>();
 
 export type SerializableData = Record<string, unknown>;
 
-export abstract class Serializable<TData extends object = SerializableData> {
-	public constructor(_data: TData) { }
+export const arrayOf = (type: SerializableType): ArrayType => ({ kind: "array", type });
 
-	public static deserialize<C extends SerializableConstructor<any>>(this: C, data: unknown, ...args: ConstructorArgs<C>): InstanceType<C> {
+const getProperties = (metadata: object): SerializableMetadata => {
+	if (Object.prototype.hasOwnProperty.call(metadata, metadataKey))
+		return (metadata as any)[metadataKey];
+
+	const inherited = (Object.getPrototypeOf(metadata) as any)?.[metadataKey] as SerializableMetadata | undefined;
+	const properties = new Map(inherited ?? []);
+
+	Object.defineProperty(metadata, metadataKey, { value: properties });
+	return properties;
+};
+
+export abstract class Serializable<TData extends object = SerializableData, TArgs extends unknown[] = []> {
+	public constructor(_data: TData, ..._args: TArgs) { }
+
+	public static deserialize<C extends SerializableConstructor>(this: C, data: ConstructorData<C>, ...args: ConstructorArgs<C>): InstanceType<C> {
 		if (!data || typeof data !== "object" || Array.isArray(data))
 			throw new TypeError(`Invalid serialized data for '${this.name}'.`);
 
@@ -63,7 +78,7 @@ export abstract class Serializable<TData extends object = SerializableData> {
 		return data as TData;
 	}
 
-	public clone(...args: unknown[]): this {
+	public clone(...args: TArgs): this {
 		const constructor = this.constructor as any;
 		return constructor.deserialize(this.serialize(), ...args) as this;
 	}
@@ -71,22 +86,24 @@ export abstract class Serializable<TData extends object = SerializableData> {
 	protected afterDeserialize(): void { }
 }
 
-export function serializable<T extends SerializableConstructor<any>>(value: T, context: ClassDecoratorContext): T;
-export function serializable<This, Value>(type: SerializableType): (value: undefined | ClassAccessorDecoratorTarget<This, Value>, context: ClassFieldDecoratorContext<This, Value> | ClassAccessorDecoratorContext<This, Value>) => void;
+export function serializable<T extends SerializableConstructor>(value: T, context: ClassDecoratorContext): T;
+export function serializable(type: StringConstructor): SerializablePropertyDecorator<string>;
+export function serializable(type: NumberConstructor): SerializablePropertyDecorator<number>;
+export function serializable(type: BooleanConstructor): SerializablePropertyDecorator<boolean>;
+export function serializable<T extends Serializable<any, any>>(type: SerializableConstructor<T>): SerializablePropertyDecorator<T>;
+export function serializable(type: ArrayType): SerializablePropertyDecorator<any[]>;
 export function serializable(...args: any[]): any {
 	if (args.length === 2 && typeof args[0] === "function") {
-		const target = args[0] as SerializableConstructor<any>;
+		const target = args[0] as SerializableConstructor;
 		const context = args[1] as ClassDecoratorContext;
 
 		if (!(target.prototype instanceof Serializable))
 			throw new TypeError(`Class '${target.name}' must extend Serializable.`);
 
-		const properties = (context.metadata as any)?.[metadataKey] as SerializableMetadata | undefined;
+		if (!context.metadata)
+			throw new Error("Decorator metadata is unavailable. Make sure Symbol.metadata is supported.");
 
-		if (!properties)
-			throw new Error(`No serializable properties registered for '${target.name}'.`);
-
-		metadataRegistry.set(target, new Map(properties));
+		metadataRegistry.set(target, new Map(getProperties(context.metadata)));
 		return target;
 	}
 
@@ -96,21 +113,11 @@ export function serializable(...args: any[]): any {
 		if (!context.metadata)
 			throw new Error("Decorator metadata is unavailable. Make sure Symbol.metadata is supported.");
 
-		let properties = (context.metadata as any)[metadataKey] as SerializableMetadata | undefined;
-
-		if (!properties) {
-			properties = new Map();
-			Object.defineProperty(context.metadata, metadataKey, { value: properties });
-		}
-
-		if (properties.has(context.name))
-			throw new Error(`Property '${String(context.name)}' is already registered for serialization.`);
-
-		properties.set(context.name, type);
+		getProperties(context.metadata).set(context.name, type);
 	};
 }
 
-const serializeValue = (value: unknown, type: SerializableType, path: string): unknown => {
+const serializeValue = (value: any, type: SerializableType, path: string): unknown => {
 	if (value === undefined || value === null)
 		return value;
 
@@ -131,7 +138,7 @@ const serializeValue = (value: unknown, type: SerializableType, path: string): u
 	if (!(value instanceof type))
 		throw new TypeError(`Invalid value at '${path}'. Expected an instance of '${type.name}'.`);
 
-	return (value as any).serialize();
+	return value.serialize();
 };
 
 const deserializeValue = (value: unknown, type: SerializableType, path: string): unknown => {

@@ -35,7 +35,7 @@ export const deserializeProject = (manager: ProjectManager, json: SerializedProj
 	if (!json.graphManager || !Array.isArray(json.graphManager.graphs))
 		throw new Error("Invalid graph manager data.");
 
-	const info = new ProjectInfo({ name: json.project.name, lastSave });
+	const info = ProjectInfo.deserialize({ name: json.project.name, lastSave });
 	const graphManager = deserializeGraphManager(json.graphManager);
 
 	const simulationManager = json.simulationManager

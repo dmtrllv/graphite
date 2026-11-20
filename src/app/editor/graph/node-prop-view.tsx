@@ -1,4 +1,5 @@
-import { Bool, F16, F32, GraphNode, I32, SelectOption, SubgraphNode, Type, U32, Vec2, Vec3, Vec4, type NodeOption, type NodeOptionType, type TypeCtor, GraphEditor } from "@editor";
+import { GraphNode, SelectOption, SubgraphNode, type NodeOption, type NodeOptionType, type TypeCtor, GraphEditor } from "@editor/graph";
+import { Bool, F16, F32, I32, Type, U32, Vec2, Vec3, Vec4 } from "@editor/graph/types";
 import React, { useCallback, useRef } from "react";
 import { useObservable } from "@reactive";
 import type { GraphLayout } from "./rendering";
