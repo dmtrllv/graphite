@@ -104,6 +104,7 @@ export abstract class GraphNode extends Serializable {
 	@serializable(Number)
 	public readonly id: number;
 
+	@observable
 	@serializable(Vec2)
 	public accessor position: Vec2;
 

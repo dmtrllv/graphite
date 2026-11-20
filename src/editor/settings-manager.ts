@@ -1,18 +1,9 @@
-import { Settings, type SettingsData } from "./settings";
+import { Settings } from "./settings";
 
 const settingKey = (name: string) => `graphite:settings:${name}`;
 
 export class SettingsManager {
-	public readonly defaultSettings = Settings.deserialize({
-		graph: {
-			curve: 1,
-			lineWidth: 1.5,
-		},
-		preferences: {
-			_accentColor: "#00b7ff",
-			autoHideMenu: false
-		}
-	});
+	public readonly defaultSettings = new Settings();
 
 	public loadProjectSettings(name: string) {
 		const json = localStorage.getItem(settingKey(name));
@@ -20,10 +11,11 @@ export class SettingsManager {
 		if (!json)
 			return this.defaultSettings.clone();
 
-		const data = JSON.parse(json) as Partial<SettingsData>;
-		const defaults = this.defaultSettings.serialize();
+		const data = JSON.parse(json);
+		const defaults = this.defaultSettings.serialize() as any;
 
 		return Settings.deserialize({
+			...defaults,
 			preferences: { ...defaults.preferences, ...(data.preferences ?? {}) },
 			graph: { ...defaults.graph, ...(data.graph ?? {}) }
 		});

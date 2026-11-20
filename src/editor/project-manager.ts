@@ -16,6 +16,13 @@ const currentDateTime = () => new Intl.DateTimeFormat(undefined, {
 	hour12: false
 }).format(new Date()).replace(",", "");
 
+const createProjectInfo = (name: string, lastSave: string): ProjectInfo => {
+	const info = new ProjectInfo();
+	info.name = name;
+	info.lastSave = lastSave;
+	return info;
+};
+
 export class ProjectManager {
 	@observable
 	public accessor projects: ProjectInfo[] = this.loadProjectInfos();
@@ -32,7 +39,7 @@ export class ProjectManager {
 
 	private loadProjectInfos(): ProjectInfo[] {
 		const names = JSON.parse(localStorage.getItem(PROJECTS_KEY) ?? "[]") as ProjectInfo[];
-		return names.map(({ name, lastSave }) => ProjectInfo.deserialize({ name, lastSave }));
+		return names.map(({ name, lastSave }) => createProjectInfo(name, lastSave));
 	}
 
 	private saveProjectInfos(): void {
@@ -40,7 +47,7 @@ export class ProjectManager {
 	}
 
 	private createNewProject(name: string = "New Project"): Project {
-		const info = ProjectInfo.deserialize({ name, lastSave: currentDateTime() });
+		const info = createProjectInfo(name, currentDateTime());
 		const p = new Project(this, info, this.editor.settings.defaultSettings.clone());
 		const graph = p.graphManager.worldGraph;
 		graph.addNode(VectorMathNode);
@@ -61,7 +68,7 @@ export class ProjectManager {
 		if (this.projects.find(info => info.name === name))
 			return false;
 
-		this.activeProject.setInfo(ProjectInfo.deserialize({ name, lastSave: currentDateTime() }));
+		this.activeProject.setInfo(createProjectInfo(name, currentDateTime()));
 		this.projects = [this.activeProject.info, ...this.projects];
 		this.saveProjectInfos();
 		this.saveProject();

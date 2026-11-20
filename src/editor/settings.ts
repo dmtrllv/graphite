@@ -1,21 +1,6 @@
 import { computed, observable } from "@reactive";
 import { Serializable, serializable } from "./serializable";
 
-export interface PreferencesData {
-	autoHideMenu: boolean;
-	_accentColor: string;
-}
-
-export interface GraphSettingsData {
-	lineWidth: number;
-	curve: number;
-}
-
-export interface SettingsData {
-	preferences: PreferencesData;
-	graph: GraphSettingsData;
-}
-
 @serializable({ type: "settings:preferences", create: () => new Preferences() })
 export class Preferences extends Serializable {
 	@observable
@@ -36,6 +21,12 @@ export class Preferences extends Serializable {
 		document.documentElement.style.setProperty("--accent-1", value);
 	}
 
+	public constructor() {
+		super();
+		this.autoHideMenu = false;
+		this._accentColor = "#00b7ff";
+	}
+
 	protected override afterDeserialize() {
 		document.documentElement.style.setProperty("--accent-1", this.accentColor);
 	}
@@ -50,6 +41,12 @@ export class GraphSettings extends Serializable {
 	@observable
 	@serializable(Number)
 	public accessor curve!: number;
+
+	public constructor() {
+		super();
+		this.lineWidth = 1.5;
+		this.curve = 1;
+	}
 }
 
 @serializable({ type: "settings", create: () => new Settings() })
@@ -59,4 +56,10 @@ export class Settings extends Serializable {
 
 	@serializable(GraphSettings)
 	public readonly graph!: GraphSettings;
+
+	public constructor() {
+		super();
+		this.preferences = new Preferences();
+		this.graph = new GraphSettings();
+	}
 }
