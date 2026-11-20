@@ -28,7 +28,7 @@ export class Preferences extends Serializable {
 		this._accentColor = "#00b7ff";
 	}
 
-	protected override afterDeserialize() {
+	protected override initialize() {
 		document.documentElement.style.setProperty("--accent-1", this.accentColor);
 	}
 }

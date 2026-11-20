@@ -19,7 +19,7 @@ export class SimulationManager extends Serializable {
 		this.graphManager = graphManager!;
 	}
 
-	protected override afterDeserialize(): void {
+	protected override initialize(): void {
 		this._idCounter = 0;
 
 		for (const simulation of this.simulations.values()) {

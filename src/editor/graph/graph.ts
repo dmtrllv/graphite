@@ -70,7 +70,7 @@ export class Graph extends Serializable {
 
 	public readonly index = new GraphIndex();
 
-	protected override afterDeserialize(): void {
+	protected override initialize(): void {
 		this._nodeIdCounter = 0;
 		this._edgeIdCounter = 0;
 

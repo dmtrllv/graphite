@@ -25,7 +25,7 @@ export class GraphManager extends Serializable {
 			this.add("World");
 	}
 
-	protected override afterDeserialize(): void {
+	protected override initialize(): void {
 		this._idCounter = 0;
 
 		for (const graph of this.graphs.values()) {

@@ -1,9 +1,10 @@
-import { GraphNode, SelectOption, SubgraphNode, type NodeOption, type NodeOptionType, type TypeCtor, GraphEditor } from "@editor/graph";
+import { GraphNode, SelectOption, type NodeOption, type NodeOptionType, type TypeCtor, GraphEditor } from "@editor/graph";
 import { Bool, F16, F32, I32, Type, U32, Vec2, Vec3, Vec4 } from "@editor/graph/types";
 import React, { useCallback, useRef } from "react";
 import { useObservable } from "@reactive";
 import type { GraphLayout } from "./rendering";
 import { Toggle } from "../../inputs/toggle";
+import { Vec2Input, Vec3Input, Vec4Input } from "../../inputs/vector";
 
 type NodePropViewProps = {
 	node: GraphNode;
@@ -16,11 +17,10 @@ type NodePropViewProps = {
 	withOutput?: boolean;
 	outputNames?: readonly string[];
 	outputTypes: ReadonlyMap<string, Type>;
+	hideInputElement?: boolean;
 };
 
-export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames, outputTypes }: NodePropViewProps) => {
-	const isSubgraphNode = node instanceof SubgraphNode;
-
+export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames, outputTypes, hideInputElement }: NodePropViewProps) => {
 	const inputRef = useCallback((element: HTMLDivElement | null) => {
 		if (withInput)
 			layout.setPortElement(node, "input", portKey, element);
@@ -70,8 +70,7 @@ export const NodePropView = ({ node, editor, layout, name, portKey = name, value
 			{withInput && (
 				<div className={`input-point ${prop.kind}`} ref={inputRef} onPointerDown={startDraggingEdge("input", portKey)} />
 			)}
-			<label>{name}</label>
-			{!isSubgraphNode && <Input node={node} name={name} disabled={!!hasInput} prop={prop} />}
+			{hideInputElement ? <label>{name}</label> : <Input node={node} name={name} disabled={!!hasInput} value={prop} />}
 			{exposedOutputs.map(outputName => (
 				<div key={outputName} className={`output-point ${outputTypes.get(outputName)?.kind ?? ""}`} ref={getOutputRef(outputName)} onPointerDown={startDraggingEdge("output", outputName)} />
 			))}
@@ -92,45 +91,31 @@ export function registerNodePropInput<T extends Type>(type: TypeCtor<T> | TypeCt
 
 type NodeInputProps<T extends Type | NodeOption<any>> = {
 	readonly name: string;
-	readonly prop: T;
+	readonly value: T;
 	readonly disabled: boolean;
 	readonly node: GraphNode;
 };
 
-registerNodePropInput(Bool, ({ prop, disabled }) => (
-	<Toggle value={prop.value} onChange={v => prop.value = v} disabled={disabled} />
+registerNodePropInput(Bool, ({ name, value, disabled }) => (
+	<Toggle label={name} value={value.value} onChange={v => value.value = v} disabled={disabled} />
 ));
 
-registerNodePropInput([F32, F16, U32, I32], ({ prop, name, disabled }) => (
-	<input type="number" value={prop.value} placeholder={name} disabled={disabled} onChange={e => prop.value = +e.target.value} />
+registerNodePropInput([F32, F16, U32, I32], ({ value, name, disabled }) => (
+	<>
+		<label>{name}</label>
+		<input type="number" value={value.value} placeholder={name} disabled={disabled} onChange={e => value.value = +e.target.value} />
+	</>
 ));
 
-registerNodePropInput(Vec2, ({ prop, disabled }) => (
-	<div className="vec2">
-		<input type="number" value={disabled ? "" : prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
-		<input type="number" value={disabled ? "" : prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
-	</div>
-));
+registerNodePropInput(Vec2, Vec2Input);
+registerNodePropInput(Vec3, Vec3Input);
+registerNodePropInput(Vec4, Vec4Input);
 
-registerNodePropInput(Vec3, ({ prop, disabled }) => (
-	<div className="vec3">
-		<input type="number" value={disabled ? "" : prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
-		<input type="number" value={disabled ? "" : prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
-		<input type="number" value={disabled ? "" : prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
-	</div>
-));
-
-registerNodePropInput(Vec4, ({ prop, disabled }) => (
-	<div className="vec4">
-		<input type="number" value={disabled ? "" : prop.x} placeholder="x" disabled={disabled} onChange={e => prop.x = +e.target.value} />
-		<input type="number" value={disabled ? "" : prop.y} placeholder="y" disabled={disabled} onChange={e => prop.y = +e.target.value} />
-		<input type="number" value={disabled ? "" : prop.z} placeholder="z" disabled={disabled} onChange={e => prop.z = +e.target.value} />
-		<input type="number" value={disabled ? "" : prop.w} placeholder="w" disabled={disabled} onChange={e => prop.w = +e.target.value} />
-	</div>
-));
-
-registerNodePropInput(SelectOption, ({ prop }) => (
-	<select value={prop.value} onChange={e => prop.value = e.target.value}>
-		{prop.options.map(option => <option key={option} value={option}>{option}</option>)}
-	</select>
+registerNodePropInput(SelectOption, ({ name, value }) => (
+	<>
+		<label>{name}</label>
+		<select value={value.value} onChange={e => value.value = e.target.value}>
+			{value.options.map(option => <option key={option} value={option}>{option}</option>)}
+		</select>
+	</>
 ));

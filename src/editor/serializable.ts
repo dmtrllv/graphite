@@ -128,7 +128,7 @@ export abstract class Serializable {
 		return serializeDocument(this);
 	}
 
-	protected afterDeserialize(): void { }
+	protected initialize(): void { }
 
 	public clone(): this {
 		return (this.constructor as any).deserialize(this.serialize()) as this;
@@ -369,7 +369,7 @@ const deserializeDocument = <T extends Serializable>(rootType: new (...args: any
 	}
 
 	for (const instance of hooks)
-		instance["afterDeserialize"]();
+		instance["initialize"]();
 
 	return result;
 };

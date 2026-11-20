@@ -52,7 +52,7 @@ export class Project extends Serializable {
 		this.bindSubscriptions();
 	}
 
-	protected override afterDeserialize() {
+	protected override initialize() {
 		this.simulationManager.setGraphManager(this.graphManager);
 		this.bindSubscriptions();
 	}

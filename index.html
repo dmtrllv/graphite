@@ -36,6 +36,35 @@
 				user-select: none;
 			}
 
+			input {
+				background-color: var(--bg-2);
+				border-radius: 6px;
+				border: 1px solid var(--border-1);
+				color: var(--fg-1);
+				outline: none;
+				padding: 5px;
+				width: 100px;
+				display: inline-block;
+
+				&:disabled {
+					opacity: 0.2;
+					user-select: none;
+					pointer-events: none;
+				}
+
+				&::-webkit-outer-spin-button,
+				&::-webkit-inner-spin-button {
+					-webkit-appearance: none;
+					appearance: none;
+					margin: 0;
+				}
+
+				&[type="number"] {
+					appearance: textfield;
+					-moz-appearance: textfield;
+				}
+			}
+
 			input,
 			select {
 				background-color: var(--bg-2);

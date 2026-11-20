@@ -4,6 +4,8 @@ import { useWindow } from "../layout";
 import React, { useEffect, useMemo, useState } from "react";
 import { NodePropInputs } from "./node-prop-view";
 
+import "./styles/graph-properties.scss"
+
 const types = {
 	F16,
 	F32,
@@ -44,19 +46,15 @@ const InterfacePortView = ({ graph, direction, port, isInput }: InterfacePortVie
 		graph.updateInterfacePort(direction, port.id, changes);
 	};
 
-	const Input: React.FC<any> = isInput && NodePropInputs.get(port.type.constructor as any) || (() => null);
-
+	const Input: React.FC<any> = isInput && NodePropInputs.get(port.type.constructor as any) || (() => <div className="spacing" />);
 
 	const props = {
-		name: "default value",
-		prop: port.type
+		value: port.type
 	};
-
-	console.log(props);
 
 	return (
 		<div className="graph-interface-port">
-			<input value={port.name} onChange={event => update({ name: event.target.value })} />
+			<input className="name" value={port.name} onChange={event => update({ name: event.target.value })} />
 			<select value={getTypeName(port.type)} onChange={event => update({ type: createType(event.target.value as keyof typeof types) })}>
 				{Object.keys(types).map(type => <option key={type} value={type}>{type}</option>)}
 			</select>
@@ -69,6 +67,7 @@ const InterfacePortView = ({ graph, direction, port, isInput }: InterfacePortVie
 export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGraph: (graph: Graph) => void; }) => {
 	const manager = graph.manager!;
 	const [, setGraphVersion] = useState(0);
+	const [collapsed, setCollapsed] = useState(false);
 	const [catalogVersion, setCatalogVersion] = useState(manager.catalogVersion);
 
 	const isWorldGraph = useMemo(() => graph instanceof WorldGraph, [graph]);
@@ -101,45 +100,72 @@ export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGr
 		graph.manager?.rename(graph, event.target.value);
 		if (window)
 			window.title = event.target.value;
-	}
+	};
+
+	const toggleCollapse = () => setCollapsed(v => !v);
+
+	const title = isWorldGraph ? "World" : "Graph Properties";
 
 	return (
-		<div className="graph-properties" data-catalog-version={catalogVersion}>
-			<div className="graph-properties-header">{isWorldGraph ? "World" : "Graph Properties"}</div>
-			{!isWorldGraph && <button onClick={removeGraph}>×</button>}
-			{isWorldGraph && (
-				<div className="graph-properties-group">
-					<div className="graph-properties-title">
-						<span>Subgraphs</span>
-					</div>
-					{availableSubgraphs.map(definition => (
-						<div key={definition.id} className="graph-properties-subgraph" onClick={() => onOpenGraph(definition)}>
-							{definition.name}
+		<div className={`graph-properties ${collapsed ? "collapsed" : ""}`} data-catalog-version={catalogVersion}>
+			<div className="header">
+				{title}
+				{<button className="btn-collapse" onClick={toggleCollapse}>V</button>}
+			</div>
+			<div className="content">
+				{isWorldGraph ? (
+					<div className="subgraphs">
+						<div className="title">
+							<span>Subgraphs</span>
 						</div>
-					))}
-				</div>
-			)}
-			{!isWorldGraph && (
-				<>
-					<div className="graph-properties-section">
-						<input value={graph.name} onChange={rename} />
-					</div>
-					<div className="graph-properties-group">
-						<div className="graph-properties-title">
-							<span>Inputs</span>
-							<button onClick={() => graph.addInput(`Input ${graph.inputs.length + 1}`)}>+</button>
+						<div className="group">
+							{availableSubgraphs.map(definition => (
+								<div key={definition.id} className="subgraph" onClick={() => onOpenGraph(definition)}>
+									{definition.name}
+								</div>
+							))}
 						</div>
-						{graph.inputs.map(port => <InterfacePortView key={port.id} graph={graph} direction="input" port={port} isInput={true} />)}
 					</div>
-					<div className="graph-properties-group">
-						<div className="graph-properties-title">
-							<span>Outputs</span>
-							<button onClick={() => graph.addOutput(`Output ${graph.outputs.length + 1}`)}>+</button>
+				) : (
+					<>
+						<div className="group">
+							<label>Graph name:</label>
+							<input value={graph.name} onChange={rename} />
+							{!isWorldGraph && <button className="btn-delete" onClick={removeGraph}>Delete</button>}
 						</div>
-						{graph.outputs.map(port => <InterfacePortView key={port.id} graph={graph} direction="output" port={port} />)}
-					</div>
-				</>
-			)}
+						<div className="group">
+							<div className="title">
+								<span>Inputs</span>
+								<button onClick={() => graph.addInput(`Input ${graph.inputs.length + 1}`)}>+</button>
+							</div>
+							{graph.inputs.map(port => <InterfacePortView key={port.id} graph={graph} direction="input" port={port} isInput={true} />)}
+						</div>
+						<div className="group">
+							<div className="title">
+								<span>Outputs</span>
+								<button onClick={() => graph.addOutput(`Output ${graph.outputs.length + 1}`)}>+</button>
+							</div>
+							{graph.outputs.map(port => <InterfacePortView key={port.id} graph={graph} direction="output" port={port} />)}
+						</div>
+					</>
+				)}
+			</div>
 		</div>
 	);
+};
+
+const WorldGraphProperties = () => {
+
+};
+
+const SubGraphProperties = () => {
+
+};
+
+const SimulationGraphProperties = () => {
+
+};
+
+const PassGraphProperties = () => {
+
 };

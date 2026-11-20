@@ -3,6 +3,8 @@ UI:
 	☐ a node library panel per graph
 	☐ save and restore editor layout
 	☐ better input components
+	☐ graph props panel name input must only be validated on change end
+		now it stops accepting keys when it matches a name already used
 
 Editor:
 	☐ option to auto reload last project
