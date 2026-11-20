@@ -18,12 +18,14 @@ export const GraphNodeView = React.memo(({ projectManager, node, editor, layout,
 	node = useObservable(node);
 	const position = useObservable(node.position);
 	const root = useRef<HTMLDivElement>(null);
-	const { inputs, options, outputs } = GraphNode.getInterface(node);
+	const options = Object.values(GraphNode.getOptions(node.constructor));
+	options.map(option => useObservable(node[option.name as keyof typeof node] as unknown as NodeOption<string>).value);
+	const { inputs, options: nodeOptions, outputs } = GraphNode.getInterface(node);
 	const outputTypes = new Map(outputs.map(port => [port.key, port.value]));
 	const optionOutputNames = new Map<string, readonly string[]>();
 	const attachedOutputs = new Set<string>();
 
-	for (const option of options) {
+	for (const option of nodeOptions) {
 		const value = node[option.name as keyof typeof node] as unknown as NodeOption<string>;
 		const names = option.variants[value.value]?.outputs ?? [];
 

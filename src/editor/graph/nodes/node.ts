@@ -129,6 +129,10 @@ export abstract class GraphNode extends Serializable {
 		this.position = position;
 	}
 
+	public reconcileInterface(): void {
+		this.graph.reconcileEdges();
+	}
+
 	public getInputEdge(inputKey: string): NodeEdge | undefined {
 		return this.graph.index.getInputEdge(this, inputKey);
 	}
