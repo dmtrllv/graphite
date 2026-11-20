@@ -1,7 +1,8 @@
 import { subscribe } from "@reactive";
 import { Bool, F16, F32, I32, U32, Vec2, Vec3, Vec4, WorldGraph, type Graph, type GraphInterfacePort, type Type } from "@editor";
 import { useWindow } from "../layout";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { NodePropInputs } from "./node-prop-view";
 
 const types = {
 	F16,
@@ -31,10 +32,27 @@ const getTypeName = (type: Type): keyof typeof types => {
 	return type.constructor.name as keyof typeof types;
 };
 
-const InterfacePortView = ({ graph, direction, port }: { graph: Graph; direction: "input" | "output"; port: GraphInterfacePort; }) => {
+type InterfacePortViewProps = {
+	graph: Graph;
+	direction: "input" | "output";
+	port: GraphInterfacePort;
+	isInput?: boolean;
+};
+
+const InterfacePortView = ({ graph, direction, port, isInput }: InterfacePortViewProps) => {
 	const update = (changes: Partial<Pick<GraphInterfacePort, "name" | "type">>) => {
 		graph.updateInterfacePort(direction, port.id, changes);
 	};
+
+	const Input: React.FC<any> = isInput && NodePropInputs.get(port.type.constructor as any) || (() => null);
+
+
+	const props = {
+		name: "default value",
+		prop: port.type
+	};
+
+	console.log(props);
 
 	return (
 		<div className="graph-interface-port">
@@ -42,6 +60,7 @@ const InterfacePortView = ({ graph, direction, port }: { graph: Graph; direction
 			<select value={getTypeName(port.type)} onChange={event => update({ type: createType(event.target.value as keyof typeof types) })}>
 				{Object.keys(types).map(type => <option key={type} value={type}>{type}</option>)}
 			</select>
+			<Input {...props} />
 			<button onClick={() => graph.removeInterfacePort(direction, port.id)}>×</button>
 		</div>
 	);
@@ -110,7 +129,7 @@ export const GraphProperties = ({ graph, onOpenGraph }: { graph: Graph; onOpenGr
 							<span>Inputs</span>
 							<button onClick={() => graph.addInput(`Input ${graph.inputs.length + 1}`)}>+</button>
 						</div>
-						{graph.inputs.map(port => <InterfacePortView key={port.id} graph={graph} direction="input" port={port} />)}
+						{graph.inputs.map(port => <InterfacePortView key={port.id} graph={graph} direction="input" port={port} isInput={true} />)}
 					</div>
 					<div className="graph-properties-group">
 						<div className="graph-properties-title">

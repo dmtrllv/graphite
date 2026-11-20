@@ -1,0 +1,18 @@
+UI:
+	☐ Collapsable sub graph properties panel
+	☐ a node library panel per graph
+	☐ save and restore editor layout
+	☐ better input components
+
+Editor:
+	☐ option to auto reload last project
+	☐ global tool/action history manager
+		☐ opening and closing panels/windows is part of it
+
+Graph:
+	☐ Graphs should have a single fixed output node
+	☐ Graph input nodes shuold not contain input field (those are defined in the graph properties panel)
+	☐ Add Pass Node
+	☐ Add Map nodes
+	☐ Add Texture Node
+	
