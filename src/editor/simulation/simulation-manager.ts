@@ -54,7 +54,7 @@ export class SimulationManager extends Serializable {
 
 		const graph = this.graphManager.get(simulation.graphId);
 
-		if (!(graph instanceof SimulationGraph))
+		if (!(graph instanceof SimulationGraph) || this.graphManager.get(graph.id) !== graph)
 			throw new Error(`Simulation ${simulation.id} references an invalid SimulationGraph!`);
 
 		simulation.validate();

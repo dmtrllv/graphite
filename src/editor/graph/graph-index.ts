@@ -77,6 +77,11 @@ export class GraphIndex {
 
 		return [...edges];
 	}
+
+	public clear() {
+		this.incoming.clear();
+		this.outgoing.clear();
+	}
 }
 
 export type GraphIndexJson = {

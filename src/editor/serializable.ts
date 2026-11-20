@@ -54,6 +54,9 @@ export const reference = (type: SerializableConstructor): ReferenceType => ({ ki
 export const recordOf = (value: PrimitiveConstructor): RecordType => ({ kind: "record", value });
 
 export const registerSerializableType = <T extends Serializable>(target: Function, type: string, create: SerializableFactory<T>): void => {
+	if (typeof target !== "function")
+		throw new TypeError(`Invalid serializable constructor for '${type}': ${String(target)}`);
+
 	if (typeRegistry.has(type))
 		throw new Error(`Serializable type '${type}' is already registered.`);
 
@@ -141,8 +144,9 @@ export function serializable(type: ArrayType): SerializablePropertyDecorator<rea
 export function serializable(type: MapType): SerializablePropertyDecorator<Map<any, any>>;
 export function serializable(type: ReferenceType): SerializablePropertyDecorator<any>;
 export function serializable(type: RecordType): SerializablePropertyDecorator<Record<string, any>>;
+export function serializable(type: SerializableType): (value: undefined, context: ClassFieldDecoratorContext | ClassAccessorDecoratorContext) => void;
 export function serializable(...args: any[]): any {
-	if (args.length === 1 && typeof args[0] === "object") {
+	if (args.length === 1 && typeof args[0] === "object" && args[0] !== null && "type" in args[0] && "create" in args[0]) {
 		const options = args[0] as { type: string; create: SerializableFactory };
 		return (target: Function, context: ClassDecoratorContext) => {
 			if (!context.metadata)
@@ -151,16 +155,14 @@ export function serializable(...args: any[]): any {
 			getProperties(context.metadata);
 			return target;
 		};
-	} else {
-		const type = args[0] as SerializableType;
-
-		return (_value: undefined | ClassAccessorDecoratorTarget<any, any>, context: ClassFieldDecoratorContext | ClassAccessorDecoratorContext) => {
-			if (!context.metadata)
-				throw new Error("Decorator metadata is unavailable. Make sure Symbol.metadata is supported.");
-
-			getProperties(context.metadata).set(context.name, type);
-		};
 	}
+
+	const type = args[0] as SerializableType;
+	return (_value: undefined, context: ClassFieldDecoratorContext | ClassAccessorDecoratorContext) => {
+		if (!context.metadata)
+			throw new Error("Decorator metadata is unavailable. Make sure Symbol.metadata is supported.");
+		getProperties(context.metadata).set(context.name, type);
+	};
 }
 
 const serializeDocument = (root: Serializable): SerializableData => {

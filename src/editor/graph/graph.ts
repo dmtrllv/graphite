@@ -74,6 +74,8 @@ export class Graph extends Serializable {
 		for (const node of this.nodes.values())
 			this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
 
+		this.index.clear();
+
 		for (const edge of this.edges.values()) {
 			this.index.add(edge);
 			this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);

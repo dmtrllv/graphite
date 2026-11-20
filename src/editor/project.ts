@@ -23,7 +23,9 @@ export class ProjectInfo extends Serializable {
 export class Project extends Serializable {
 	public readonly manager: ProjectManager;
 
-	public readonly info: ProjectInfo;
+	@observable
+	public accessor info: ProjectInfo;
+
 	public readonly settings: Settings;
 
 	@serializable(GraphManager)
@@ -54,7 +56,7 @@ export class Project extends Serializable {
 	}
 
 	public setInfo(info: ProjectInfo) {
-		(this as any).info = info;
+		this.info = info;
 		this.bindSubscriptions();
 	}
 

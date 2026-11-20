@@ -4,7 +4,7 @@ import type { Graph } from "../graph";
 import type { NodeEdge } from "../edge";
 import { Type, Vec2 } from "../types";
 import { getTypeConversion } from "../types/cast";
-import { arrayOf, Serializable, serializable } from "../../serializable";
+import { arrayOf, Serializable, registerSerializableType, serializable } from "../../serializable";
 
 const INPUTS = Symbol("INPUTS");
 const OUTPUTS = Symbol("OUTPUTS");
@@ -55,11 +55,7 @@ export abstract class GraphNode extends Serializable {
 
 	public static register = (category: GraphNodeCategory, name: string) => (target: GraphNodeType<any>, context: ClassDecoratorContext) => {
 		GraphNode.#registry.set(name, Object.assign(target, { [CATEGORY]: category }));
-
-		serializable({
-			type: `node:${target.name}`,
-			create: (data, context) => new target(data.id, context["graph"], new Vec2())
-		})(target, context);
+		registerSerializableType(target, `node:${name}`, (data, context) => new target(data.id, context["graph"], new Vec2()));
 	}
 
 	public static getInputs<T extends typeof GraphNode | Function>(target: T): Record<string, NodeProp> {

@@ -55,12 +55,15 @@ export class SimulationInputNode extends SimulationNode {
 @GraphNode.register(GraphNodeCategory.Simulation, "Simulation Output")
 export class SimulationOutputNode extends SimulationNode {
 	@observable
-	public accessor stateId = crypto.randomUUID() as any;
+	@serializable(String)
+	public accessor stateId = crypto.randomUUID();
 
 	@observable
+	@serializable(String)
 	public override accessor name = "State";
 
 	@observable
+	@serializable(Type)
 	public accessor value: Type = new F32(0);
 
 	public override getInterface() {
