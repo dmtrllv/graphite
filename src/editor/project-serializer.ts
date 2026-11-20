@@ -23,10 +23,9 @@ export const deserializeProject = (manager: ProjectManager, json: SerializedProj
 	if (json.version !== 1)
 		throw new Error(`Unsupported project version '${json.version}'.`);
 
-	const info = ProjectInfo.deserialize({
-		name: json.project.name,
-		lastSave
-	});
+	const info = new ProjectInfo();
+	info.name = json.project.name;
+	info.lastSave = lastSave;
 
 	return Project.deserialize(json.data, { manager, info, settings });
 };

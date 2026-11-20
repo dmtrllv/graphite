@@ -1,4 +1,4 @@
-import { ProjectList } from "../app/editor/windows/projects";
+import { ProjectList, SaveProjectView } from "../app/editor/windows/projects";
 import { SettingsView } from "../app/editor/windows/settings";
 import { EditorLayout } from "./editor-layout";
 import { Menubar, MenuItem, MenuSeparator } from "./menubar";
@@ -25,10 +25,10 @@ export class Editor {
 
 	public readonly menubar: Menubar = new Menubar([
 		new MenuItem("file", "File", undefined, [
-			new MenuItem("new_project", "New Project"),
+			new MenuItem("new_project", "New Project", () => this.projectManager.newProject()),
 			MenuSeparator,
 			new MenuItem("save", "Save", () => this.projectManager.saveProject()),
-			new MenuItem("save_as", "Save As"),
+			new MenuItem("save_as", "Save As", () => this.windowManager.open("Save Project As", SaveProjectView, { manager: this.projectManager }, { singleInstance: true, float: true })),
 			MenuSeparator,
 			new MenuItem("open", "Open", () => this.windowManager.open("Projects", ProjectList, { manager: this.projectManager }, { singleInstance: true, float: true })),
 			new MenuItem("open_recent", "Open Recent", undefined, this.projectManager.projects.map(p => {
@@ -45,7 +45,7 @@ export class Editor {
 
 		]),
 		new MenuItem("view", "View", undefined, [
-			new MenuItem("world_graph", "World Graph", () =>{
+			new MenuItem("world_graph", "World Graph", () => {
 				const manager = this.projectManager.activeProject.graphManager;
 				const graph = manager.worldGraph;
 				const editor = manager.openEditor(graph);

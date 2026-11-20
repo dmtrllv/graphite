@@ -4,5 +4,5 @@ export const useEvent = <K extends keyof WindowEventMap>(type: K, listener: (thi
 	useEffect(() => {
 		window.addEventListener(type, listener, options);
 		return () => window.removeEventListener(type, listener, options);
-	}, [type, ...dependencies]);
+	}, [type, listener, options, ...dependencies]);
 }

@@ -41,7 +41,7 @@ export const MenuItems = ({ children, parentPath, activePath, execute, setActive
 						{hasChildren && <span className="menu-submenu-indicator">&rsaquo;</span>}
 					</button>
 					{selected && hasChildren && (
-						<MenuItems execute={execute} setActivePath={setActivePath} children={child.children} parentPath={[]} activePath={activePath}  />
+						<MenuItems execute={execute} setActivePath={setActivePath} children={child.children} parentPath={path} activePath={activePath} />
 					)}
 				</div>
 			);
