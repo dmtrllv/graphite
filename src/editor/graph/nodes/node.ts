@@ -11,12 +11,17 @@ const OUTPUTS = Symbol("OUTPUTS");
 const OPTIONS = Symbol("OPTIONS");
 const CATEGORY = Symbol("CATEGORY");
 
-export type NodeVariant = {
+export type IOType<Node> = (typeof Type) | readonly (typeof Type)[] | ((node: Node) => Type);
+
+export type NodeVariant<Node extends GraphNode = GraphNode> = {
 	inputs?: readonly string[];
 	outputs?: readonly string[];
+	inputTypes?: Record<string, IOType<Node>>;
+	outputTypes?: Record<string, IOType<Node>>;
 };
 
-export type NodeOptionVariants = Record<string, NodeVariant>;
+export type NodeOptionVariants<Node extends GraphNode = GraphNode> = Record<string, NodeVariant<Node>>;
+
 
 const getOwnMetadata = <T>(metadata: object, key: symbol): T => {
 	const target = metadata as unknown as Record<PropertyKey, unknown>;
@@ -155,6 +160,7 @@ export abstract class GraphNode extends Serializable {
 		return null;
 	}
 
+
 	public getInterface() {
 		const inputs = GraphNode.getInputs(this.constructor);
 		const outputs = GraphNode.getOutputs(this.constructor);
@@ -170,9 +176,29 @@ export abstract class GraphNode extends Serializable {
 			}
 		}
 
+		const resolveType = (type: IOType<GraphNode>, fallback: Type): Type => {
+			if (Array.isArray(type)) {
+				const matching = type.find(candidate => fallback instanceof candidate);
+				const Constructor = matching ?? type[0]!;
+				return fallback instanceof Constructor ? fallback : new (Constructor as new () => Type)();
+			}
+
+			if (typeof type === "function") {
+				if (type.prototype instanceof Type) {
+					const Constructor = type as any;
+					return fallback instanceof Constructor ? fallback : new Constructor();
+				}
+
+				return (type as (node: GraphNode) => Type)(this);
+			}
+
+			return fallback;
+		};
+
 		const resolve = (props: Record<string, NodeProp>, direction: "input" | "output"): ResolvedNodePort[] => {
 			const controlled = direction === "input" ? controlledInputs : controlledOutputs;
 			const active = new Set(Object.values(props).filter(prop => !controlled.has(prop.name)).map(prop => prop.name));
+			const typeOverrides = new Map<string, IOType<GraphNode>>();
 
 			for (const option of Object.values(options)) {
 				const value = this[option.name as keyof this] as unknown as NodeOption<string>;
@@ -182,12 +208,20 @@ export abstract class GraphNode extends Serializable {
 					throw new Error(`Invalid option value "${value.value}" for ${option.name}!`);
 
 				const names = direction === "input" ? variant.inputs : variant.outputs;
+				const types = direction === "input" ? variant.inputTypes : variant.outputTypes;
 
 				for (const name of names ?? []) {
 					if (!(name in props))
 						throw new Error(`Option "${option.name}" references unknown ${direction} "${name}"!`);
 
 					active.add(name);
+				}
+
+				for (const [name, type] of Object.entries(types ?? {})) {
+					if (!(name in props))
+						throw new Error(`Option "${option.name}" references unknown ${direction} "${name}"!`);
+
+					typeOverrides.set(name, type);
 				}
 			}
 
@@ -198,7 +232,13 @@ export abstract class GraphNode extends Serializable {
 				if (!(value instanceof Type))
 					throw new Error(`Property "${key}" of ${this.constructor.name} is not a Type!`);
 
-				return { key, name: key, direction, value, editable: prop.editable };
+				return {
+					key,
+					name: key,
+					direction,
+					value: typeOverrides.has(key) ? resolveType(typeOverrides.get(key)!, value) : value,
+					editable: prop.editable
+				};
 			});
 		};
 
@@ -228,8 +268,6 @@ export type GraphNodeType<T extends GraphNode> = new (id: number, graph: Graph, 
 export const input = GraphNode.input;
 export const output = GraphNode.output;
 export const option = GraphNode.option;
-
-export type IOType<Node> = (typeof Type) | readonly (typeof Type)[] | ((node: Node) => Type);
 
 @observable
 export class NodeProp {
