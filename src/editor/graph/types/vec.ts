@@ -1,21 +1,25 @@
 import { observable } from "@reactive";
+import { serializable } from "../../serializable";
 import { Type } from "./type";
 
-export class Vec2 extends Type {
+export abstract class Vector extends Type {
+
+}
+
+@serializable({ type: "type:vec2", create: () => new Vec2() })
+export class Vec2 extends Vector {
 	@observable
+	@serializable(Number)
 	public accessor x: number;
 
 	@observable
+	@serializable(Number)
 	public accessor y: number;
 
 	public constructor(x: number = 0, y: number = 0) {
 		super("vector");
 		this.x = x;
 		this.y = y;
-	}
-
-	public clone() {
-		return new Vec2(this.x, this.y)
 	}
 
 	public add({ x, y }: Vec2) {
@@ -57,12 +61,16 @@ export class Vec2 extends Type {
 
 export type Vec2Type = typeof Vec2;
 
-export class Vec3 extends Type {
+@serializable({ type: "type:vec3", create: () => new Vec3() })
+export class Vec3 extends Vector {
 	@observable
+	@serializable(Number)
 	public accessor x: number;
 	@observable
+	@serializable(Number)
 	public accessor y: number;
 	@observable
+	@serializable(Number)
 	public accessor z: number;
 
 	public constructor(x: number = 0, y: number = 0, z: number = 0) {
@@ -71,22 +79,23 @@ export class Vec3 extends Type {
 		this.y = y;
 		this.z = z;
 	}
-
-	public clone() {
-		return new Vec3(this.x, this.y, this.z);
-	}
 }
 
 export type Vec3Type = typeof Vec3;
 
-export class Vec4 extends Type {
+@serializable({ type: "type:vec4", create: () => new Vec4() })
+export class Vec4 extends Vector {
 	@observable
+	@serializable(Number)
 	public accessor x: number;
 	@observable
+	@serializable(Number)
 	public accessor y: number;
 	@observable
+	@serializable(Number)
 	public accessor z: number;
 	@observable
+	@serializable(Number)
 	public accessor w: number;
 
 	public constructor(x: number = 0, y: number = 0, z: number = 0, w: number = 0) {
@@ -96,15 +105,10 @@ export class Vec4 extends Type {
 		this.z = z;
 		this.w = w;
 	}
-
-	public clone() {
-		return new Vec4(this.x, this.y, this.z, this.w);
-	}
 }
 
 export type Vec4Type = typeof Vec4;
 
 export const VectorTypes = [Vec2, Vec3, Vec4] as const;
-export type VectorTypes = (typeof VectorTypes)[number];
 
-export type Vector = Vec2 | Vec3 | Vec4;
+export type VectorTypes = (typeof VectorTypes)[number];

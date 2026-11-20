@@ -1,21 +1,14 @@
 import { observable } from "@reactive";
 import { GraphNode, GraphNodeCategory } from "./node";
+import { serializable } from "../../serializable";
 
 abstract class GraphIONode extends GraphNode {
 	@observable
+	@serializable(String)
 	public accessor interfaceId = "";
 
 	public get interfacePort() {
 		return [...this.graph.inputs, ...this.graph.outputs].find(port => port.id === this.interfaceId);
-	}
-
-	public override serializeData(): Record<string, unknown> {
-		return { interfaceId: this.interfaceId };
-	}
-
-	public override restoreData(data: Record<string, unknown>): void {
-		if (typeof data["interfaceId"] === "string")
-			this.interfaceId = data["interfaceId"];
 	}
 }
 

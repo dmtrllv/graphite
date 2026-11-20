@@ -9,4 +9,3 @@ export * from "./actions";
 export * from "./tools";
 export * from "./edge";
 export * from "./simulation-graph";
-export * from "./graph-serializer";

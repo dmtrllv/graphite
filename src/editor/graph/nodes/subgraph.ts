@@ -1,10 +1,12 @@
 import { observable } from "@reactive";
 import { Subgraph } from "../graph";
 import { GraphNode, GraphNodeCategory } from "./node";
+import { serializable } from "../../serializable";
 
 @GraphNode.register(GraphNodeCategory.SubGraph, "Subgraph")
 export class SubgraphNode extends GraphNode {
 	@observable
+	@serializable(Number)
 	private accessor _graphId: number | null = null;
 
 	public get graphId(): number | null {
@@ -54,14 +56,5 @@ export class SubgraphNode extends GraphNode {
 			})) ?? [],
 			options: []
 		};
-	}
-
-	public override serializeData(): Record<string, unknown> {
-		return { graphId: this.graphId };
-	}
-
-	public override restoreData(data: Record<string, unknown>): void {
-		if (typeof data["graphId"] === "number" || data["graphId"] === null)
-			this.graphId = data["graphId"];
 	}
 }

@@ -4,6 +4,7 @@ import type { Graph } from "../graph";
 import type { NodeEdge } from "../edge";
 import { Type, Vec2 } from "../types";
 import { getTypeConversion } from "../types/cast";
+import { arrayOf, Serializable, serializable } from "../../serializable";
 
 const INPUTS = Symbol("INPUTS");
 const OUTPUTS = Symbol("OUTPUTS");
@@ -36,14 +37,14 @@ export const GraphNodeCategory = {
 
 type GraphNodeCategory = (typeof GraphNodeCategory)[keyof typeof GraphNodeCategory];
 
-export abstract class GraphNode {
+export abstract class GraphNode extends Serializable {
 	declare private static [INPUTS]?: Record<string, NodeProp>;
 	declare private static [OUTPUTS]?: Record<string, NodeProp>;
 	declare private static [OPTIONS]?: Record<string, NodeProp>;
 	declare private static [CATEGORY]?: GraphNodeCategory;
 
 	static readonly #registry = new Map<string, GraphNodeType<any>>();
-	
+
 	public static get category(): GraphNodeCategory {
 		return this[CATEGORY] || GraphNodeCategory.Unknown;
 	}
@@ -52,10 +53,13 @@ export abstract class GraphNode {
 		return this.#registry;
 	}
 
-	public static register = (category: GraphNodeCategory, name: string) => (target: GraphNodeType<any>, _: ClassDecoratorContext) => {
-		if (GraphNode.#registry.has(name))
-			throw new Error(`GraphNode with name ${name} is already registered!`);
+	public static register = (category: GraphNodeCategory, name: string) => (target: GraphNodeType<any>, context: ClassDecoratorContext) => {
 		GraphNode.#registry.set(name, Object.assign(target, { [CATEGORY]: category }));
+
+		serializable({
+			type: `node:${target.name}`,
+			create: (data, context) => new target(data.id, context["graph"], new Vec2())
+		})(target, context);
 	}
 
 	public static getInputs<T extends typeof GraphNode | Function>(target: T): Record<string, NodeProp> {
@@ -101,28 +105,24 @@ export abstract class GraphNode {
 		return getTypeConversion(source.value, target.value) !== null;
 	}
 
+	@serializable(Number)
 	public readonly id: number;
 
-	public readonly graph: Graph;
-
-	@observable
+	@serializable(Vec2)
 	public accessor position: Vec2;
+
+	public readonly graph: Graph;
 
 	public get name(): string {
 		return assert.notNull(GraphNode.#registry.entries().find(([_, type]) => type === this.constructor)?.[0]);
 	}
 
 	public constructor(id: number, graph: Graph, position: Vec2 = new Vec2()) {
+		super();
 		this.id = id;
 		this.graph = graph;
 		this.position = position;
 	}
-
-	public serializeData(): Record<string, unknown> {
-		return {};
-	}
-
-	public restoreData(_data: Record<string, unknown>): void { }
 
 	public getInputEdge(inputKey: string): NodeEdge | undefined {
 		return this.graph.index.getInputEdge(this, inputKey);
@@ -267,28 +267,33 @@ export class NodeOptionProp extends NodeProp {
 	}
 }
 
-export abstract class NodeOption<T> {
+@serializable({ type: "option:base", create: () => new SelectOption([]) })
+export abstract class NodeOption<T extends string> extends Serializable {
 	@observable
+	@serializable(String)
 	public accessor value: T;
 
 	public abstract get kind(): string;
 
 	public constructor(value: T) {
+		super();
 		this.value = value;
 	}
-};
+}
 
+@serializable({ type: "option:select", create: data => new SelectOption(data.options) })
 export class SelectOption<T extends readonly string[]> extends NodeOption<T[number]> {
+	@serializable(arrayOf(String))
+	public readonly options: T;
+
 	public override get kind(): string {
 		return "select";
 	}
 
-	public readonly options: T;
-
 	public constructor(options: T) {
-		super(options[0]!)
+		super(options[0]!);
 		this.options = options;
 	}
-};
+}
 
-export type NodeOptionType<T extends NodeOption<R>, R extends readonly string[]> = new (options: R) => T;
+export type NodeOptionType<T extends NodeOption<R[number]>, R extends readonly string[]> = new (options: R) => T;

@@ -1,12 +1,14 @@
 import { Graph, SimulationGraph, Subgraph, SubgraphNode, WorldGraph, type GraphNode, type NodeEdge } from "../graph";
+import { Serializable, serializable, mapOf } from "../serializable";
 import { observable } from "@reactive";
 import { GraphEditor } from "./editor";
 import { Vec2 } from "./types";
 
-export class GraphManager {
+export class GraphManager extends Serializable {
 	private _idCounter = 0;
 
 	@observable
+	@serializable(mapOf(Number, Graph, manager => ({ manager })))
 	public accessor graphs = new Map<number, Graph>();
 
 	@observable
@@ -16,8 +18,20 @@ export class GraphManager {
 	public accessor catalogVersion = 0;
 
 	public constructor(createWorldGraph = true) {
+		super()
 		if (createWorldGraph)
 			this.add("World");
+	}
+
+	protected override afterDeserialize(): void {
+		this._idCounter = 0;
+
+		for (const graph of this.graphs.values()) {
+			graph.setManager(this);
+			this._idCounter = Math.max(this._idCounter, graph.id + 1);
+		}
+
+		this.validateReferences();
 	}
 
 	public notifySubgraphTopologyChanged(): void {
@@ -228,7 +242,7 @@ export class GraphManager {
 		const isSubGraph = (graph: Graph): graph is Subgraph => {
 			return graph instanceof Subgraph && graph !== parent && !this.hasRecursiveReference(parent, graph);
 		};
-	
+
 		return [...this.graphs.values()].filter(isSubGraph);
 	}
 }

@@ -126,14 +126,18 @@ export abstract class Serializable {
 	}
 
 	protected afterDeserialize(): void { }
+
+	public clone(): this {
+		return (this.constructor as any).deserialize(this.serialize()) as this;
+	}
 }
 
 export function serializable<T extends Serializable>(options: { type: string; create: SerializableFactory<T> }): (value: Function, context: ClassDecoratorContext) => void;
-export function serializable(type: StringConstructor): SerializablePropertyDecorator<string>;
-export function serializable(type: NumberConstructor): SerializablePropertyDecorator<number>;
-export function serializable(type: BooleanConstructor): SerializablePropertyDecorator<boolean>;
+export function serializable(type: StringConstructor): SerializablePropertyDecorator<string | null>;
+export function serializable(type: NumberConstructor): SerializablePropertyDecorator<number | null>;
+export function serializable(type: BooleanConstructor): SerializablePropertyDecorator<boolean | null>;
 export function serializable<T extends Serializable>(type: SerializableConstructor<T>): SerializablePropertyDecorator<T>;
-export function serializable(type: ArrayType): SerializablePropertyDecorator<any[]>;
+export function serializable(type: ArrayType): SerializablePropertyDecorator<readonly any[]>;
 export function serializable(type: MapType): SerializablePropertyDecorator<Map<any, any>>;
 export function serializable(type: ReferenceType): SerializablePropertyDecorator<any>;
 export function serializable(type: RecordType): SerializablePropertyDecorator<Record<string, any>>;
@@ -159,36 +163,33 @@ export function serializable(...args: any[]): any {
 	}
 }
 
-
 const serializeDocument = (root: Serializable): SerializableData => {
 	const identities = new WeakMap<object, string>();
 	let nextId = 1;
 
-	const traverse = (value: any, type: SerializableType, visit: (value: Serializable, metadata: SerializableMetadata) => void): void => {
+	const visit = (value: any, type: SerializableType): void => {
 		if (value == null || isPrimitiveType(type) || isReferenceType(type) || isRecordType(type))
 			return;
 
 		if (isArrayType(type)) {
 			for (const item of value)
-				traverse(item, type.type, visit);
+				visit(item, type.type);
 			return;
 		}
 
 		if (isMapType(type)) {
 			for (const item of value.values())
-				traverse(item, type.value, visit);
+				visit(item, type.value);
 			return;
 		}
 
 		if (identities.has(value))
 			return;
 
-		const metadata = getMetadata(value.constructor);
 		identities.set(value, String(nextId++));
-		visit(value, metadata);
 
-		for (const [name, propertyType] of metadata)
-			traverse(Reflect.get(value, name), propertyType, visit);
+		for (const [name, propertyType] of getMetadata(value.constructor))
+			visit(Reflect.get(value, name), propertyType);
 	};
 
 	const encode = (value: any, type: SerializableType): any => {
@@ -202,13 +203,15 @@ const serializeDocument = (root: Serializable): SerializableData => {
 			return { $map: [...value.entries()].map(([key, item]) => [key, encode(item, type.value)]) };
 
 		if (isRecordType(type))
-			return value;
+			return { ...value };
 
 		if (isReferenceType(type))
 			return { $ref: identities.get(value)! };
 
-		const id = identities.get(value)!;
-		const result: Record<string, unknown> = { $type: constructorRegistry.get(value.constructor), $id: id };
+		const result: Record<string, unknown> = {
+			$type: constructorRegistry.get(value.constructor),
+			$id: identities.get(value)!
+		};
 
 		for (const [name, propertyType] of getMetadata(value.constructor))
 			result[String(name)] = encode(Reflect.get(value, name), propertyType);
@@ -216,10 +219,10 @@ const serializeDocument = (root: Serializable): SerializableData => {
 		return result;
 	};
 
-	traverse(root, root.constructor as SerializableConstructor, () => {});
-	return encode(root, root.constructor as SerializableConstructor);
+	const type = root.constructor as SerializableConstructor;
+	visit(root, type);
+	return encode(root, type);
 };
-
 
 const deserializeDocument = <T extends Serializable>(rootType: new (...args: any[]) => T, data: any, context: SerializationContext): T => {
 	const identities = new Map<string, Serializable>();

@@ -3,6 +3,7 @@ import { observable } from "@reactive";
 import { F32, Type, Vec2 } from "../types";
 import { SimulationGraph } from "../graph";
 import { GraphNode, GraphNodeCategory } from "./node";
+import { serializable } from "../../serializable";
 
 export type SimulationInputKind = "parameter" | "state";
 
@@ -18,18 +19,23 @@ abstract class SimulationNode extends GraphNode {
 @GraphNode.register(GraphNodeCategory.Simulation, "Simulation Input")
 export class SimulationInputNode extends SimulationNode {
 	@observable
+	@serializable(String)
 	public accessor inputId = crypto.randomUUID() as string;
 
 	@observable
+	@serializable(String)
 	public override accessor name = "Input";
 
 	@observable
+	@serializable(String)
 	public accessor inputKind: SimulationInputKind = "parameter";
 
 	@observable
+	@serializable(String)
 	public accessor stateId: string | null = null;
 
 	@observable
+	@serializable(Type)
 	public accessor value: Type = new F32(0);
 
 	public override getInterface() {
@@ -43,33 +49,6 @@ export class SimulationInputNode extends SimulationNode {
 			}],
 			options: []
 		};
-	}
-
-	public override serializeData(): Record<string, unknown> {
-		return {
-			inputId: this.inputId,
-			name: this.name,
-			inputKind: this.inputKind,
-			stateId: this.stateId,
-			value: this.value
-		};
-	}
-
-	public override restoreData(data: Record<string, unknown>): void {
-		if (typeof data["inputId"] === "string")
-			this.inputId = data["inputId"];
-
-		if (typeof data["name"] === "string")
-			this.name = data["name"];
-
-		if (data["inputKind"] === "parameter" || data["inputKind"] === "state")
-			this.inputKind = data["inputKind"];
-
-		if (typeof data["stateId"] === "string" || data["stateId"] === null)
-			this.stateId = data["stateId"];
-
-		if (data["value"] instanceof Type)
-			this.value = data["value"];
 	}
 }
 
@@ -95,24 +74,5 @@ export class SimulationOutputNode extends SimulationNode {
 			outputs: [],
 			options: []
 		};
-	}
-
-	public override serializeData(): Record<string, unknown> {
-		return {
-			stateId: this.stateId,
-			name: this.name,
-			value: this.value
-		};
-	}
-
-	public override restoreData(data: Record<string, unknown>): void {
-		if (typeof data["stateId"] === "string")
-			this.stateId = data["stateId"];
-
-		if (typeof data["name"] === "string")
-			this.name = data["name"];
-
-		if (data["value"] instanceof Type)
-			this.value = data["value"];
 	}
 }

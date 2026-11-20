@@ -1,17 +1,30 @@
 import { observable } from "@reactive";
 import { SimulationGraph, type GraphManager } from "../graph";
 import { Simulation } from "./simulation";
+import { Serializable, serializable, mapOf } from "../serializable";
 
-export class SimulationManager {
+@serializable({ type: "simulation-manager", create: () => new SimulationManager() })
+export class SimulationManager extends Serializable {
 	private _idCounter = 0;
 
-	private readonly graphManager: GraphManager;
+	public graphManager!: GraphManager;
 
 	@observable
+	@serializable(mapOf(Number, Simulation))
 	public accessor simulations = new Map<number, Simulation>();
 
-	public constructor(graphManager: GraphManager) {
-		this.graphManager = graphManager;
+	public constructor(graphManager?: GraphManager) {
+		super();
+		this.graphManager = graphManager!;
+	}
+
+	protected override afterDeserialize(): void {
+		this._idCounter = 0;
+
+		for (const simulation of this.simulations.values()) {
+			simulation.validate();
+			this._idCounter = Math.max(this._idCounter, simulation.id + 1);
+		}
 	}
 
 	public get(id: number): Simulation | undefined {
@@ -27,7 +40,7 @@ export class SimulationManager {
 		if ([...this.simulations.values()].some(simulation => simulation.name === simulationName))
 			throw new Error(`Simulation with name "${simulationName}" already exists!`);
 
-		const simulation = new Simulation(this._idCounter++, simulationName, graph);
+		const simulation = new Simulation(this._idCounter++, simulationName, graph.id);
 		this.simulations.set(simulation.id, simulation);
 		return simulation;
 	}
@@ -63,44 +76,20 @@ export class SimulationManager {
 
 		return name;
 	}
-}
 
-export interface SerializedSimulation {
-	id: number;
-	name: string;
-	graphId: number;
-	iterations: number;
-	inputBindings: Record<string, string>;
-}
+	public setGraphManager(graphManager: GraphManager): void {
+		this.graphManager = graphManager;
+		this._idCounter = 0;
 
-export interface SerializedSimulationManager {
-	simulations: SerializedSimulation[];
-}
+		for (const simulation of this.simulations.values()) {
+			simulation.validate();
 
-export const serializeSimulationManager = (manager: SimulationManager): SerializedSimulationManager => ({
-	simulations: [...manager.simulations.values()].map(simulation => ({
-		id: simulation.id,
-		name: simulation.name,
-		graphId: simulation.graphId,
-		iterations: simulation.iterations,
-		inputBindings: { ...simulation.inputBindings }
-	}))
-});
+			const graph = graphManager.get(simulation.graphId);
 
-export const deserializeSimulationManager = (json: SerializedSimulationManager, graphManager: GraphManager): SimulationManager => {
-	const manager = new SimulationManager(graphManager);
+			if (!(graph instanceof SimulationGraph))
+				throw new Error(`Simulation ${simulation.id} references an invalid SimulationGraph!`);
 
-	for (const item of json.simulations) {
-		const graph = graphManager.get(item.graphId);
-
-		if (!(graph instanceof SimulationGraph))
-			throw new Error(`Simulation ${item.id} references an invalid SimulationGraph!`);
-
-		const simulation = new Simulation(item.id, item.name, graph);
-		simulation.iterations = item.iterations;
-		simulation.inputBindings = { ...item.inputBindings };
-		manager.restore(simulation);
+			this._idCounter = Math.max(this._idCounter, simulation.id + 1);
+		}
 	}
-
-	return manager;
-};
+}

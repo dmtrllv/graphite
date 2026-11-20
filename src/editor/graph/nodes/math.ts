@@ -1,5 +1,6 @@
-import { F32, Scalar, Vec4, type Vector } from "../types";
+import { F32, Scalar, Vec4, Vector } from "../types";
 import { GraphNode, input, output, option, SelectOption, GraphNodeCategory } from "./node";
+import { serializable } from "../../serializable";
 
 export const MathOps = [
 	"add",
@@ -12,12 +13,15 @@ export const MathOps = [
 @GraphNode.register(GraphNodeCategory.Math, "Math")
 export class MathNode extends GraphNode {
 	@input()
+	@serializable(Scalar)
 	accessor a: Scalar = new F32(0);
 
 	@input()
+	@serializable(Scalar)
 	accessor b: Scalar = new F32(0);
 
 	@output()
+	@serializable(Scalar)
 	accessor result: Scalar = new F32(0);
 
 	@option({
@@ -27,6 +31,7 @@ export class MathNode extends GraphNode {
 		divide: { inputs: ["a", "b"], outputs: ["result"] },
 		negate: { inputs: ["a"], outputs: ["result"] }
 	})
+	@serializable(SelectOption)
 	accessor op = new SelectOption(MathOps);
 }
 
@@ -39,15 +44,18 @@ export const VectorMathOps = [
 	"divide"
 ] as const;
 
-@GraphNode.register(GraphNodeCategory.Math,"Vector Math")
+@GraphNode.register(GraphNodeCategory.Math, "Vector Math")
 export class VectorMathNode extends GraphNode {
 	@input()
+	@serializable(Vector)
 	accessor a: Vector = new Vec4();
 
 	@input()
+	@serializable(Vector)
 	accessor b: Vector = new Vec4();
 
 	@output()
+	@serializable(Vector)
 	accessor result: Vector = new Vec4();
 
 	@option({
@@ -56,6 +64,7 @@ export class VectorMathNode extends GraphNode {
 		multiply: { inputs: ["a", "b"], outputs: ["result"] },
 		divide: { inputs: ["a", "b"], outputs: ["result"] }
 	})
+	@serializable(SelectOption)
 	accessor op = new SelectOption(VectorMathOps);
 }
 

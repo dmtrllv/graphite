@@ -5,16 +5,23 @@ import { GraphIndex } from "./graph-index";
 import type { GraphManager } from "./graph-manager";
 import { F32, Type } from "./types";
 import { NodeEdge } from "./edge";
+import { Serializable, serializable, arrayOf, mapOf } from "../serializable";
 
 const RECONCILING_GRAPHS = new WeakSet<Graph>();
 
-export type GraphInterfacePort = {
-	id: string;
-	name: string;
-	type: Type;
-};
+@serializable({ type: "graph:port", create: () => new GraphInterfacePort() })
+export class GraphInterfacePort extends Serializable {
+	@serializable(String)
+	public id = "";
 
-export class Graph {
+	@serializable(String)
+	public name = "";
+
+	@serializable(Type)
+	public type: Type = new F32(0);
+}
+
+export class Graph extends Serializable {
 	private _nodeIdCounter = 0;
 	private _edgeIdCounter = 0;
 
@@ -24,35 +31,57 @@ export class Graph {
 		return this._manager;
 	}
 
+	@serializable(Number)
 	public readonly id: number;
 
 	@observable
+	@serializable(String)
 	public accessor name: string;
 
 	@observable
+	@serializable(Vec2)
 	public accessor offset: Vec2;
 
 	@observable
+	@serializable(Number)
 	public accessor scale: number = 1;
 
 	@observable
+	@serializable(mapOf(Number, GraphNode, graph => ({ graph })))
 	public accessor nodes: Map<number, GraphNode>;
 
 	@observable
+	@serializable(mapOf(Number, NodeEdge))
 	public accessor edges: Map<number, NodeEdge>;
+
+	@observable({ recursive: true })
+	@serializable(arrayOf(GraphInterfacePort))
+	public accessor inputs: GraphInterfacePort[] = [];
+
+	@observable({ recursive: true })
+	@serializable(arrayOf(GraphInterfacePort))
+	public accessor outputs: GraphInterfacePort[] = [];
 
 	@observable
 	public accessor structureVersion = 0;
 
-	@observable({ recursive: true })
-	public accessor inputs: GraphInterfacePort[] = [];
-
-	@observable({ recursive: true })
-	public accessor outputs: GraphInterfacePort[] = [];
-
 	public readonly index = new GraphIndex();
 
+	protected override afterDeserialize(): void {
+		this._nodeIdCounter = 0;
+		this._edgeIdCounter = 0;
+
+		for (const node of this.nodes.values())
+			this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
+
+		for (const edge of this.edges.values()) {
+			this.index.add(edge);
+			this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
+		}
+	}
+
 	public constructor(id: number, name: string, offset: Vec2, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
+		super();
 		this.id = id;
 		this.name = name;
 		this.offset = offset;
@@ -208,7 +237,10 @@ export class Graph {
 
 	public addInterfacePort(direction: "input" | "output", name: string, type: Type = new F32(0)): GraphInterfacePort {
 		const ports = direction === "input" ? this.inputs : this.outputs;
-		const port = { id: crypto.randomUUID(), name, type };
+		const port = new GraphInterfacePort();
+		port.id = crypto.randomUUID();
+		port.name = name;
+		port.type = type;
 
 		if (ports.some(item => item.name === name))
 			throw new Error(`Graph ${direction} "${name}" already exists!`);
@@ -232,7 +264,16 @@ export class Graph {
 		if (changes.name !== undefined && ports.some(item => item.id !== id && item.name === changes.name))
 			throw new Error(`Graph ${direction} "${changes.name}" already exists!`);
 
-		const updated = ports.map(item => item.id === id ? { ...item, ...changes } : item);
+		const updated = ports.map(item => {
+			if (item.id !== id)
+				return item;
+
+			const port = new GraphInterfacePort();
+			port.id = item.id;
+			port.name = changes.name ?? item.name;
+			port.type = changes.type ?? item.type;
+			return port;
+		});
 
 		if (direction === "input")
 			this.inputs = updated;
@@ -267,8 +308,11 @@ export class Graph {
 	}
 }
 
+@serializable({ type: "graph:world", create: data => new WorldGraph(data.id, data.name, new Vec2()) })
 export class WorldGraph extends Graph { }
 
+@serializable({ type: "graph:subgraph", create: data => new Subgraph(data.id, data.name, new Vec2()) })
 export class Subgraph extends Graph { }
 
+@serializable({ type: "graph:simulation", create: data => new SimulationGraph(data.id, data.name, new Vec2()) })
 export class SimulationGraph extends Graph { }

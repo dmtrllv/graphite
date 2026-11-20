@@ -1,7 +1,11 @@
-export abstract class Type {
+import { Serializable, serializable } from "../../serializable";
+
+export abstract class Type extends Serializable {
+	@serializable(String)
 	public readonly kind: TypeKind;
 
 	public constructor(kind: TypeKind) {
+		super();
 		this.kind = kind;
 	}
 }

@@ -3,7 +3,7 @@ import { GraphEditorView } from "../app/editor/graph";
 import { VectorMathNode, SubgraphNode, Vec2, type GraphEditor } from "./graph";
 import { observable } from "../reactive";
 import type { Editor } from "./editor";
-import { Project, ProjectInfo, type ProjectInfoData } from "./project";
+import { Project, ProjectInfo } from "./project";
 import { serializeProject, deserializeProject } from "./project-serializer";
 
 const PROJECTS_KEY = "graphite:projects";
@@ -31,7 +31,7 @@ export class ProjectManager {
 	}
 
 	private loadProjectInfos(): ProjectInfo[] {
-		const names = JSON.parse(localStorage.getItem(PROJECTS_KEY) ?? "[]") as ProjectInfoData[];
+		const names = JSON.parse(localStorage.getItem(PROJECTS_KEY) ?? "[]") as ProjectInfo[];
 		return names.map(({ name, lastSave }) => ProjectInfo.deserialize({ name, lastSave }));
 	}
 
@@ -41,7 +41,7 @@ export class ProjectManager {
 
 	private createNewProject(name: string = "New Project"): Project {
 		const info = ProjectInfo.deserialize({ name, lastSave: currentDateTime() });
-		const p = new Project({}, this, info, this.editor.settings.defaultSettings.clone());
+		const p = new Project(this, info, this.editor.settings.defaultSettings.clone());
 		const graph = p.graphManager.worldGraph;
 		graph.addNode(VectorMathNode);
 		this.openGraph(p.graphManager.openEditor(graph));

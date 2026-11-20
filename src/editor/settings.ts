@@ -1,4 +1,4 @@
-import { computed, observable } from "../reactive";
+import { computed, observable } from "@reactive";
 import { Serializable, serializable } from "./serializable";
 
 export interface PreferencesData {
@@ -16,8 +16,8 @@ export interface SettingsData {
 	graph: GraphSettingsData;
 }
 
-@serializable
-export class Preferences extends Serializable<PreferencesData> {
+@serializable({ type: "settings:preferences", create: () => new Preferences() })
+export class Preferences extends Serializable {
 	@observable
 	@serializable(Boolean)
 	public accessor autoHideMenu!: boolean;
@@ -36,17 +36,13 @@ export class Preferences extends Serializable<PreferencesData> {
 		document.documentElement.style.setProperty("--accent-1", value);
 	}
 
-	public constructor(data: PreferencesData) {
-		super(data);
-	}
-
 	protected override afterDeserialize() {
 		document.documentElement.style.setProperty("--accent-1", this.accentColor);
 	}
 }
 
-@serializable
-export class GraphSettings extends Serializable<GraphSettingsData> {
+@serializable({ type: "settings:graph", create: () => new GraphSettings() })
+export class GraphSettings extends Serializable {
 	@observable
 	@serializable(Number)
 	public accessor lineWidth!: number;
@@ -56,8 +52,8 @@ export class GraphSettings extends Serializable<GraphSettingsData> {
 	public accessor curve!: number;
 }
 
-@serializable
-export class Settings extends Serializable<SettingsData> {
+@serializable({ type: "settings", create: () => new Settings() })
+export class Settings extends Serializable {
 	@serializable(Preferences)
 	public readonly preferences!: Preferences;
 

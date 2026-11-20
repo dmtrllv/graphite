@@ -3,15 +3,10 @@ import { observable, subscribe, type Unsubscriber } from "../reactive";
 import type { ProjectManager } from "./project-manager";
 import { Settings } from "./settings";
 import { SimulationManager } from "./simulation";
-import { serializable, Serializable, type SerializableData } from "./serializable";
+import { Serializable, serializable } from "./serializable";
 
-export interface ProjectInfoData {
-	name: string;
-	lastSave: string;
-}
-
-@serializable
-export class ProjectInfo extends Serializable<ProjectInfoData> {
+@serializable({ type: "project:info", create: () => new ProjectInfo() })
+export class ProjectInfo extends Serializable {
 	@observable
 	@serializable(String)
 	public accessor name!: string;
@@ -21,46 +16,45 @@ export class ProjectInfo extends Serializable<ProjectInfoData> {
 	public accessor lastSave!: string;
 }
 
-type ProjectArgs = [
-	manager: ProjectManager,
-	info: ProjectInfo,
-	settings: Settings,
-	graphManager?: GraphManager,
-	simulationManager?: SimulationManager
-];
-
-@serializable
-export class Project extends Serializable<SerializableData, ProjectArgs> {
+@serializable({
+	type: "project",
+	create: (_, context) => new Project(context["manager"], context["info"], context["settings"], new GraphManager(false))
+})
+export class Project extends Serializable {
 	public readonly manager: ProjectManager;
 
-	@observable
-	@serializable(ProjectInfo)
-	public accessor info: ProjectInfo;
-
-	@serializable(Settings)
+	public readonly info: ProjectInfo;
 	public readonly settings: Settings;
 
+	@serializable(GraphManager)
 	public readonly graphManager: GraphManager;
+
+	@serializable(SimulationManager)
 	public readonly simulationManager: SimulationManager;
+
 	private unsubscribeSettings: Unsubscriber[] = [];
 
 	public get isSaved() {
 		return !!this.manager.projects.find(info => info.name === this.info.name);
 	}
 
-	public constructor(data: SerializableData, manager: ProjectManager, info: ProjectInfo, settings: Settings, graphManager: GraphManager = new GraphManager(), simulationManager: SimulationManager = new SimulationManager(graphManager)) {
-		super(data, manager, info, settings, graphManager, simulationManager);
+	public constructor(manager: ProjectManager, info: ProjectInfo, settings: Settings, graphManager: GraphManager = new GraphManager(), simulationManager: SimulationManager = new SimulationManager(graphManager)) {
+		super();
 		this.manager = manager;
 		this.info = info;
 		this.settings = settings;
 		this.graphManager = graphManager;
 		this.simulationManager = simulationManager;
+		this.bindSubscriptions();
+	}
 
+	protected override afterDeserialize() {
+		this.simulationManager.setGraphManager(this.graphManager);
 		this.bindSubscriptions();
 	}
 
 	public setInfo(info: ProjectInfo) {
-		this.info = info;
+		(this as any).info = info;
 		this.bindSubscriptions();
 	}
 
@@ -70,10 +64,6 @@ export class Project extends Serializable<SerializableData, ProjectArgs> {
 			subscribe(this.settings.preferences, { recursive: true }, this.onSettingsChange),
 			subscribe(this.info, this.onSettingsChange)
 		];
-	}
-
-	protected override afterDeserialize() {
-		this.bindSubscriptions();
 	}
 
 	private readonly onSettingsChange = () => {
