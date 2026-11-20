@@ -3,14 +3,21 @@ import { observable, subscribe, type Unsubscriber } from "../reactive";
 import type { ProjectManager } from "./project-manager";
 import { Settings } from "./settings";
 import { SimulationManager } from "./simulation";
-import { serializable, Serializable } from "./serializable";
+import { serializable, Serializable, type SerializableData } from "./serializable";
+
+export interface ProjectInfoData {
+	name: string;
+	lastSave: string;
+}
 
 @serializable
-export class ProjectInfo extends Serializable {
+export class ProjectInfo extends Serializable<ProjectInfoData> {
 	@observable
+	@serializable(String)
 	public accessor name!: string;
 
 	@observable
+	@serializable(String)
 	public accessor lastSave!: string;
 }
 
@@ -27,13 +34,13 @@ export class Project extends Serializable {
 
 	public readonly graphManager: GraphManager;
 	public readonly simulationManager: SimulationManager;
-	private readonly unsubscribeSettings: Unsubscriber;
+	private readonly unsubscribeSettings: Unsubscriber[];
 
 	public get isSaved() {
 		return !!this.manager.projects.find(info => info.name === this.info.name);
 	}
 
-	public constructor(data: object, manager: ProjectManager, info: ProjectInfo, settings: Settings, graphManager: GraphManager = new GraphManager(), simulationManager: SimulationManager = new SimulationManager(graphManager)) {
+	public constructor(data: SerializableData, manager: ProjectManager, info: ProjectInfo, settings: Settings, graphManager: GraphManager = new GraphManager(), simulationManager: SimulationManager = new SimulationManager(graphManager)) {
 		super(data);
 		this.manager = manager;
 		this.info = info;
@@ -41,8 +48,10 @@ export class Project extends Serializable {
 		this.graphManager = graphManager;
 		this.simulationManager = simulationManager;
 
-		this.unsubscribeSettings = subscribe(this.settings.preferences, { recursive: true }, this.onSettingsChange);
-		this.unsubscribeSettings = subscribe(this.info, this.onSettingsChange);
+		this.unsubscribeSettings = [
+			subscribe(this.settings.preferences, { recursive: true }, this.onSettingsChange),
+			subscribe(this.info, this.onSettingsChange)
+		];
 	}
 
 	private readonly onSettingsChange = () => {
@@ -51,6 +60,6 @@ export class Project extends Serializable {
 	}
 
 	public dispose() {
-		this.unsubscribeSettings();
+		this.unsubscribeSettings.forEach(unsubscribe => unsubscribe());
 	}
 }

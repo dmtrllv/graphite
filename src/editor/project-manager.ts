@@ -32,7 +32,7 @@ export class ProjectManager {
 
 	private loadProjectInfos(): ProjectInfo[] {
 		const names = JSON.parse(localStorage.getItem(PROJECTS_KEY) ?? "[]") as ProjectInfo[];
-		return names.map(({ name, lastSave }) => new ProjectInfo(name, lastSave));
+		return names.map(({ name, lastSave }) => new ProjectInfo({ name, lastSave }));
 	}
 
 	private saveProjectInfos(): void {
@@ -40,7 +40,7 @@ export class ProjectManager {
 	}
 
 	private createNewProject(name: string = "New Project"): Project {
-		const p = new Project({}, this, new ProjectInfo(name, currentDateTime()), this.editor.settings.defaultSettings.clone());
+		const p = new Project({}, this, new ProjectInfo({ name, lastSave: currentDateTime() }), this.editor.settings.defaultSettings.clone());
 		const graph = p.graphManager.worldGraph;
 		graph.addNode(VectorMathNode);
 		this.openGraph(p.graphManager.openEditor(graph));
@@ -60,7 +60,7 @@ export class ProjectManager {
 		if (this.projects.find(info => info.name === name))
 			return false;
 
-		this.activeProject.info = new ProjectInfo(name, currentDateTime());
+		this.activeProject.info = new ProjectInfo({ name, lastSave: currentDateTime() });
 		this.projects = [this.activeProject.info, ...this.projects];
 		this.saveProjectInfos();
 		this.saveProject();
