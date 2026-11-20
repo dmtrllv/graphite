@@ -220,11 +220,8 @@ export class GraphManager extends Serializable {
 
 		const editor = this.editors.get(graph);
 
-		if (editor) {
-			editor.activeTool?.cancel();
-			editor.selectedNodes = [];
-			this.editors.delete(graph);
-		}
+		if (editor)
+			this.closeEditor(graph, editor);
 
 		this.graphs.delete(graph.id);
 		this.catalogVersion++;
@@ -245,6 +242,14 @@ export class GraphManager extends Serializable {
 		};
 
 		return [...this.graphs.values()].filter(isSubGraph);
+	}
+
+	public closeEditor(graph: Graph, editor: GraphEditor): void {
+		if (this.editors.get(graph) !== editor)
+			return;
+
+		editor.dispose();
+		this.editors.delete(graph);
 	}
 }
 

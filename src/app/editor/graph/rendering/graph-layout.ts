@@ -235,4 +235,21 @@ export class GraphLayout {
 			));
 		}
 	}
+
+	public clear(): void {
+		this.hoveredPort?.classList.remove("hovered");
+		this.hoveredPort = null;
+
+		for (const { element } of this.nodeElements.values()) {
+			element.style.removeProperty("--drag-x");
+			element.style.removeProperty("--drag-y");
+		}
+
+		this.ports.clear();
+		this.portVersions.clear();
+		this.portElements.clear();
+		this.nodePorts.clear();
+		this.nodeElements.clear();
+		this.nodeDragOffsets.clear();
+	}
 }

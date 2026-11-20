@@ -5,6 +5,8 @@ import { observable } from "../reactive";
 import type { Editor } from "./editor";
 import { Project, ProjectInfo } from "./project";
 import { serializeProject, deserializeProject } from "./project-serializer";
+import type { WindowOpenOptions } from "./window";
+import type { WindowOptions } from "./window-manager";
 
 const PROJECTS_KEY = "graphite:projects";
 
@@ -121,12 +123,16 @@ export class ProjectManager {
 
 	public openGraph(editor: GraphEditor): void {
 		const graph = editor.graph;
-
+		const windowOptions: WindowOptions = {
+			singleInstance: false,
+			check: w => w.Component === GraphEditorView && w.props["editor"] === editor,
+			onClose: () => graph.manager?.closeEditor(graph, editor)
+		};
 		this.editor.windowManager.open(graph.name, GraphEditorView, {
 			editor,
 			onCreateSubgraph: (parentEditor, position) => this.createSubgraph(parentEditor, position),
 			projectManager: this
-		}, { singleInstance: false, check: (w) => w.Component === GraphEditorView && w.props["editor"] === editor });
+		}, windowOptions);
 	}
 
 	public createSubgraph(editor: GraphEditor, position: Vec2): void {

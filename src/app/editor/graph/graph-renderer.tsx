@@ -77,7 +77,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		store.updateNode(node);
 	}, [store]);
 
-	const selectTool = useMemo(() => new SelectTool(editor, layout), [editor, layout, store]);
+	const selectTool = useMemo(() => new SelectTool(editor, layout, invalidate), [editor, layout, invalidate]);
 
 	const cutTool = useMemo(() => new CutEdgesTool(editor, (start, end) => {
 		const canvasElement = canvas.current;
@@ -120,7 +120,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 				setGraphVersion(version => version + 1);
 				invalidate();
 			}),
-			subscribe(editor, "selectedNodes", { recursive: true }, () => setEditorVersion(version => version + 1)),
+			subscribe(editor, "selectedNodes", () => setEditorVersion(version => version + 1)),
 			subscribe(editor, "selection", { recursive: true }, () => {
 				setEditorVersion(version => version + 1);
 				invalidate();

@@ -7,7 +7,7 @@ export type DockPosition = "center" | "left" | "right" | "top" | "bottom";
 
 export type DropTarget = { panelId: number; position: DockPosition | "float" } | null;
 
-export type OpenOptions = WindowOpenOptions & {
+export type WindowOptions = WindowOpenOptions & {
 	float?: boolean;
 	check?: (window: Window) => boolean | undefined
 }
@@ -25,9 +25,9 @@ export class WindowManager {
 		this.layout = layout;
 	}
 
-	public open<T extends ComponentType<any>>(title: string, Component: T, props: Omit<ComponentProps<T>, "window">, { float, check, ...options }: OpenOptions): Window<ComponentProps<T>> {
+	public open<T extends ComponentType<any>>(title: string, Component: T, props: Omit<ComponentProps<T>, "window">, { float, check, ...options }: WindowOptions): Window<ComponentProps<T>> {
 		const found = this.windows.find(w => check ? check(w) : (w.Component === Component) && w.isSingleInstance);
-		
+
 		if (found)
 			return found;
 
@@ -41,8 +41,12 @@ export class WindowManager {
 	}
 
 	public close(window: Window): void {
+		if (!this.windows.includes(window))
+			return;
+
 		this.detach(window);
 		this.windows = this.windows.filter(item => item !== window);
+		window.onClose?.();
 	}
 
 	public activate(panel: LayoutPanel, window: Window): void {

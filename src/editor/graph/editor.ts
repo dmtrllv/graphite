@@ -101,6 +101,15 @@ export class GraphEditor {
 		this.history.execute(new DeleteNodesAction(this.graph, [...this.selectedNodes]));
 		this.selectedNodes = [];
 	}
+
+	public dispose(): void {
+		this.setTool(null);
+		this.selectedNodes = [];
+		this.selection = null;
+		this.draggingEdge = null;
+		this.edgeCut = null;
+		this.history.clear();
+	}
 }
 
 const GraphNodePort = (node: GraphNode, key: string, direction: "input" | "output") => {

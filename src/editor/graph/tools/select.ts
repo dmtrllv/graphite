@@ -1,4 +1,3 @@
-
 import { GraphEditorToolBase, type GraphPointerEvent } from "./tool";
 import { MoveNodesAction, type NodePositionChange } from "../actions";
 import { Selection } from "../editor-state";
@@ -8,17 +7,21 @@ import type { GraphEditor } from "../editor";
 
 type GraphSelectionHitTest = {
 	getNodesInRect(left: number, top: number, right: number, bottom: number): GraphNode[];
+	setNodeDragOffset(node: GraphNode, offset: Vec2 | null): void;
 };
 
 export class SelectTool extends GraphEditorToolBase {
 	private layout: GraphSelectionHitTest;
+	private invalidate: () => void;
 	private downPosition: Vec2 | null = null;
 	private changes: NodePositionChange[] = [];
+	private delta = new Vec2();
 	private dragging = false;
 
-	public constructor(editor: GraphEditor, layout: GraphSelectionHitTest) {
+	public constructor(editor: GraphEditor, layout: GraphSelectionHitTest, invalidate: () => void) {
 		super(editor);
 		this.layout = layout;
+		this.invalidate = invalidate;
 	}
 
 	public override pointerDown(event: GraphPointerEvent): void {
@@ -26,6 +29,8 @@ export class SelectTool extends GraphEditorToolBase {
 			return;
 
 		this.downPosition = event.graphPosition.clone();
+		this.changes = [];
+		this.delta = new Vec2();
 		this.dragging = false;
 
 		if (event.node) {
@@ -58,11 +63,12 @@ export class SelectTool extends GraphEditorToolBase {
 			if (!this.dragging)
 				return;
 
-			for (const change of this.changes) {
-				change.node.position.set(change.before.clone().add(delta));
-				change.after = change.node.position.clone();
-			}
+			this.delta = delta;
 
+			for (const change of this.changes)
+				this.layout.setNodeDragOffset(change.node, delta);
+
+			this.invalidate();
 			return;
 		}
 
@@ -77,23 +83,43 @@ export class SelectTool extends GraphEditorToolBase {
 		}
 	}
 
-	public override pointerUp(_event: GraphPointerEvent): void {
-		if (this.dragging && this.changes.length)
-			this.editor.history.recordApplied(new MoveNodesAction(this.changes));
+	public override pointerUp(event: GraphPointerEvent): void {
+		if (this.dragging && this.changes.length) {
+			this.pointerMove(event);
+
+			const changes = this.changes.map(change => ({
+				node: change.node,
+				before: change.before,
+				after: change.before.clone().add(this.delta)
+			}));
+
+			for (const change of changes) {
+				change.node.position.set(change.after);
+				this.layout.setNodeDragOffset(change.node, null);
+			}
+
+			if (changes.some(change => change.before.distance(change.after) > 0))
+				this.editor.history.recordApplied(new MoveNodesAction(changes));
+
+			this.invalidate();
+		}
 
 		this.editor.selection = null;
 		this.downPosition = null;
 		this.changes = [];
+		this.delta = new Vec2();
 		this.dragging = false;
 	}
 
 	public override cancel(): void {
 		for (const change of this.changes)
-			change.node.position = change.before.clone();
+			this.layout.setNodeDragOffset(change.node, null);
 
 		this.editor.selection = null;
 		this.downPosition = null;
 		this.changes = [];
+		this.delta = new Vec2();
 		this.dragging = false;
+		this.invalidate();
 	}
 }

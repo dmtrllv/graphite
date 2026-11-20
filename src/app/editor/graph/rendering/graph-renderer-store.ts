@@ -24,7 +24,7 @@ export class GraphRendererStore {
 	}
 
 	public attach(canvas: HTMLCanvasElement): void {
-		this.detach();
+		this.detach(false);
 		this.canvas = canvas;
 		this.layoutDirty = true;
 
@@ -32,7 +32,7 @@ export class GraphRendererStore {
 			subscribe(this.graph, "offset", { recursive: true }, this.invalidateLayout),
 			subscribe(this.graph, "scale", this.invalidateLayout),
 			subscribe(this.graph, "structureVersion", this.invalidateLayout),
-			subscribe(this.editor, "selectedNodes", { recursive: true }, this.invalidate),
+			subscribe(this.editor, "selectedNodes", this.invalidate),
 			subscribe(this.editor, "draggingEdge", { recursive: true }, this.invalidate),
 			subscribe(this.editor, "edgeCut", { recursive: true }, this.invalidate),
 			subscribe(this.settings, "lineWidth", { recursive: true }, this.invalidate),
@@ -42,7 +42,7 @@ export class GraphRendererStore {
 		this.invalidate();
 	}
 
-	public detach(): void {
+	public detach(clearLayout = true): void {
 		for (const unsubscribe of this.unsubscribers)
 			unsubscribe();
 
@@ -50,6 +50,9 @@ export class GraphRendererStore {
 		this.canvas = null;
 		this.scheduler.dispose();
 		this.renderer.clear();
+
+		if (clearLayout)
+			this.layout.clear();
 	}
 
 	public invalidate = (): void => {
