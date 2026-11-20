@@ -1,4 +1,4 @@
-import { Vec2, type GraphEditor, type Graph, type NodeEdge } from "@editor";
+import { Vec2, type GraphEditor, type Graph, type NodeEdge, GraphNode } from "@editor";
 import { EdgeGeometryCache } from "./edge-geometry";
 import { GraphLayout } from "./graph-layout";
 import type { GraphSettings } from "../../../../editor/settings";
@@ -93,12 +93,12 @@ export class EdgeRenderer {
 		if (!geometry)
 			return;
 
-		const sourceKind = edge.source.getPropKind(edge.sourceOutput);
-		const targetKind = edge.target.getPropKind(edge.targetInput);
+		const sourceKind = GraphNode.getPort(edge.source, edge.sourceOutput, "output")?.value.kind;
+		const targetKind = GraphNode.getPort(edge.target, edge.targetInput, "input")?.value.kind;
 		const gradient = ctx.createLinearGradient(geometry.start.x, geometry.start.y, geometry.end.x, geometry.end.y);
 
-		gradient.addColorStop(0, this.getEdgeColor(sourceKind ?? ""));
-		gradient.addColorStop(1, this.getEdgeColor(targetKind ?? ""));
+		gradient.addColorStop(0, this.getEdgeColor(sourceKind!));
+		gradient.addColorStop(1, this.getEdgeColor(targetKind!));
 
 		ctx.strokeStyle = gradient;
 
@@ -125,7 +125,7 @@ export class EdgeRenderer {
 			return;
 
 		const mouse = graph.getCanvasMousePosition(edge.mousePosition, ctx.canvas);
-		const kind = edge.node.getPropKind(edge.key);
+		const kind = GraphNode.getPort(edge.node, edge.key, edge.from)?.value.kind;
 
 		ctx.strokeStyle = this.getEdgeColor(kind ?? "");
 		ctx.beginPath();
@@ -153,13 +153,14 @@ export class EdgeRenderer {
 	}
 
 	private getEdgeColor(kind: string): string {
-		switch (kind) {
-			case "vector": return "#56B6C2";
-			case "scalar": return "#E5A45B";
-			case "texture": return "#62b64d";
-			case "sampler": return "#d46363";
-		}
-
-		return "white";
+		return EDGE_COLOR_MAP[kind] || "white";
 	}
 }
+
+
+const EDGE_COLOR_MAP: Record<string, string> = {
+	vector: "#56B6C2",
+	scalar: "#E5A45B",
+	map: "#62b64d",
+	sampler: "#d46363",
+};

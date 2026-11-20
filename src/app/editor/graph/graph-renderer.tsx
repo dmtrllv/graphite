@@ -117,30 +117,26 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		const unsubscribers = [
 			subscribe(graph.offset, { recursive: true }, () => {
 				setGraphVersion(version => version + 1);
+			}),
+			subscribe(editor.selection, { recursive: true }, () => {
+				setEditorVersion(version => version + 1);
 				invalidate();
 			}),
-			editor.selection ? subscribe(editor.selection, { recursive: true }, () => {
-				setEditorVersion(version => version + 1)
-				invalidate()
-			}) : null,
-			subscribe(graph, (e) => {
-				if (e.key === "structureVersion") {
+			subscribe(graph, e => {
+				if (e.key === "structureVersion")
 					setStructureVersion(graph.structureVersion);
-				} else if (e.key === "offset" || e.key === "scale") {
+				else if (e.key === "offset" || e.key === "scale")
 					setGraphVersion(version => version + 1);
-					invalidate();
-				} else if (e.key === "selectedNodes") {
-					setEditorVersion(version => version + 1)
-				} else if (e.key === "selection") {
+			}),
+			subscribe(editor, e => {
+				if (e.key === "selectedNodes" || e.key === "selection")
 					setEditorVersion(version => version + 1);
-					invalidate();
-				}
 			})
 		];
 
 		return () => {
 			for (const unsubscribe of unsubscribers)
-				unsubscribe && unsubscribe();
+				unsubscribe();
 		};
 	}, [graph, editor, editor.selection, invalidate]);
 

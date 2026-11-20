@@ -6,11 +6,12 @@ export interface SubscribeOptions {
 
 export type Unsubscribe = () => void;
 
-export function subscribe<T extends object>(target: T, callback: ObservableSubscriber): Unsubscribe;
-
-export function subscribe<T extends object>(target: T, options: SubscribeOptions, callback: ObservableSubscriber): Unsubscribe;
-
-export function subscribe<T extends object>(target: T, optionsOrCallback: SubscribeOptions | ObservableSubscriber, callback?: ObservableSubscriber): Unsubscribe {
+export function subscribe<T extends object>(target: T | null, callback: ObservableSubscriber): Unsubscribe;
+export function subscribe<T extends object>(target: T | null, options: SubscribeOptions, callback: ObservableSubscriber): Unsubscribe;
+export function subscribe<T extends object>(target: T | null, optionsOrCallback: SubscribeOptions | ObservableSubscriber, callback?: ObservableSubscriber): Unsubscribe {
+	if(target === null)
+		return () => {};
+	
 	ensureState(target);
 
 	const options = typeof optionsOrCallback === "function" ? {} : optionsOrCallback;

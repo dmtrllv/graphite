@@ -19,8 +19,6 @@ export class SelectTool extends GraphEditorToolBase {
 	private changes: NodePositionChange[] = [];
 	private delta = new Vec2();
 	private dragging = false;
-	private frame: number | null = null;
-	private pendingEvent: GraphPointerEvent | null = null;
 
 	public constructor(editor: GraphEditor, layout: GraphSelectionHitTest, invalidate: () => void) {
 		super(editor);
@@ -67,7 +65,7 @@ export class SelectTool extends GraphEditorToolBase {
 			}
 
 			if (this.dragging)
-				this.scheduleDrag(event);
+				this.applyDrag(event);
 
 			return;
 		}
@@ -85,7 +83,6 @@ export class SelectTool extends GraphEditorToolBase {
 
 	public override pointerUp(event: GraphPointerEvent): void {
 		if (this.dragging && this.changes.length) {
-			this.cancelScheduledDrag();
 			this.applyDrag(event);
 
 			const changes = this.changes.map(change => ({
@@ -115,8 +112,6 @@ export class SelectTool extends GraphEditorToolBase {
 	}
 
 	public override cancel(): void {
-		this.cancelScheduledDrag();
-
 		for (const change of this.changes)
 			this.layout.setNodeDragOffset(change.node, null);
 
@@ -131,23 +126,6 @@ export class SelectTool extends GraphEditorToolBase {
 		this.invalidate();
 	}
 
-	private scheduleDrag(event: GraphPointerEvent): void {
-		this.pendingEvent = event;
-
-		if (this.frame !== null)
-			return;
-
-		this.frame = requestAnimationFrame(() => {
-			this.frame = null;
-
-			const pending = this.pendingEvent;
-			this.pendingEvent = null;
-
-			if (pending && this.dragging)
-				this.applyDrag(pending);
-		});
-	}
-
 	private applyDrag(event: GraphPointerEvent): void {
 		if (!this.downPosition)
 			return;
@@ -158,13 +136,5 @@ export class SelectTool extends GraphEditorToolBase {
 			this.layout.setNodeDragOffset(change.node, this.delta);
 
 		this.invalidate();
-	}
-
-	private cancelScheduledDrag(): void {
-		if (this.frame !== null)
-			cancelAnimationFrame(this.frame);
-
-		this.frame = null;
-		this.pendingEvent = null;
 	}
 }
