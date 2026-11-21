@@ -5,6 +5,7 @@ import { observable } from "@reactive";
 import { GraphEditor } from "./editor";
 import { GraphViewport } from "./viewport";
 import { validateSimulationGraph } from "./simulation-graph";
+import type { ActionHistory } from "../actions";
 
 @observable
 @serializable({ type: "graph-manager", create: () => new GraphManager(false) })
@@ -24,6 +25,17 @@ export class GraphManager extends Serializable {
 
 	@observable
 	public accessor catalogVersion = 0;
+
+	private history?: ActionHistory;
+
+	public get worldGraph(): WorldGraph {
+		const graph = [...this.graphs.values()].find((graph): graph is WorldGraph => graph instanceof WorldGraph);
+
+		if (!graph)
+			throw new Error("GraphManager does not contain a World Graph!");
+
+		return graph;
+	}
 
 	public constructor(createWorldGraph = true) {
 		super();
@@ -54,13 +66,8 @@ export class GraphManager extends Serializable {
 		this.validateReferences();
 	}
 
-	public get worldGraph(): WorldGraph {
-		const graph = [...this.graphs.values()].find((graph): graph is WorldGraph => graph instanceof WorldGraph);
-
-		if (!graph)
-			throw new Error("GraphManager does not contain a World Graph!");
-
-		return graph;
+	public setHistory(history: ActionHistory): void {
+		this.history = history;
 	}
 
 	public get(id: number): Graph | undefined;
@@ -86,7 +93,11 @@ export class GraphManager extends Serializable {
 				this.viewports.set(graph.id, viewport);
 			}
 
-			editor = new GraphEditor(graph, viewport);
+			if (!this.history)
+				throw new Error("GraphManager has no ActionHistory!");
+
+			editor = new GraphEditor(graph, this.history, viewport);
+			
 			this.editors.set(graph.id, editor);
 		}
 

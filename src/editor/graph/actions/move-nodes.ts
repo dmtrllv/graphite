@@ -1,4 +1,4 @@
-import type { GraphAction } from "./action";
+import type { EditorAction } from "../../actions";
 import type { GraphNode } from "../nodes";
 import { Vec2 } from "../types";
 
@@ -8,7 +8,7 @@ export type NodePositionChange = {
 	after: Vec2;
 };
 
-export class MoveNodesAction implements GraphAction {
+export class MoveNodesAction implements EditorAction {
 	public constructor(private changes: NodePositionChange[]) { }
 
 	public execute(): void {

@@ -1,5 +1,5 @@
 import { observable } from "@reactive";
-import { Graph, PassGraph, Subgraph, WorldGraph } from "../graph";
+import { PassGraph, Subgraph, WorldGraph } from "../graph";
 import { GraphNode, GraphNodeCategory } from "./node";
 import { serializable } from "../../serializable";
 

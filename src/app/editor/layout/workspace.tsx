@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import type { DockPosition, DropTarget, Editor, Window } from "@editor"
+import type { DockPosition, DropTarget, Editor, Window, WindowManagerSnapshot } from "@editor"
 import { useObservable } from "@reactive";
 import { LayoutView } from "./layout";
 import { FloatingWindowView } from "./window";
@@ -14,6 +14,7 @@ type DragState = {
 	originBounds: Window["bounds"];
 	sourceState: Window["state"];
 	moved: boolean;
+	originLayout: WindowManagerSnapshot;
 };
 
 export const Workspace = ({ editor }: { editor: Editor }) => {
@@ -49,7 +50,8 @@ export const Workspace = ({ editor }: { editor: Editor }) => {
 			startY: event.clientY,
 			originBounds: { ...targetWindow.bounds },
 			sourceState: targetWindow.state,
-			moved: false
+			moved: false,
+			originLayout: editor.windowManager.captureLayoutState(),
 		};
 
 		dragRef.current = drag;
@@ -184,6 +186,7 @@ export const Workspace = ({ editor }: { editor: Editor }) => {
 					x: drag.originBounds.x + pointerEvent.clientX - drag.startX,
 					y: drag.originBounds.y + pointerEvent.clientY - drag.startY
 				};
+				editor.windowManager.recordLayoutChange(drag.originLayout);
 			}
 
 			if (moveFrameRef.current !== null) {

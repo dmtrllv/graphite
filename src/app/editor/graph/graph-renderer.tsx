@@ -218,7 +218,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [editor, nodePicker, isHovering]);
 
-	const getPointerEvent = (event: React.PointerEvent, node?: GraphNode, rect = root.current!.getBoundingClientRect()) => ({
+	const getPointerEvent = (event: React.PointerEvent, node?: GraphNode) => ({
 		clientX: event.clientX,
 		clientY: event.clientY,
 		button: event.button,
@@ -292,7 +292,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			layout.setHoveredPort();
 		}
 
-		editor.activeTool?.pointerMove(getPointerEvent(event, undefined, rect));
+		editor.activeTool?.pointerMove(getPointerEvent(event, undefined));
 	};
 
 	const onPointerUp = (event: React.PointerEvent) => {

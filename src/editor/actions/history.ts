@@ -1,17 +1,17 @@
-import type { GraphAction } from "./action";
+import type { EditorAction } from "./action";
 
-export class GraphEditorHistory {
+export class ActionHistory {
 	private static readonly MAX_ENTRIES = 100;
 
-	private undoStack: GraphAction[] = [];
-	private redoStack: GraphAction[] = [];
+	private undoStack: EditorAction[] = [];
+	private redoStack: EditorAction[] = [];
 
-	public execute(action: GraphAction): void {
+	public execute(action: EditorAction): void {
 		action.execute();
 		this.recordApplied(action);
 	}
 
-	public recordApplied(action: GraphAction): void {
+	public recordApplied(action: EditorAction): void {
 		this.undoStack.push(action);
 		this.redoStack = [];
 		this.trim(this.undoStack);
@@ -19,7 +19,8 @@ export class GraphEditorHistory {
 
 	public undo(): void {
 		const action = this.undoStack.pop();
-		if (!action) return;
+		if (!action)
+			return;
 
 		action.undo();
 		this.redoStack.push(action);
@@ -28,7 +29,8 @@ export class GraphEditorHistory {
 
 	public redo(): void {
 		const action = this.redoStack.pop();
-		if (!action) return;
+		if (!action)
+			return;
 
 		action.execute();
 		this.undoStack.push(action);
@@ -40,9 +42,9 @@ export class GraphEditorHistory {
 		this.redoStack = [];
 	}
 
-	private trim(stack: GraphAction[]): void {
-		if (stack.length > GraphEditorHistory.MAX_ENTRIES)
-			stack.splice(0, stack.length - GraphEditorHistory.MAX_ENTRIES);
+	private trim(stack: EditorAction[]): void {
+		if (stack.length > ActionHistory.MAX_ENTRIES)
+			stack.splice(0, stack.length - ActionHistory.MAX_ENTRIES);
 	}
 
 	public get canUndo(): boolean {

@@ -56,7 +56,7 @@ export class SimulationInputNode extends SimulationNode {
 	}
 }
 
-@GraphNode.register(GraphNodeCategory.Unknown, "Simulation Output")
+@GraphNode.register(GraphNodeCategory.Simulation, "Simulation Output")
 export class SimulationOutputNode extends SimulationNode {
 	public override getInterface() {
 		const graph = this.graph as SimulationGraph;

@@ -1,9 +1,9 @@
 import type { Graph } from "../graph";
 import { type GraphNode, type GraphNodeType } from "../nodes";
 import type { Vec2 } from "../types";
-import type { GraphAction } from "./action";
+import type { EditorAction } from "../../actions";
 
-export class AddNodeAction implements GraphAction {
+export class AddNodeAction implements EditorAction {
 	public node: GraphNode | null = null;
 
 	public constructor(

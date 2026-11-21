@@ -1,7 +1,7 @@
-import type { GraphAction } from "./action";
+import type { EditorAction } from "../../actions";
 
-export class CompositeAction implements GraphAction {
-	public constructor(private actions: GraphAction[]) { }
+export class CompositeAction implements EditorAction {
+	public constructor(private actions: EditorAction[]) { }
 
 	public execute(): void {
 		for (const action of this.actions)

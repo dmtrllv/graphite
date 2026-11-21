@@ -1,9 +1,10 @@
-import { VectorMathNode, SubgraphNode, Vec2, type GraphEditor } from "./graph";
+import { SubgraphNode, Vec2, type GraphEditor } from "./graph";
 import { observable } from "../reactive";
 import type { Editor } from "./editor";
 import { Project, ProjectInfo } from "./project";
 import { serializeProject, deserializeProject } from "./project-serializer";
-import type { WindowOptions } from "./window-manager";
+import type { WindowOptions } from "./window";
+import type { ActionHistory } from "./actions";
 
 const PROJECTS_KEY = "graphite:projects";
 const projectKey = (name: string) => `graphite:project:${name}`;
@@ -31,6 +32,10 @@ export class ProjectManager {
 
 	private readonly editor: Editor;
 
+	public get history(): ActionHistory {
+		return this.editor.history;
+	}
+
 	public constructor(editor: Editor) {
 		this.editor = editor;
 		this.activeProject = this.createNewProject();
@@ -50,7 +55,7 @@ export class ProjectManager {
 		const project = new Project(this, info, this.editor.settings.defaultSettings.clone());
 		const graph = project.graphManager.worldGraph;
 		this.openGraph(project.graphManager.openEditor(graph));
-
+		this.history.clear();
 		return project;
 	}
 
@@ -59,6 +64,7 @@ export class ProjectManager {
 	}
 
 	public newProject(name?: string): void {
+		this.history.clear();
 		this.activeProject.dispose();
 		this.editor.windowManager.closeAll();
 		this.activeProject = this.createNewProject(name);
@@ -107,12 +113,14 @@ export class ProjectManager {
 		const settings = this.editor.settings.loadProjectSettings(name);
 		const project = deserializeProject(this, JSON.parse(json), info.lastSave, settings);
 		const oldProject = this.activeProject;
-
+		
 		this.editor.windowManager.closeAll();
 		this.activeProject = project;
 
 		const graph = project.graphManager.worldGraph;
 		this.openGraph(project.graphManager.openEditor(graph));
+
+		this.history.clear();
 
 		oldProject.dispose();
 	}

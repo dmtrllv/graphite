@@ -1,7 +1,7 @@
 import { subscribe } from "@reactive";
 import { Bool, F16, F32, GraphInterfacePort, I32, U32, Vec2, Vec3, Vec4, WorldGraph, Subgraph, PassGraph, SimulationGraph, type Graph, type Type } from "@editor";
 import { useWindow } from "../layout";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NodePropInputs } from "./node-prop-view";
 
 import "./styles/graph-properties.scss";

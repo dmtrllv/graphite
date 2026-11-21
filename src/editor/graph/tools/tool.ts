@@ -20,7 +20,11 @@ export interface GraphEditorTool {
 }
 
 export abstract class GraphEditorToolBase implements GraphEditorTool {
-	public constructor(protected editor: GraphEditor) { }
+	public readonly editor: GraphEditor;
+
+	public constructor(editor: GraphEditor) {
+		this.editor = editor;
+	}
 
 	public pointerDown(_event: GraphPointerEvent): void { }
 	public pointerMove(_event: GraphPointerEvent): void { }

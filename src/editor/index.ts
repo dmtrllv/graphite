@@ -7,7 +7,6 @@ export * from "./project-serializer";
 export * from "./project-manager";
 export * from "./settings-manager";
 export * from "./settings";
-export * from "./window-manager";
 export * from "./window";
 export * from "./simulation";
 export * from "./serializable";

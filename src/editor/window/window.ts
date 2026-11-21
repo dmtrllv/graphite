@@ -1,5 +1,5 @@
 import type { WindowManager } from "./window-manager";
-import { observable } from "../reactive";
+import { observable } from "@reactive";
 
 export type WindowBounds = {
 	x: number;

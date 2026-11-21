@@ -267,7 +267,7 @@ export type ResolvedNodePort = {
 	editable: boolean;
 };
 
-export type GraphNodeType<T extends GraphNode> = new (id: number, graph: Graph, position?: Vec2) => T;
+export type GraphNodeType<T extends GraphNode = GraphNode> = new (id: number, graph: any, position?: Vec2) => T;
 
 export const input = GraphNode.input;
 export const output = GraphNode.output;

@@ -1,6 +1,8 @@
-import { observable } from "../reactive";
-import { EditorLayout, LayoutPanel } from "./editor-layout";
+import { observable } from "@reactive";
+import { EditorLayout, LayoutPanel } from "../editor-layout";
 import { Window, type WindowBounds, type WindowOpenOptions } from "./window";
+import type { ActionHistory } from "../actions";
+import { WindowLayoutAction } from "./actions";
 
 export type DockPosition = "center" | "left" | "right" | "top" | "bottom";
 
@@ -9,6 +11,26 @@ export type DropTarget = { panelId: number; position: DockPosition | "float" } |
 export type WindowOptions = WindowOpenOptions & {
 	float?: boolean;
 	check?: (window: Window) => boolean | undefined;
+};
+
+export type LayoutSnapshot = {
+	layout: EditorLayout;
+	direction: EditorLayout["direction"];
+	size: number;
+	children: (LayoutSnapshot | {
+		panel: LayoutPanel;
+		size: number;
+		tabs: Window[];
+		activeTab: number;
+	})[];
+};
+
+export type WindowManagerSnapshot = {
+	layout: LayoutSnapshot;
+	windows: Window[];
+	floatingWindows: Window[];
+	windowStates: Map<Window, Window["state"]>;
+	windowBounds: Map<Window, Window["bounds"]>;
 };
 
 @observable
@@ -21,8 +43,11 @@ export class WindowManager {
 	@observable
 	public accessor floatingWindows: Window[] = [];
 
-	public constructor(layout: EditorLayout) {
+	private readonly history: ActionHistory;
+
+	public constructor(layout: EditorLayout, history: ActionHistory) {
 		this.layout = layout;
+		this.history = history;
 	}
 
 	public open<P extends object = Record<string, never>>(title: string, component: string, props: P, { float, check, ...options }: WindowOptions = {}): Window<P> {
@@ -76,47 +101,53 @@ export class WindowManager {
 	}
 
 	public dock(window: Window, target: LayoutPanel, position: DockPosition): void {
-		const source = this.findPanel(window);
+		this.executeLayoutChange(() => {
+			const source = this.findPanel(window);
 
-		if (source === target && position === "center") {
-			target.activate(window);
-			return;
-		}
+			if (source === target && position === "center") {
+				target.activate(window);
+				return;
+			}
 
-		if (source === target && source.tabs.length === 1)
-			return;
+			if (source === target && source.tabs.length === 1)
+				return;
 
-		this.detach(window);
+			this.detach(window);
 
-		if (position === "center") {
-			target.tabs.push(window);
-			target.activate(window);
-		} else {
-			this.split(target, new LayoutPanel(target.parent, [window]), position);
-		}
+			if (position === "center") {
+				target.tabs.push(window);
+				target.activate(window);
+			} else {
+				this.split(target, new LayoutPanel(target.parent, [window]), position);
+			}
 
-		window.state = "docked";
+			window.state = "docked";
+		});
 	}
 
 	public dockToRoot(window: Window): void {
-		this.detach(window);
-		this.layout.children.push(new LayoutPanel(this.layout, [window]));
-		window.state = "docked";
+		this.executeLayoutChange(() => {
+			this.detach(window);
+			this.layout.children.push(new LayoutPanel(this.layout, [window]));
+			window.state = "docked";
+		});
 	}
 
 	public float(window: Window, bounds: Partial<WindowBounds> | "centered" = "centered"): void {
-		this.detach(window);
+		this.executeLayoutChange(() => {
+			this.detach(window);
 
-		if (bounds === "centered") {
-			const x = (globalThis.window?.innerWidth ?? window.bounds.width) / 2 - window.bounds.width / 2;
-			const y = (globalThis.window?.innerHeight ?? window.bounds.height) / 2 - window.bounds.height / 2;
-			window.bounds = { ...window.bounds, x, y };
-		} else {
-			window.bounds = { ...window.bounds, ...bounds };
-		}
+			if (bounds === "centered") {
+				const x = (globalThis.window?.innerWidth ?? window.bounds.width) / 2 - window.bounds.width / 2;
+				const y = (globalThis.window?.innerHeight ?? window.bounds.height) / 2 - window.bounds.height / 2;
+				window.bounds = { ...window.bounds, x, y };
+			} else {
+				window.bounds = { ...window.bounds, ...bounds };
+			}
 
-		this.floatingWindows.push(window);
-		window.state = "floating";
+			this.floatingWindows.push(window);
+			window.state = "floating";
+		});
 	}
 
 	private split(target: LayoutPanel, panel: LayoutPanel, position: Exclude<DockPosition, "center">): void {
@@ -233,5 +264,83 @@ export class WindowManager {
 			this.close(window);
 
 		this.windows = [];
+	}
+
+	private captureLayout(layout: EditorLayout): LayoutSnapshot {
+		return {
+			layout,
+			direction: layout.direction,
+			size: layout.size,
+			children: layout.children.map(child => {
+				if (child instanceof EditorLayout)
+					return this.captureLayout(child);
+
+				return {
+					panel: child,
+					size: child.size,
+					tabs: [...child.tabs],
+					activeTab: child.activeTab
+				};
+			})
+		};
+	}
+
+	private capture(): WindowManagerSnapshot {
+		return {
+			layout: this.captureLayout(this.layout),
+			windows: [...this.windows],
+			floatingWindows: [...this.floatingWindows],
+			windowStates: new Map(this.windows.map(window => [window, window.state])),
+			windowBounds: new Map(this.windows.map(window => [window, { ...window.bounds }]))
+		};
+	}
+
+	private restoreLayout(snapshot: LayoutSnapshot, parent: EditorLayout | null): void {
+		const layout = snapshot.layout;
+		layout.parent = parent;
+		layout.direction = snapshot.direction;
+		layout.size = snapshot.size;
+		layout.children = snapshot.children.map(child => {
+			if ("layout" in child) {
+				this.restoreLayout(child, layout);
+				return child.layout;
+			}
+
+			child.panel.parent = layout;
+			child.panel.size = child.size;
+			child.panel.tabs = [...child.tabs];
+			child.panel.activeTab = child.activeTab;
+			return child.panel;
+		});
+	}
+
+	private restore(snapshot: WindowManagerSnapshot): void {
+		this.restoreLayout(snapshot.layout, null);
+		this.windows = [...snapshot.windows];
+		this.floatingWindows = [...snapshot.floatingWindows];
+
+		for (const [window, state] of snapshot.windowStates)
+			window.state = state;
+
+		for (const [window, bounds] of snapshot.windowBounds)
+			window.bounds = { ...bounds };
+	}
+
+	public recordLayoutChange(before: WindowManagerSnapshot): void {
+		this.history.recordApplied(new WindowLayoutAction(this, before, this.capture()));
+	}
+
+	public captureLayoutState(): WindowManagerSnapshot {
+		return this.capture();
+	}
+
+	public restoreLayoutState(snapshot: WindowManagerSnapshot): void {
+		this.restore(snapshot);
+	}
+
+	public executeLayoutChange(callback: () => void): void {
+		const before = this.capture();
+		callback();
+		this.history.recordApplied(new WindowLayoutAction(this, before, this.capture()));
 	}
 }

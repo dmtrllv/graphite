@@ -1,9 +1,9 @@
 import type { Graph } from "../graph";
 import { NodeEdge } from "../edge";
 import type { GraphNode } from "../nodes";
-import type { GraphAction } from "./action";
+import type { EditorAction } from "../../actions";
 
-export class ConnectNodesAction implements GraphAction {
+export class ConnectNodesAction implements EditorAction {
 	private created: NodeEdge | null = null;
 
 	public constructor(

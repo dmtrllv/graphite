@@ -48,11 +48,13 @@ export class Project extends Serializable {
 		this.info = info;
 		this.settings = settings;
 		this.graphManager = graphManager;
+		this.graphManager.setHistory(manager.history);
 		this.simulationManager = simulationManager;
 		this.bindSubscriptions();
 	}
 
 	protected override initialize() {
+		this.graphManager.setHistory(this.manager.history);
 		this.simulationManager.setGraphManager(this.graphManager);
 		this.bindSubscriptions();
 	}

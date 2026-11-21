@@ -4,14 +4,14 @@ import type { GraphEditorTool } from "./tools/tool";
 import { Selection, DraggingEdge, EdgeSlice } from "./editor-state";
 import { GraphNode, type GraphNodeType } from "./nodes";
 import { Vec2 } from "./types";
-import { GraphEditorHistory, ConnectNodesAction, AddNodeAction, DeleteNodesAction } from "./actions";
 import { GraphViewport } from "./viewport";
+import { ConnectNodesAction, AddNodeAction, DeleteNodesAction } from "./actions";
+import type { ActionHistory } from "../actions";
 
 @observable
 export class GraphEditor {
 	public readonly graph: Graph;
 	public readonly viewport: GraphViewport;
-	public readonly history = new GraphEditorHistory();
 
 	public get offset(): Vec2 {
 		return this.viewport.offset;
@@ -36,8 +36,11 @@ export class GraphEditor {
 	@observable
 	public accessor edgeCut: EdgeSlice | null = null;
 
-	public constructor(graph: Graph, viewport: GraphViewport = new GraphViewport()) {
+	public readonly history: ActionHistory;
+
+	public constructor(graph: Graph, history: ActionHistory, viewport: GraphViewport = new GraphViewport()) {
 		this.graph = graph;
+		this.history = history;
 		this.viewport = viewport;
 	}
 
@@ -111,10 +114,12 @@ export class GraphEditor {
 	}
 
 	public removeSelectedNodes(): void {
-		if (!this.selectedNodes.length)
+		const nodes = this.selectedNodes.filter(node => node.name !== this.graph.outputNodeName);
+
+		if (!nodes.length)
 			return;
 
-		this.history.execute(new DeleteNodesAction(this.graph, [...this.selectedNodes]));
+		this.history.execute(new DeleteNodesAction(this.graph, nodes));
 		this.selectedNodes = [];
 	}
 
@@ -124,6 +129,5 @@ export class GraphEditor {
 		this.selection = null;
 		this.draggingEdge = null;
 		this.edgeCut = null;
-		this.history.clear();
 	}
 }

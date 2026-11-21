@@ -1,13 +1,15 @@
 import type { Graph } from "../graph";
 import type { NodeEdge } from "../edge";
 import type { GraphNode } from "../nodes";
-import type { GraphAction } from "./action";
+import type { EditorAction } from "../../actions";
 
-export class DeleteNodesAction implements GraphAction {
+export class DeleteNodesAction implements EditorAction {
 	private edges: NodeEdge[];
+	private nodes: GraphNode[];
 
-	public constructor(private graph: Graph, private nodes: GraphNode[]) {
-		this.edges = [...new Set(nodes.flatMap(node => graph.index.getConnectedEdges(node)))];
+	public constructor(private graph: Graph, nodes: GraphNode[]) {
+		this.nodes = nodes.filter(node => node.name !== graph.outputNodeName);
+		this.edges = [...new Set(this.nodes.flatMap(node => graph.index.getConnectedEdges(node)))];
 	}
 
 	public execute(): void {
