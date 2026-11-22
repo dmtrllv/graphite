@@ -1,5 +1,5 @@
 import { observable } from "@reactive";
-import { GraphNode, type GraphNodeType } from "./nodes";
+import { GraphNode, GraphOutputNode, PassOutputNode, SimulationOutputNode, WorldOutputNode, type GraphNodeType } from "./nodes";
 import { GraphIndex } from "./graph-index";
 import type { GraphManager } from "./graph-manager";
 import { F32, Type, Vec2 } from "./types";
@@ -31,7 +31,10 @@ export abstract class Graph extends Serializable {
 		return this._manager;
 	}
 
-	public abstract readonly outputNodeName: string;
+	public abstract readonly outputNodeType: GraphNodeType;
+
+	@serializable(Number)
+	public accessor outputNodeId: number | null = null;
 
 	@serializable(Number)
 	public readonly id: number;
@@ -61,21 +64,6 @@ export abstract class Graph extends Serializable {
 
 	public readonly index = new GraphIndex();
 
-	protected override initialize(): void {
-		this._nodeIdCounter = 0;
-		this._edgeIdCounter = 0;
-		this.index.clear();
-
-		for (const node of this.nodes.values()) {
-			this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
-		}
-
-		for (const edge of this.edges.values()) {
-			this.index.add(edge);
-			this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
-		}
-	}
-
 	public constructor(id: number, name: string, nodes: Map<number, GraphNode> = new Map(), edges: Map<number, NodeEdge> = new Map()) {
 		super();
 		this.id = id;
@@ -92,32 +80,43 @@ export abstract class Graph extends Serializable {
 		}
 	}
 
+
+	public isOutputNode(node: GraphNode): boolean {
+		return node.graph === this && node.id === this.outputNodeId;
+	}
+
+
+	protected override initialize(): void {
+		this._nodeIdCounter = 0;
+		this._edgeIdCounter = 0;
+		this.index.clear();
+
+		for (const node of this.nodes.values()) {
+			this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
+		}
+
+		for (const edge of this.edges.values()) {
+			this.index.add(edge);
+			this._edgeIdCounter = Math.max(this._edgeIdCounter, edge.id + 1);
+		}
+	}
+
 	public setManager(manager: GraphManager): void {
 		this._manager = manager;
 	}
 
-	public ensureOutputNode(): void {
-		const outputs = [...this.nodes.values()].filter(node => node.name === this.outputNodeName);
+	public createOutputNode(): void {
+		if (this.outputNodeId !== null)
+			throw new Error(`${this.constructor.name} already has an output node!`);
 
-		if (outputs.length > 1)
-			throw new Error(`${this.constructor.name} can only contain one ${this.outputNodeName}!`);
-
-		if (outputs.length === 1)
-			return;
-
-		const type = GraphNode.getRegisteredNodes().get(this.outputNodeName);
-
-		if (!type)
-			throw new Error(`Node "${this.outputNodeName}" is not registered!`);
-
-		this.addNode(type);
+		this.outputNodeId = this.addNode(this.outputNodeType).id;
 	}
 
 	public validate(): void {
-		const outputs = [...this.nodes.values()].filter(node => node.name === this.outputNodeName);
+		const output = this.outputNodeId === null ? undefined : this.nodes.get(this.outputNodeId);
 
-		if (outputs.length !== 1)
-			throw new Error(`${this.constructor.name} must contain exactly one ${this.outputNodeName}!`);
+		if (!output || output.constructor !== this.outputNodeType)
+			throw new Error(`${this.constructor.name} must contain a valid output node!`);
 
 		for (const node of this.nodes.values()) {
 			if (node.graph !== this)
@@ -150,12 +149,15 @@ export abstract class Graph extends Serializable {
 	}
 
 	public addNode<T extends GraphNode>(type: GraphNodeType<T>, position: Vec2 = new Vec2()): T {
-		if (GraphNode.getRegisteredNodes().get(this.outputNodeName) === type && [...this.nodes.values()].some(node => node.name === this.outputNodeName))
+		if (type === this.outputNodeType && this.outputNodeId !== null)
 			throw new Error(`${this.constructor.name} already has its mandatory output node!`);
 
 		const node = new type(this._nodeIdCounter++, this, position);
 		this.nodes.set(node.id, node);
 		this.structureVersion++;
+
+		if (type === this.outputNodeType)
+			this.outputNodeId = node.id;
 
 		if ("graphId" in node && node.graphId !== null)
 			this._manager?.notifySubgraphTopologyChanged();
@@ -170,10 +172,14 @@ export abstract class Graph extends Serializable {
 		if (node.graph !== this)
 			throw new Error(`Cannot restore node ${node.id} into a different graph!`);
 
-		if (node.name === this.outputNodeName && [...this.nodes.values()].some(item => item.name === this.outputNodeName))
+		if (node.constructor === this.outputNodeType && this.outputNodeId !== null && this.outputNodeId !== node.id)
 			throw new Error(`${this.constructor.name} already has its mandatory output node!`);
 
 		this.nodes.set(node.id, node);
+
+		if (node.constructor === this.outputNodeType)
+			this.outputNodeId = node.id;
+
 		this._nodeIdCounter = Math.max(this._nodeIdCounter, node.id + 1);
 		this.structureVersion++;
 
@@ -186,11 +192,11 @@ export abstract class Graph extends Serializable {
 	public removeNode(idOrNode: number | GraphNode): void {
 		const node = typeof idOrNode === "number" ? this.nodes.get(idOrNode) : idOrNode;
 
-		if (!node || !this.nodes.has(node.id))
+		if (!node || this.nodes.get(node.id) !== node)
 			return;
 
-		if (node.name === this.outputNodeName)
-			throw new Error(`${this.outputNodeName} cannot be removed!`);
+		if (this.isOutputNode(node))
+			throw new Error("The output node cannot be removed!");
 
 		for (const edge of this.index.getConnectedEdges(node))
 			this.removeEdge(edge);
@@ -376,19 +382,19 @@ export abstract class Graph extends Serializable {
 @observable
 @serializable({ type: "graph:world", create: data => new WorldGraph(data.id, data.name) })
 export class WorldGraph extends Graph {
-	public readonly outputNodeName = "World Output";
+	public readonly outputNodeType = WorldOutputNode;
 }
 
 @observable
 @serializable({ type: "graph:subgraph", create: data => new Subgraph(data.id, data.name) })
 export class Subgraph extends Graph {
-	public readonly outputNodeName = "Graph Output";
+	public readonly outputNodeType = GraphOutputNode;
 }
 
 @observable
 @serializable({ type: "graph:pass", create: data => new PassGraph(data.id, data.name) })
 export class PassGraph extends Graph {
-	public readonly outputNodeName = "Pass Output";
+	public readonly outputNodeType = PassOutputNode;
 
 	@observable
 	@serializable(mapOf(String, GraphInterfacePort))
@@ -435,7 +441,7 @@ export class PassGraph extends Graph {
 @observable
 @serializable({ type: "graph:simulation", create: data => new SimulationGraph(data.id, data.name) })
 export class SimulationGraph extends Graph {
-	public readonly outputNodeName = "Simulation Output";
+	public readonly outputNodeType = SimulationOutputNode;
 
 	@observable
 	@serializable(mapOf(String, GraphInterfacePort))

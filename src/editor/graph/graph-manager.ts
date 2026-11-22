@@ -62,7 +62,6 @@ export class GraphManager extends Serializable {
 			if (!this.viewports.has(graph.id))
 				this.viewports.set(graph.id, new GraphViewport());
 
-			graph.ensureOutputNode();
 			graph.validate();
 
 			if (graph instanceof SimulationGraph)
@@ -128,22 +127,22 @@ export class GraphManager extends Serializable {
 			throw new Error("A GraphManager can only contain one World Graph!");
 
 		const graph = new WorldGraph(this._idCounter++, name);
-		return this.register(graph) as WorldGraph;
+		return this.register(graph, true) as WorldGraph;
 	}
 
 	public createSubgraph(name = this.createName("Subgraph")): Subgraph {
-		return this.register(new Subgraph(this._idCounter++, name)) as Subgraph;
+		return this.register(new Subgraph(this._idCounter++, name), true) as Subgraph;
 	}
 
 	public createPassGraph(name = this.createName("Pass")): PassGraph {
-		return this.register(new PassGraph(this._idCounter++, name)) as PassGraph;
+		return this.register(new PassGraph(this._idCounter++, name), true) as PassGraph;
 	}
 
 	public createSimulationGraph(name = this.createName("Simulation")): SimulationGraph {
-		return this.register(new SimulationGraph(this._idCounter++, name)) as SimulationGraph;
+		return this.register(new SimulationGraph(this._idCounter++, name), true) as SimulationGraph;
 	}
 
-	private register<T extends Graph>(graph: T): T {
+	private register<T extends Graph>(graph: T, createOutput = false): T {
 		if (this.get(graph.name))
 			throw new DuplicateGraphNameError(graph.name);
 
@@ -157,10 +156,14 @@ export class GraphManager extends Serializable {
 		this.graphs.set(graph.id, graph);
 
 		try {
-			graph.ensureOutputNode();
+			if (createOutput)
+				graph.createOutputNode();
+
 			graph.validate();
+
 			if (graph instanceof SimulationGraph)
 				validateSimulationGraph(graph);
+
 			this.validateReferences();
 		} catch (error) {
 			this.graphs.delete(graph.id);

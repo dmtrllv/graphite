@@ -117,7 +117,7 @@ export class GraphEditor {
 	}
 
 	public removeSelectedNodes(): void {
-		const nodes = this.selectedNodes.filter(node => node.name !== this.graph.outputNodeName);
+		const nodes = this.selectedNodes.filter(node => node.graph === this.graph && !this.graph.isOutputNode(node));
 
 		if (!nodes.length)
 			return;

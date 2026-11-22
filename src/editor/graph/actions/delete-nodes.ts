@@ -12,7 +12,7 @@ export class DeleteNodesAction extends GraphAction {
 
 	public constructor(graphEditor: GraphEditor, projectManager: ProjectManager, nodes: GraphNode[]) {
 		super(graphEditor, projectManager);
-		this.nodes = nodes.filter(node => node.name !== this.graph.outputNodeName);
+		this.nodes = nodes.filter(node => node.graph === this.graph && !this.graph.isOutputNode(node));
 		this.edges = [...new Set(this.nodes.flatMap(node => this.graph.index.getConnectedEdges(node)))];
 	}
 
