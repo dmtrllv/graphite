@@ -24,6 +24,7 @@ export class GraphLayout {
 	private nodeElements = new Map<number, { node: GraphNode; element: HTMLDivElement }>();
 	private hoveredPort: HTMLDivElement | null = null;
 	private nodeDragOffsets = new Map<number, Vec2>();
+	private pendingNodeDragOffsets = new Map<number, Vec2 | null>();
 
 	private getPortKey(node: GraphNode, direction: PortDirection, key: string): string {
 		return `${node.id}:${direction}:${key}`;
@@ -203,41 +204,30 @@ export class GraphLayout {
 	}
 
 	public setNodeDragOffset(node: GraphNode, offset: Vec2 | null): void {
-		const previous = this.nodeDragOffsets.get(node.id) ?? new Vec2();
-		const current = offset ?? new Vec2();
-		const delta = new Vec2(current.x - previous.x, current.y - previous.y);
-		const element = this.nodeElements.get(node.id)?.element;
+		this.pendingNodeDragOffsets.set(node.id, offset);
+	}
 
-		if (offset) {
-			this.nodeDragOffsets.set(node.id, current);
-			element?.style.setProperty("--drag-x", `${current.x}px`);
-			element?.style.setProperty("--drag-y", `${-current.y}px`);
-		} else {
-			this.nodeDragOffsets.delete(node.id);
-			element?.style.removeProperty("--drag-x");
-			element?.style.removeProperty("--drag-y");
-		}
-
-		if (delta.x === 0 && delta.y === 0)
+	public flushNodeDragOffsets(editor: GraphEditor, canvas: HTMLCanvasElement): void {
+		if (!this.pendingNodeDragOffsets.size)
 			return;
 
-		const ports = this.nodePorts.get(node.id);
-
-		if (!ports)
-			return;
-
-		for (const id of ports) {
-			const port = this.ports.get(id);
-			const element = this.portElements.get(id);
-
-			if (!port || !element)
+		for (const [id, offset] of this.pendingNodeDragOffsets) {
+			const entry = this.nodeElements.get(id);
+			if (!entry)
 				continue;
 
-			this.updatePort(node, element.direction, element.key, new Vec2(
-				port.position.x + delta.x,
-				port.position.y + delta.y
-			));
+			if (offset) {
+				entry.element.style.setProperty("--drag-x", `${offset.x}px`);
+				entry.element.style.setProperty("--drag-y", `${-offset.y}px`);
+			} else {
+				entry.element.style.removeProperty("--drag-x");
+				entry.element.style.removeProperty("--drag-y");
+			}
+
+			this.updateNode(entry.node, editor, canvas);
 		}
+
+		this.pendingNodeDragOffsets.clear();
 	}
 
 	public clear(): void {
@@ -255,5 +245,6 @@ export class GraphLayout {
 		this.nodePorts.clear();
 		this.nodeElements.clear();
 		this.nodeDragOffsets.clear();
+		this.pendingNodeDragOffsets.clear();
 	}
 }

@@ -115,6 +115,7 @@ export class GraphRendererStore {
 		if (!this.canvas || !this.bounds)
 			return;
 
+		this.layout.flushNodeDragOffsets(this.editor, this.canvas);
 		this.renderer.render(this.graph, this.editor, this.canvas, this.layout, this.settings, this.bounds);
 	}
 }

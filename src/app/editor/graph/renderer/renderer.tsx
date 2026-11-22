@@ -117,7 +117,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			onContextMenu={event => event.preventDefault()}
 			onMouseLeave={interaction.onMouseLeave}>
 			<canvas ref={canvas} />
-			<div className="graph" style={style} data-viewport-version={viewportVersion}>
+			<div className="graph" style={style}>
 				{mapChildren(graph.nodes, (key, node) => (
 					<GraphNodeView key={`${graph.id}:${key}`} node={node} editor={editor} layout={layout}
 						selected={editor.isSelected(node)}
