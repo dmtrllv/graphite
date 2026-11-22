@@ -21,14 +21,17 @@ export const PanelView = ({ panel, onWindowDrag, dropPosition }: PanelViewProps)
 	const className = useMemo(() => `panel${dropPosition ? ` drop-target drop-${dropPosition}` : ""}`, [dropPosition]);
 	const style = useMemo(() => ({ flex: `${panel.size} 1 0px` }), [panel.size]);
 
+	const onPointerEnter = () => activeWindow?.manager.activateWindow(activeWindow);
+	const onPointerDownCapture = () => activeWindow?.manager.activateWindow(activeWindow);
+
 	return (
-		<div className={className} data-panel-id={panel.id} style={style}>
+		<div className={className} data-panel-id={panel.id} style={style} onPointerEnter={onPointerEnter} onPointerDownCapture={onPointerDownCapture}>
 			<div className="tab-titles">
 				{panel.tabs.map((tab, index) => {
 					const className = `title${panel.activeTab === index ? " active" : ""}`;
 
 					return (
-						<div key={tab.id} className={className} onClick={() => panel.activate(tab)} onPointerDown={event => onWindowDrag(tab, event)}>
+						<div key={tab.id} className={className} onClick={() => tab.manager.activateWindow(tab)} onPointerDown={event => onWindowDrag(tab, event)}>
 							<span>{tab.title}</span>
 							<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => tab.manager.close(tab)}>
 								×

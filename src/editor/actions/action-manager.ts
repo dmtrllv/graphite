@@ -1,10 +1,10 @@
-import type { EditorAction, ActionConstructor } from "./action";
+import type { EditorAction, ActionConstructor, ActivationConstructor } from "./action";
 import { getActionMetadata } from "./action";
 import { ActionHistory } from "./history";
 
-type ActionFactory = (...args: any[]) => EditorAction | null;
 type RegisteredAction = {
-	factory: ActionFactory;
+	factory: (context: object | null) => EditorAction | null;
+	activation: ActivationConstructor | null;
 };
 
 const normalizeShortcut = (shortcut: string): string => {
@@ -42,8 +42,9 @@ export class ActionManager {
 	public readonly history = new ActionHistory();
 
 	private actions = new Map<string, RegisteredAction>();
-	private shortcuts = new Map<string, string>();
+	private shortcuts = new Map<string, string[]>();
 	private commands = new Map<string, () => void>();
+	private activationStack: object[] = [];
 
 	public constructor() {
 		this.commands.set("history.undo", () => this.undo());
@@ -52,7 +53,13 @@ export class ActionManager {
 		this.bindShortcut("history.redo", "Mod+Shift+Z");
 	}
 
-	public register(type: ActionConstructor, factory: ActionFactory): void {
+	public get activeContext(): object | null {
+		return this.activationStack.at(-1) ?? null;
+	}
+
+	public register(type: ActionConstructor, factory: () => EditorAction | null): void;
+	public register<TActivation extends ActivationConstructor>(type: ActionConstructor, activation: TActivation, factory: (context: InstanceType<TActivation>) => EditorAction | null): void;
+	public register(type: ActionConstructor, activationOrFactory: ActivationConstructor | (() => EditorAction | null), contextualFactory?: (...args: never[]) => EditorAction | null): void {
 		const metadata = getActionMetadata(type);
 
 		if (!metadata)
@@ -61,7 +68,27 @@ export class ActionManager {
 		if (this.actions.has(metadata.id) || this.commands.has(metadata.id))
 			throw new Error(`Action '${metadata.id}' is already registered.`);
 
-		this.actions.set(metadata.id, { factory });
+		if (contextualFactory) {
+			if (!metadata.activation || activationOrFactory !== metadata.activation())
+				throw new Error(`Action '${metadata.id}' must be registered with its declared activation type.`);
+
+			const activation = metadata.activation();
+			this.actions.set(metadata.id, {
+				activation,
+				factory: context => context instanceof activation
+					? Reflect.apply(contextualFactory, undefined, [context]) as EditorAction | null
+					: null
+			});
+		} else {
+			if (metadata.activation)
+				throw new Error(`Action '${metadata.id}' requires an activation context.`);
+
+			const factory = activationOrFactory as () => EditorAction | null;
+			this.actions.set(metadata.id, {
+				activation: null,
+				factory: () => factory()
+			});
+		}
 
 		if (metadata.shortcut) {
 			const shortcuts = Array.isArray(metadata.shortcut) ? metadata.shortcut : [metadata.shortcut];
@@ -69,6 +96,15 @@ export class ActionManager {
 			for (const shortcut of shortcuts)
 				this.bindShortcut(metadata.id, shortcut);
 		}
+	}
+
+	public activate(context: object): void {
+		this.deactivate(context);
+		this.activationStack.push(context);
+	}
+
+	public deactivate(context: object): void {
+		this.activationStack = this.activationStack.filter(item => item !== context);
 	}
 
 	public execute(action: EditorAction): void {
@@ -83,7 +119,7 @@ export class ActionManager {
 			action.execute();
 	}
 
-	public executeById(id: string, ...args: any[]): void {
+	public executeById(id: string): void {
 		const command = this.commands.get(id);
 
 		if (command) {
@@ -96,7 +132,7 @@ export class ActionManager {
 		if (!registered)
 			throw new Error(`Action '${id}' is not registered.`);
 
-		const action = registered.factory(...args);
+		const action = registered.factory(this.activeContext);
 
 		if (action)
 			this.execute(action);
@@ -124,7 +160,24 @@ export class ActionManager {
 		if (event.defaultPrevented || event.isComposing || isEditableTarget(event.target))
 			return;
 
-		const id = this.shortcuts.get(getEventShortcut(event));
+		const ids = this.shortcuts.get(getEventShortcut(event));
+
+		if (!ids)
+			return;
+
+		const activeContext = this.activeContext;
+		let id: string | undefined;
+
+		if (activeContext) {
+			const contextual = ids.filter(id => this.actions.get(id)?.activation && activeContext instanceof this.actions.get(id)!.activation!);
+
+			if (contextual.length > 1)
+				throw new Error(`Shortcut '${getEventShortcut(event)}' is ambiguous for the active context.`);
+
+			id = contextual[0];
+		}
+
+		id ??= ids.find(id => this.actions.get(id)?.activation === null || this.commands.has(id));
 
 		if (!id)
 			return;
@@ -135,11 +188,22 @@ export class ActionManager {
 
 	private bindShortcut(id: string, shortcut: string): void {
 		const key = normalizeShortcut(shortcut);
-		const existing = this.shortcuts.get(key);
+		const ids = this.shortcuts.get(key) ?? [];
 
-		if (existing)
-			throw new Error(`Shortcut '${shortcut}' is already assigned to '${existing}'.`);
+		if (ids.includes(id))
+			return;
 
-		this.shortcuts.set(key, id);
+		const metadata = this.actions.get(id);
+		const activation = metadata?.activation ?? null;
+
+		for (const existingId of ids) {
+			const existing = this.actions.get(existingId);
+			const existingActivation = existing?.activation ?? null;
+
+			if (activation === existingActivation)
+				throw new Error(`Shortcut '${shortcut}' is already assigned to '${existingId}'.`);
+		}
+
+		this.shortcuts.set(key, [...ids, id]);
 	}
 }

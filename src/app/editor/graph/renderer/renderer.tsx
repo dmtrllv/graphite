@@ -111,6 +111,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			onPointerCancel={interaction.onPointerCancel}
 			onWheel={interaction.onWheel}
 			onContextMenu={event => event.preventDefault()}
+			onMouseEnter={interaction.onMouseEnter}
 			onMouseLeave={interaction.onMouseLeave}>
 			<canvas ref={canvas} />
 			<div ref={graphElement} className="graph">

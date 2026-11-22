@@ -46,6 +46,20 @@ export const useGraphInteraction = ({ editor, graph, layout, store, canvas, root
 	}, [editor, selectTool]);
 
 	useEffect(() => {
+		return () => editor.actionManager.deactivate(editor);
+	}, [editor]);
+
+	const onMouseEnter = () => {
+		editor.actionManager.activate(editor);
+		setHovering(true);
+	};
+
+	const onMouseLeave = () => {
+		editor.actionManager.deactivate(editor);
+		setHovering(false);
+	};
+
+	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (!isHovering)
 				return;
@@ -118,6 +132,8 @@ export const useGraphInteraction = ({ editor, graph, layout, store, canvas, root
 	};
 
 	const onNodePointerDown = (event: React.PointerEvent, node: GraphNode) => {
+		editor.actionManager.activate(editor);
+
 		if (event.button !== 0)
 			return;
 
@@ -130,8 +146,8 @@ export const useGraphInteraction = ({ editor, graph, layout, store, canvas, root
 
 	const onPointerMove = (event: React.PointerEvent) => {
 		if (!isHovering)
-			setHovering(true);
-
+			onMouseEnter();
+		
 		const rect = root.current!.getBoundingClientRect();
 		mousePosition.current = new Vec2(event.clientX - rect.left, event.clientY - rect.top);
 
@@ -201,8 +217,6 @@ export const useGraphInteraction = ({ editor, graph, layout, store, canvas, root
 		store.invalidate();
 	};
 
-	const onMouseLeave = () => setHovering(false);
-
 	return {
 		nodePicker,
 		setNodePicker,
@@ -212,6 +226,7 @@ export const useGraphInteraction = ({ editor, graph, layout, store, canvas, root
 		onPointerUp,
 		onPointerCancel,
 		onWheel,
-		onMouseLeave
+		onMouseEnter,
+		onMouseLeave,
 	};
 };

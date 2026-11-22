@@ -1,9 +1,9 @@
 import { observable } from "../reactive";
-import { EditorLayout, LayoutPanel } from "./editor-layout";
+import { EditorLayout } from "./editor-layout";
 import { Menubar, MenuItem, MenuSeparator } from "./menubar";
 import { ProjectManager } from "./project-manager";
 import { SettingsManager } from "./settings/settings-manager";
-import { WindowManager, type Window } from "./window";
+import { WindowManager } from "./window";
 import { ActionManager } from "./actions";
 import { GraphEditor, DeleteNodesAction } from "./graph";
 
@@ -26,7 +26,7 @@ export class Editor {
 	public readonly actionManager = new ActionManager();
 
 	public readonly layout: EditorLayout = new EditorLayout(null);
-	public readonly windowManager: WindowManager = new WindowManager(this.layout);
+	public readonly windowManager: WindowManager = new WindowManager(this.layout, this.actionManager);
 	public readonly projectManager: ProjectManager = new ProjectManager(this);
 
 	public readonly menubar: Menubar = new Menubar([
@@ -60,43 +60,9 @@ export class Editor {
 	]);
 
 	public constructor() {
-		this.actionManager.register(DeleteNodesAction, () => {
-			const editor = this.getActiveGraphEditor();
-			return editor?.selectedNodes.length ? new DeleteNodesAction(editor, this.projectManager, editor.selectedNodes) : null;
+		this.actionManager.register(DeleteNodesAction, GraphEditor, editor => {
+			return editor.selectedNodes.length ? new DeleteNodesAction(editor, this.projectManager, editor.selectedNodes) : null;
 		});
-	}
-
-	private getActiveGraphEditor(): GraphEditor | null {
-		const getEditor = (window: Window | undefined): GraphEditor | null => {
-			if (!window || window.component !== "graph-editor")
-				return null;
-
-			return (window.props as { editor?: GraphEditor }).editor ?? null;
-		};
-
-		for (const window of [...this.windowManager.floatingWindows].reverse()) {
-			const editor = getEditor(window);
-			if (editor)
-				return editor;
-		}
-
-		const find = (layout: EditorLayout): GraphEditor | null => {
-			for (const child of layout.children) {
-				if (child instanceof LayoutPanel) {
-					const editor = getEditor(child.tabs[child.activeTab]);
-					if (editor)
-						return editor;
-				} else {
-					const editor = find(child);
-					if (editor)
-						return editor;
-				}
-			}
-
-			return null;
-		};
-
-		return find(this.layout);
 	}
 
 	public async init(): Promise<void> { }

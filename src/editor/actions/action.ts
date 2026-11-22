@@ -3,9 +3,14 @@ export interface EditorAction {
 	undo(): void;
 }
 
+export type ActivationReference<T extends object = object> = () => ActivationConstructor<T>;
+
+export type ActivationConstructor<TContext extends object = object> = abstract new (...args: any[]) => TContext;
+
 export type ActionMetadata = {
 	id: string;
 	shortcut?: string | string[];
+	activation?: ActivationReference;
 	history?: boolean;
 };
 

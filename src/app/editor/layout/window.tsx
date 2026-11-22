@@ -80,9 +80,12 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 		height: floatingWindow.bounds.height
 	};
 
+	const onPointerEnter = () => floatingWindow.manager.activateWindow(floatingWindow);
+	const onPointerDownCapture = () => floatingWindow.manager.activateWindow(floatingWindow);
+
 	return (
 		<WindowContext.Provider value={floatingWindow}>
-			<div className="floating-window" style={style}>
+			<div className="floating-window" style={style} onPointerEnter={onPointerEnter} onPointerDownCapture={onPointerDownCapture}>
 				<div className="floating-title" onPointerDown={event => onWindowDrag(floatingWindow, event)}>
 					<span>{floatingWindow.title}</span>
 					<button className="window-close" onPointerDown={event => event.stopPropagation()} onClick={() => onClose(floatingWindow)}>×</button>

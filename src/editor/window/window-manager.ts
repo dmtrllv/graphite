@@ -1,6 +1,7 @@
 import { observable } from "@reactive";
 import { EditorLayout, LayoutPanel } from "../editor-layout";
 import { Window, type WindowBounds, type WindowOpenOptions } from "./window";
+import type { ActionManager } from "../actions";
 
 export type DockPosition = "center" | "left" | "right" | "top" | "bottom";
 
@@ -26,6 +27,7 @@ export type WindowPlacement =
 @observable
 export class WindowManager {
 	public readonly layout: EditorLayout;
+	public readonly actionManager: ActionManager;
 
 	@observable
 	public accessor windows: Window[] = [];
@@ -35,15 +37,18 @@ export class WindowManager {
 
 	private placements = new WeakMap<object, WindowPlacement>();
 
-	public constructor(layout: EditorLayout) {
+	public constructor(layout: EditorLayout, actionManager: ActionManager) {
 		this.layout = layout;
+		this.actionManager = actionManager;
 	}
 
 	public open<P extends object = Record<string, never>>(title: string, component: string, props: P, { float, check, placementKey, ...options }: WindowOptions = {}): Window<P> {
 		const found = this.windows.find(window => check ? check(window) : window.component === component && window.isSingleInstance);
 
-		if (found)
+		if (found) {
+			this.activateWindow(found);
 			return found as Window<P>;
+		}
 
 		const window = new Window(this, title, component, props, { ...options, placementKey });
 		this.windows = [...this.windows, window];
@@ -55,6 +60,8 @@ export class WindowManager {
 				this.dockToRoot(window);
 		}
 
+		this.activateWindow(window);
+
 		return window;
 	}
 
@@ -62,6 +69,7 @@ export class WindowManager {
 		if (!this.windows.includes(window))
 			return;
 
+		this.actionManager.deactivate(window);
 		this.savePlacement(window);
 		this.detach(window);
 		this.windows = this.windows.filter(item => item !== window);
@@ -70,6 +78,7 @@ export class WindowManager {
 
 	public activate(panel: LayoutPanel, window: Window): void {
 		panel.activate(window);
+		this.activateWindow(window);
 	}
 
 	public getPanel(id: number): LayoutPanel | null {
@@ -96,7 +105,7 @@ export class WindowManager {
 		const source = this.findPanel(window);
 
 		if (source === target && position === "center") {
-			target.activate(window);
+			this.activateWindow(window);
 			return;
 		}
 
@@ -113,12 +122,14 @@ export class WindowManager {
 		}
 
 		window.state = "docked";
+		this.activateWindow(window);
 	}
 
 	public dockToRoot(window: Window): void {
 		this.detach(window);
 		this.layout.children = [...this.layout.children, new LayoutPanel(this.layout, [window])];
 		window.state = "docked";
+		this.activateWindow(window);
 	}
 
 	public float(window: Window, bounds: Partial<WindowBounds> | "centered" = "centered"): void {
@@ -134,6 +145,7 @@ export class WindowManager {
 
 		this.floatingWindows = [...this.floatingWindows, window];
 		window.state = "floating";
+		this.activateWindow(window);
 	}
 
 	private split(target: LayoutPanel, panel: LayoutPanel, position: Exclude<DockPosition, "center">): void {
@@ -257,6 +269,11 @@ export class WindowManager {
 
 		if (panel)
 			panel.activate(window);
+
+		if (window.state === "floating")
+			this.floatingWindows = [...this.floatingWindows.filter(item => item !== window), window];
+
+		this.actionManager.activate(window);
 	}
 
 	private isLayoutAttached(target: EditorLayout): boolean {
