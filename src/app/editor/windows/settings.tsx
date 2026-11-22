@@ -9,6 +9,12 @@ import "./styles/settings.scss";
 
 const Preferences = ({ settings }: { settings: Settings }) => {
 	const preferences = useObservable(settings.preferences);
+	const editor = useEditor();
+
+	useSubscribe(settings.preferences, () => {
+		const p = editor.projectManager.activeProject;
+		editor.settings.saveProjectSettings(p.info.name, p.settings);
+	});
 
 	return (
 		<>
@@ -25,6 +31,12 @@ const Preferences = ({ settings }: { settings: Settings }) => {
 
 const Graph = ({ settings }: { settings: Settings }) => {
 	const graph = useObservable(settings.graph);
+	const editor = useEditor();
+
+	useSubscribe(graph, () => {
+		const p = editor.projectManager.activeProject;
+		editor.settings.saveProjectSettings(p.info.name, p.settings);
+	});
 
 	return (
 		<>
@@ -34,7 +46,32 @@ const Graph = ({ settings }: { settings: Settings }) => {
 			</div>
 			<div className="input-field">
 				<label>Curve:</label>
-				<input value={graph.curve} onChange={(e) => graph.curve = +e.target.value} />
+				<input type="range" min={0} max={1} step={0.05} value={graph.curve} onChange={(e) => graph.curve = +e.target.value} />
+			</div>
+			<div className="input-field">
+				<label>Scalar color:</label>
+				<input type="color" value={graph.scalarColor} onChange={(e) => graph.scalarColor = e.target.value} />
+			</div>
+			<div className="input-field">
+				<label>Vector color:</label>
+				<input type="color" value={graph.vectorColor} onChange={(e) => graph.vectorColor = e.target.value} />
+			</div>
+		</>
+	);
+};
+
+const Keyboard = ({ settings }: { settings: Settings }) => {
+	const editor = useEditor();
+	const appSettings = useObservable(settings.app);
+
+	useSubscribe(appSettings, () => {
+		editor.settings.saveAppSettings();
+	}, { recursive: true });
+
+	return (
+		<>
+			<div className="input-field">
+				<Toggle label="Open last project" value={appSettings.openLastProjectOnStartup} onChange={v => appSettings.openLastProjectOnStartup = v} />
 			</div>
 		</>
 	);
@@ -60,6 +97,7 @@ const App = ({ settings }: { settings: Settings }) => {
 const SETTINGS = {
 	Preferences,
 	Graph,
+	Keyboard,
 	App,
 } as const;
 
@@ -71,11 +109,6 @@ export const SettingsView = memo(({ projectManager }: { projectManager: ProjectM
 	const [active, setActive] = useState<keyof typeof SETTINGS>("Preferences");
 
 	const Component = SETTINGS[active];
-
-	useSubscribe(settings.preferences, () => {
-		const p = projectManager.activeProject;
-		editor.settings.saveProjectSettings(p.info.name, p.settings);
-	}, { recursive: true });
 
 	return (
 		<div className="settings-view">

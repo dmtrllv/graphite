@@ -1,7 +1,7 @@
 import { type GraphEditor, GraphNode, GraphRendererStore, SubgraphNode } from "@editor";
 import { mapChildren } from "@utils";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { subscribe } from "@reactive";
+import { subscribe, useSubscribe } from "@reactive";
 import { GraphNodeView } from "./node";
 import type { ProjectManager, Vec2 } from "@editor";
 import { useGraphInteraction } from "./hooks";
@@ -76,7 +76,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			subscribe(editor, event => {
 				if (event.key === "selectedNodes" || event.key === "selection")
 					setEditorVersion(version => version + 1);
-			})
+			}),
 		];
 
 		return () => {
@@ -84,6 +84,11 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 				unsubscribe();
 		};
 	}, [graph, editor, editor.selection, store]);
+
+	useSubscribe(projectManager.activeProject.settings.graph, () => {
+		console.log("rerender")
+		store.invalidateStatic();
+	})
 
 	useLayoutEffect(() => {
 		const element = canvas.current;

@@ -101,8 +101,8 @@ export class EdgeRenderer {
 		const targetKind = GraphNode.getPort(edge.target, edge.targetInput, "input")?.value.kind;
 		const gradient = ctx.createLinearGradient(geometry.start.x, geometry.start.y, geometry.end.x, geometry.end.y);
 
-		gradient.addColorStop(0, this.getEdgeColor(sourceKind ?? ""));
-		gradient.addColorStop(1, this.getEdgeColor(targetKind ?? ""));
+		gradient.addColorStop(0, this.getEdgeColor(settings, sourceKind ?? ""));
+		gradient.addColorStop(1, this.getEdgeColor(settings, targetKind ?? ""));
 		ctx.strokeStyle = gradient;
 
 		const curve = Math.max(0, Math.min(1, settings.curve));
@@ -130,7 +130,7 @@ export class EdgeRenderer {
 		const mouse = editor.getCanvasMousePosition(edge.mousePosition, ctx.canvas);
 		const kind = GraphNode.getPort(edge.node, edge.key, edge.from)?.value.kind;
 
-		ctx.strokeStyle = this.getEdgeColor(kind ?? "");
+		ctx.strokeStyle = this.getEdgeColor(settings, kind ?? "");
 		ctx.beginPath();
 		ctx.moveTo(port.position.x, port.position.y);
 
@@ -155,14 +155,11 @@ export class EdgeRenderer {
 		return abC * abD <= 0 && cdA * cdB <= 0;
 	}
 
-	private getEdgeColor(kind: string): string {
-		return EDGE_COLOR_MAP[kind] || "white";
+	private getEdgeColor(settings: GraphSettings, kind: string): string {
+		switch(kind) {
+			case "scalar": return settings.scalarColor;
+			case "vector": return settings.vectorColor;
+			default: return "pink";
+		}
 	}
 }
-
-const EDGE_COLOR_MAP: Record<string, string> = {
-	vector: "#56B6C2",
-	scalar: "#E5A45B",
-	map: "#62b64d",
-	sampler: "#d46363"
-};

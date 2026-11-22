@@ -1,15 +1,18 @@
-import type { WorldGraph, Graph } from "@editor";
+import type { Graph } from "@editor";
 
 type GraphSubgraphsProps = {
-	graph: WorldGraph;
+	graph: Graph;
 	onOpenGraph: (graph: Graph) => void;
 };
 
 export const GraphSubgraphs = ({ graph, onOpenGraph }: GraphSubgraphsProps) => {
-	const availableSubgraphs = graph.manager!.getAvailableSubgraphs(graph);
+	const availableSubgraphs = graph.manager!.getAvailableSubgraphs(graph).filter(g => g !== graph);
+	
+	if(availableSubgraphs.length === 0)
+		return null;
 
 	return (
-		<div className="subgraphs">
+		<div className="group">
 			<div className="title">
 				<span>Subgraphs</span>
 			</div>

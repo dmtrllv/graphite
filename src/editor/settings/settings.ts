@@ -45,10 +45,46 @@ export class GraphSettings extends Serializable {
 	@serializable(Number)
 	public accessor curve!: number;
 
+	@observable
+	@serializable(String)
+	private accessor _scalarColor!: string;
+
+	@computed
+	public get scalarColor() {
+		return this._scalarColor;
+	}
+
+	public set scalarColor(value: string) {
+		this._scalarColor = value;
+		document.documentElement.style.setProperty("--graph-scalar-color", value);
+	}
+
+	@observable
+	@serializable(String)
+	private accessor _vectorColor!: string;
+
+	@computed
+	public get vectorColor() {
+		return this._vectorColor;
+	}
+
+	public set vectorColor(value: string) {
+		this._vectorColor = value;
+		document.documentElement.style.setProperty("--graph-vector-color", value);
+	}
+	
 	public constructor() {
 		super();
 		this.lineWidth = 1.5;
 		this.curve = 1;
+		this._scalarColor = "#E5A45B";
+		this._vectorColor = "#56B6C2";
+	}
+
+	
+	protected override initialize() {
+		document.documentElement.style.setProperty("--graph-scalar-color", this._scalarColor);
+		document.documentElement.style.setProperty("--graph-vector-color", this._vectorColor);
 	}
 }
 

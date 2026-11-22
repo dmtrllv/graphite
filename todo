@@ -1,9 +1,9 @@
 UI:
+	☐ FIX: sub graph nodes in other subgraph cannot be removed
 	☐ Collapsable sub graph properties panel
 	☐ a node library panel per graph
-	☐ save and restore editor layout
 	☐ better input components
-	☐ graph props panel name input must only be validated on change end
+	✔ graph props panel name input must only be validated on change end @done(26-11-22 05:33)
 		now it stops accepting keys when it matches a name already used
 
 Editor:

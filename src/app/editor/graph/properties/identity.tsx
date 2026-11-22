@@ -1,5 +1,5 @@
 import type { Graph } from "@editor";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useWindow } from "../../layout";
 
 type GraphIdentityProps = {
@@ -10,22 +10,31 @@ export const GraphIdentity = ({ graph }: GraphIdentityProps) => {
 	const manager = graph.manager!;
 	const window = useWindow();
 
+	const [name, setName] = useState(graph.name)
+
 	const removeGraph = () => {
 		manager.removeGraph(graph);
 		window?.close();
 	};
 
-	const rename = (event: React.ChangeEvent<HTMLInputElement>) => {
-		manager.rename(graph, event.target.value);
+	const onChange = (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value);
+
+	const rename = () => {
+		manager.rename(graph, name);
 
 		if (window)
-			window.title = event.target.value;
+			window.title = name;
 	};
+
+	useEffect(() => {
+		if(name !== graph.name)
+			setName(graph.name)
+	},[graph.name])
 
 	return (
 		<div className="group">
 			<label>Graph name:</label>
-			<input value={graph.name} onChange={rename} />
+			<input value={name} onChange={onChange} onBlur={rename} />
 			<button className="btn-delete" onClick={removeGraph}>Delete</button>
 		</div>
 	);

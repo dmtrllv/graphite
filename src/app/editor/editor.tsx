@@ -18,7 +18,7 @@ export const useEditor = (): Editor => {
 
 export const EditorView = ({ editor }: { editor: Editor }) => {
 	const projectManager = useObservable(editor.projectManager, { recursive: true });
-	const preferences = projectManager.activeProject.settings.preferences;
+	const preferences = useObservable(projectManager.activeProject.settings.preferences);
 
 	useEvent("keydown", event => editor.actionManager.handleKeyDown(event), undefined, [editor]);
 

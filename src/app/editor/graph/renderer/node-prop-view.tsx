@@ -5,6 +5,7 @@ import React, { useCallback, useRef } from "react";
 import { useObservable } from "@reactive";
 import { Toggle } from "../../../inputs/toggle";
 import { Vec2Input, Vec3Input, Vec4Input } from "../../../inputs/vector";
+import type { GraphSettings } from "../../../../editor";
 
 type NodePropViewProps = {
 	node: GraphNode;
@@ -18,9 +19,10 @@ type NodePropViewProps = {
 	outputNames?: readonly string[];
 	outputTypes: ReadonlyMap<string, Type>;
 	hideInputElement?: boolean;
+	settings: GraphSettings;
 };
 
-export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames, outputTypes, hideInputElement }: NodePropViewProps) => {
+export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames, outputTypes, hideInputElement, settings }: NodePropViewProps) => {
 	const inputRef = useCallback((element: HTMLDivElement | null) => {
 		if (withInput)
 			layout.setPortElement(node, "input", portKey, element);

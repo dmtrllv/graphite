@@ -37,7 +37,7 @@ export const GraphProperties = ({ graph, onOpenGraph }: GraphPropertiesProps) =>
 		<div className={`graph-properties ${collapsed ? "collapsed" : ""}`} data-catalog-version={catalogVersion}>
 			<GraphPropertiesHeader isWorldGraph={isWorldGraph} collapsed={collapsed} onToggle={() => setCollapsed(value => !value)} />
 			<div className="content">
-				{isWorldGraph && <GraphSubgraphs graph={graph as WorldGraph} onOpenGraph={onOpenGraph} />}
+				<GraphSubgraphs graph={graph} onOpenGraph={onOpenGraph} />
 				{!isWorldGraph && <GraphIdentity graph={graph} />}
 				{isSubgraph && <GraphInterface graph={graph} />}
 				{graph instanceof PassGraph && <GraphDefinitions graph={graph} />}

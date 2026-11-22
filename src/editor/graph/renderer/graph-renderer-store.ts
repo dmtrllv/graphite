@@ -115,17 +115,17 @@ export class GraphRendererStore {
 	}
 
 	private render(): void {
-		if (!this.canvas || !this.bounds)
-			return;
+	if (!this.canvas || !this.bounds)
+		return;
 
-		if (this.graphElement) {
-			const { offset, scale } = this.editor.viewport;
-			this.graphElement.style.left = `calc(50% + ${offset.x}px)`;
-			this.graphElement.style.top = `calc(50% + ${-offset.y}px)`;
-			this.graphElement.style.transform = `translate(-50%, -50%) scale(${scale})`;
-		}
-
-		this.layout.flushNodeDragOffsets(this.editor, this.canvas);
-		this.renderer.render(this.graph, this.editor, this.canvas, this.layout, this.settings, this.bounds);
+	if (this.graphElement) {
+		const { offset, scale } = this.editor.viewport;
+		this.graphElement.style.left = `calc(50% + ${offset.x}px)`;
+		this.graphElement.style.top = `calc(50% + ${-offset.y}px)`;
+		this.graphElement.style.transform = `translate(-50%, -50%) scale(${scale})`;
 	}
+
+	this.layout.flushNodeDragOffsets(this.editor, this.canvas);
+	this.renderer.render(this.graph, this.editor, this.canvas, this.layout, this.settings, this.bounds);
+}
 }

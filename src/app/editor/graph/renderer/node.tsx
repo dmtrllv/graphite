@@ -16,6 +16,9 @@ type GraphNodeViewProps = {
 
 export const GraphNodeView = React.memo(({ projectManager, node, editor, layout, selected, onNodePointerDown, onLayoutChange }: GraphNodeViewProps) => {
 	node = useObservable(node);
+	
+	const settings = useObservable(projectManager.activeProject.settings.graph);
+	
 	const position = useObservable(node.position);
 	const root = useRef<HTMLDivElement>(null);
 	const options = Object.values(GraphNode.getOptions(node.constructor));
@@ -91,13 +94,13 @@ export const GraphNodeView = React.memo(({ projectManager, node, editor, layout,
 			<div className="name" onPointerDown={onPointerDown} onDoubleClick={onDoubleClick}>{name}</div>
 			<div className="body">
 				{outputs.filter(port => !attachedOutputs.has(port.key)).map(port => (
-					<NodePropView hideInputElement={isSubGraph || !port.editable} key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput outputTypes={outputTypes} />
+					<NodePropView settings={settings} hideInputElement={isSubGraph || !port.editable} key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withOutput outputTypes={outputTypes} />
 				))}
 				{options.map(option => (
-					<NodePropView hideInputElement={!option.editable} key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} outputTypes={outputTypes} />
+					<NodePropView settings={settings} hideInputElement={!option.editable} key={option.name} node={node} editor={editor} layout={layout} name={option.name} outputNames={optionOutputNames.get(option.name) ?? []} outputTypes={outputTypes} />
 				))}
 				{inputs.map(port => (
-					<NodePropView hideInputElement={!port.editable} key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput outputTypes={outputTypes} />
+					<NodePropView settings={settings} hideInputElement={!port.editable} key={port.key} node={node} editor={editor} layout={layout} name={port.name} portKey={port.key} value={port.value} withInput outputTypes={outputTypes} />
 				))}
 			</div>
 		</div>

@@ -68,12 +68,12 @@
 
 						.input-point.scalar,
 						.output-point.scalar {
-							--color: #e5a45b;
+							--color: var(--graph-scalar-color);
 						}
 
 						.input-point.vector,
 						.output-point.vector {
-							--color: #56b6c2;
+							--color: var(--graph-vector-color);
 						}
 
 						.input-point {
