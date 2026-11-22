@@ -1,4 +1,4 @@
-import { SubgraphNode, Vec2, type GraphEditor } from "./graph";
+import { CreateSubgraphAction, Graph, SubgraphNode, Vec2, type GraphEditor } from "./graph";
 import { observable } from "../reactive";
 import type { Editor } from "./editor";
 import { Project, ProjectInfo } from "./project";
@@ -92,15 +92,13 @@ export class ProjectManager {
 			return;
 		}
 
-		const json = serializeProject(project);
-		localStorage.setItem(projectKey(project.info.name), JSON.stringify(json));
-		this.saveProjectSettings(project);
 		project.info.lastSave = currentDateTime();
 
-		if (!this.projects.some(info => info.name === project.info.name)) {
-			this.projects = [...this.projects, project.info];
-			this.saveProjectInfos();
-		}
+		const json = serializeProject(project);
+
+		localStorage.setItem(projectKey(project.info.name), JSON.stringify(json));
+		this.saveProjectSettings(project);
+		this.saveProjectInfos();
 	}
 
 	public loadProject(name: string): void {
@@ -134,6 +132,17 @@ export class ProjectManager {
 		oldProject?.dispose();
 	}
 
+	public checkRemovableGraph(graph: Graph): void {
+		if (this.activeProject.graphManager !== graph.manager)
+			return;
+
+		const references = [...this.activeProject.simulationManager.simulations.values()]
+			.filter(simulation => simulation.graphId === graph.id);
+
+		if (references.length)
+			throw new Error(`Cannot remove graph "${graph.name}" because it is referenced by simulations: ${references.map(simulation => simulation.name).join(", ")}!`);
+	}
+
 	public openGraph(editor: GraphEditor): void {
 		const graph = editor.graph;
 		const options: WindowOptions = {
@@ -159,12 +168,7 @@ export class ProjectManager {
 	}
 
 	public createSubgraph(editor: GraphEditor, position: Vec2): void {
-		const manager = this.activeProject.graphManager;
-		const graph = manager.createSubgraph();
-		const node = editor.addNode(SubgraphNode, position) as SubgraphNode;
-
-		node.graphId = graph.id;
-		this.openGraph(manager.openEditor(graph));
+		this.actionManager.execute(new CreateSubgraphAction(editor, this, position));
 	}
 
 	public createPassGraph(): void {

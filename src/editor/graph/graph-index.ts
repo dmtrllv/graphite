@@ -78,6 +78,19 @@ export class GraphIndex {
 		return [...edges];
 	}
 
+	public getEdges(): NodeEdge[] {
+		const edges = new Set<NodeEdge>();
+
+		for (const outputs of this.outgoing.values()) {
+			for (const connected of outputs.values()) {
+				for (const edge of connected)
+					edges.add(edge);
+			}
+		}
+
+		return [...edges];
+	}
+
 	public clear() {
 		this.incoming.clear();
 		this.outgoing.clear();

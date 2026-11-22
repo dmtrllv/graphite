@@ -9,16 +9,35 @@ import { GraphEditor, DeleteNodesAction } from "./graph";
 
 @observable
 export class Editor {
-	private static _instance: Editor | null;
 
-	public static readonly load = async () => {
+	private static _instance: Editor | null = null;
+	private static _loading: Promise<Editor> | null = null;
+
+	public static readonly load = async (): Promise<Editor> => {
 		if (this._instance)
 			return this._instance;
 
-		this._instance = new Editor();
-		await this._instance.init();
-		return this._instance;
+		if (this._loading)
+			return this._loading;
+
+		const instance = new Editor();
+
+		this._loading = new Promise(async (res, rej) => {
+			try {
+				await instance.init();
+				this._instance = instance;
+				res(instance);
+			} catch (error) {
+				this._instance = null;
+				rej(error);
+			} finally {
+				this._loading = null;
+			}
+		})
+
+		return this._loading;
 	};
+
 
 	@observable
 	public accessor settings: SettingsManager = new SettingsManager();

@@ -113,21 +113,32 @@ export abstract class Graph extends Serializable {
 	}
 
 	public validate(): void {
-		const output = this.outputNodeId === null ? undefined : this.nodes.get(this.outputNodeId);
+		for (const [id, node] of this.nodes) {
+			if (id !== node.id)
+				throw new Error(`Node map key ${id} does not match node ID ${node.id}!`);
 
-		if (!output || output.constructor !== this.outputNodeType)
-			throw new Error(`${this.constructor.name} must contain a valid output node!`);
-
-		for (const node of this.nodes.values()) {
 			if (node.graph !== this)
 				throw new Error(`Node ${node.id} does not belong to graph ${this.id}!`);
 		}
 
-		const connectedInputs = new Set<string>();
+		const outputNodes = [...this.nodes.values()].filter(node => node.constructor === this.outputNodeType);
 
-		for (const edge of this.edges.values()) {
-			if (edge.source.graph !== this || edge.target.graph !== this)
-				throw new Error(`Edge ${edge.id} references a node outside graph ${this.id}!`);
+		if (outputNodes.length !== 1)
+			throw new Error(`${this.constructor.name} must contain exactly one output node!`);
+
+		const output = this.outputNodeId === null ? undefined : this.nodes.get(this.outputNodeId);
+
+		if (!output || output.constructor !== this.outputNodeType || output !== outputNodes[0])
+			throw new Error(`${this.constructor.name} must reference its valid output node!`);
+
+		const connectedInputs = new Map<GraphNode, Set<string>>();
+
+		for (const [id, edge] of this.edges) {
+			if (id !== edge.id)
+				throw new Error(`Edge map key ${id} does not match edge ID ${edge.id}!`);
+
+			if (this.nodes.get(edge.source.id) !== edge.source || this.nodes.get(edge.target.id) !== edge.target)
+				throw new Error(`Edge ${edge.id} references a node that is not registered in graph ${this.id}!`);
 
 			const source = GraphNode.getPort(edge.source, edge.sourceOutput, "output");
 			const target = GraphNode.getPort(edge.target, edge.targetInput, "input");
@@ -135,13 +146,29 @@ export abstract class Graph extends Serializable {
 			if (!source || !target || !GraphNode.canConnect(source, target))
 				throw new Error(`Edge ${edge.id} has an invalid connection!`);
 
-			const inputKey = `${edge.target.id}:${edge.targetInput}`;
+			let inputs = connectedInputs.get(edge.target);
 
-			if (connectedInputs.has(inputKey))
+			if (!inputs) {
+				inputs = new Set();
+				connectedInputs.set(edge.target, inputs);
+			}
+
+			if (inputs.has(edge.targetInput))
 				throw new Error(`Input ${edge.targetInput} on node ${edge.target.id} has multiple connections!`);
 
-			connectedInputs.add(inputKey);
+			inputs.add(edge.targetInput);
+
+			if (this.index.getInputEdge(edge.target, edge.targetInput) !== edge)
+				throw new Error(`GraphIndex has an inconsistent incoming edge ${edge.id}!`);
+
+			if (!this.index.getOutputEdges(edge.source, edge.sourceOutput).includes(edge))
+				throw new Error(`GraphIndex has an inconsistent outgoing edge ${edge.id}!`);
 		}
+
+		const indexedEdges = this.index.getEdges();
+
+		if (indexedEdges.length !== this.edges.size || indexedEdges.some(edge => this.edges.get(edge.id) !== edge))
+			throw new Error(`GraphIndex does not match the edge collection of graph ${this.id}!`);
 	}
 
 	public getEdge(source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string): NodeEdge | undefined {
@@ -241,7 +268,7 @@ export abstract class Graph extends Serializable {
 	public removeEdge(idOrEdge: number | NodeEdge): void {
 		const edge = typeof idOrEdge === "number" ? this.edges.get(idOrEdge) : idOrEdge;
 
-		if (!edge || !this.edges.has(edge.id))
+		if (!edge || this.edges.get(edge.id) !== edge)
 			return;
 
 		this.edges.delete(edge.id);
@@ -332,6 +359,9 @@ export abstract class Graph extends Serializable {
 		if (changes.name !== undefined && ports.some(item => item.id !== id && item.name === changes.name))
 			throw new Error(`Graph ${direction} "${changes.name}" already exists!`);
 
+		if (direction === "input")
+			this.removeInterfaceNodes(id);
+
 		const updated = ports.map(item => {
 			if (item.id !== id)
 				return item;
@@ -343,17 +373,10 @@ export abstract class Graph extends Serializable {
 			return replacement;
 		});
 
-
 		if (direction === "input")
 			this.inputs = updated;
 		else
 			this.outputs = updated;
-
-
-		for (const node of [...this.nodes.values()]) {
-			if ("interfaceId" in node && node.interfaceId === id)
-				this.removeNode(node);
-		}
 
 		this.notifyInterfaceChanged();
 	}
@@ -364,12 +387,21 @@ export abstract class Graph extends Serializable {
 		if (!ports.some(port => port.id === id))
 			return;
 
-		if (direction === "input")
-			this.inputs = ports.filter(port => port.id !== id);
-		else
-			this.outputs = ports.filter(port => port.id !== id);
+		if (direction === "input") {
+			this.removeInterfaceNodes(id);
+			this.inputs = this.inputs.filter(port => port.id !== id);
+		} else {
+			this.outputs = this.outputs.filter(port => port.id !== id);
+		}
 
 		this.notifyInterfaceChanged();
+	}
+
+	private removeInterfaceNodes(id: string): void {
+		for (const node of [...this.nodes.values()]) {
+			if ("interfaceId" in node && node.interfaceId === id)
+				this.removeNode(node);
+		}
 	}
 
 	protected notifyInterfaceChanged(): void {

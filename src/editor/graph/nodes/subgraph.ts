@@ -17,8 +17,8 @@ export class SubgraphNode extends GraphNode {
 		const manager = this.graph.manager;
 		const definition = value === null ? undefined : manager?.get(value);
 
-		if (definition && !(definition instanceof Subgraph))
-			throw new Error("Only Subgraphs can be used as SubgraphNodes!");
+		if (value !== null && (!(definition instanceof Subgraph) || manager?.get(value) !== definition))
+			throw new Error(`SubgraphNode cannot reference invalid Subgraph ${value}!`);
 
 		if (definition && manager?.hasRecursiveReference(this.graph, definition))
 			throw new Error("A graph cannot reference itself or one of its parent graphs!");
@@ -30,6 +30,7 @@ export class SubgraphNode extends GraphNode {
 		manager?.notifySubgraphTopologyChanged();
 		this.graph.reconcileEdges();
 	}
+
 
 	public get definition(): Subgraph | undefined {
 		if (this.graphId === null)

@@ -104,7 +104,7 @@ export class GraphManager extends Serializable {
 			if (!this.projectManager)
 				throw new Error("GraphManager has no ProjectManager!");
 
-			editor = new GraphEditor(graph, this.projectManager.actionManager, this.projectManager)
+			editor = new GraphEditor(graph, this.actionManager, this.projectManager, viewport);
 
 			this.editors.set(graph.id, editor);
 		}
@@ -170,12 +170,16 @@ export class GraphManager extends Serializable {
 			throw error;
 		}
 
-		this.viewports.set(graph.id, new GraphViewport());
+		if (!this.viewports.has(graph.id))
+			this.viewports.set(graph.id, new GraphViewport());
 		this.catalogVersion++;
 		return graph;
 	}
 
-	public restore(graph: Graph): void {
+	public restore(graph: Graph, viewport?: GraphViewport): void {
+		if (viewport)
+			this.viewports.set(graph.id, viewport);
+
 		this.register(graph);
 		this._idCounter = Math.max(this._idCounter, graph.id + 1);
 	}
@@ -259,6 +263,8 @@ export class GraphManager extends Serializable {
 
 		if (this.graphs.get(graph.id) !== graph)
 			return;
+
+		this.projectManager?.checkRemovableGraph(graph);
 
 		for (const candidate of this.graphs.values()) {
 			if (candidate === graph)
