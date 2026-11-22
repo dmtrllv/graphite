@@ -19,6 +19,7 @@ export class GraphRendererStore {
 	private observer: ResizeObserver | null = null;
 	private scheduler = new RenderScheduler(() => this.render());
 	private unsubscribers: (() => void)[] = [];
+	private graphElement: HTMLDivElement | null = null;
 
 	public constructor(editor: GraphEditor, settings: GraphSettings) {
 		this.editor = editor;
@@ -26,9 +27,10 @@ export class GraphRendererStore {
 		this.settings = settings;
 	}
 
-	public attach(canvas: HTMLCanvasElement): void {
+	public attach(canvas: HTMLCanvasElement, graphElement: HTMLDivElement): void {
 		this.detach(false);
 		this.canvas = canvas;
+		this.graphElement = graphElement;
 		this.bounds = canvas.getBoundingClientRect();
 		this.renderer.invalidateGraph(this.graph);
 
@@ -67,6 +69,7 @@ export class GraphRendererStore {
 		for (const unsubscribe of this.unsubscribers)
 			unsubscribe();
 
+		this.graphElement = null;
 		this.unsubscribers = [];
 		this.observer?.disconnect();
 		this.observer = null;
@@ -114,6 +117,13 @@ export class GraphRendererStore {
 	private render(): void {
 		if (!this.canvas || !this.bounds)
 			return;
+
+		if (this.graphElement) {
+			const { offset, scale } = this.editor.viewport;
+			this.graphElement.style.left = `calc(50% + ${offset.x}px)`;
+			this.graphElement.style.top = `calc(50% + ${-offset.y}px)`;
+			this.graphElement.style.transform = `translate(-50%, -50%) scale(${scale})`;
+		}
 
 		this.layout.flushNodeDragOffsets(this.editor, this.canvas);
 		this.renderer.render(this.graph, this.editor, this.canvas, this.layout, this.settings, this.bounds);
