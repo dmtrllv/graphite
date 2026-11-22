@@ -2,6 +2,7 @@ import type { Editor } from "../../editor";
 import { MenuBarView } from "./menubar";
 import { Workspace } from "./layout";
 import { useObservable } from "@reactive";
+import { useEvent } from "@hooks";
 import { createContext, useContext } from "react";
 
 import "./styles/editor.scss";
@@ -18,6 +19,8 @@ export const useEditor = (): Editor => {
 export const EditorView = ({ editor }: { editor: Editor }) => {
 	const projectManager = useObservable(editor.projectManager, { recursive: true });
 	const preferences = projectManager.activeProject.settings.preferences;
+
+	useEvent("keydown", event => editor.actionManager.handleKeyDown(event), undefined, [editor]);
 
 	return (
 		<EditorContext.Provider value={editor}>

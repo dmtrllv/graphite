@@ -5,7 +5,7 @@ import { observable } from "@reactive";
 import { GraphEditor } from "./editor";
 import { GraphViewport } from "./viewport";
 import { validateSimulationGraph } from "./simulation-graph";
-import type { ActionHistory } from "../actions";
+import type { ActionManager } from "../actions";
 import type { ProjectManager } from "../project-manager";
 
 @observable
@@ -27,7 +27,7 @@ export class GraphManager extends Serializable {
 	@observable
 	public accessor catalogVersion = 0;
 
-	private history?: ActionHistory;
+	private actionManager?: ActionManager;
 	private projectManager?: ProjectManager;
 
 	public get worldGraph(): WorldGraph {
@@ -72,8 +72,8 @@ export class GraphManager extends Serializable {
 		this.validateReferences();
 	}
 
-	public setHistory(history: ActionHistory): void {
-		this.history = history;
+	public setActionManager(actionManager: ActionManager): void {
+		this.actionManager = actionManager;
 	}
 
 	public get(id: number): Graph | undefined;
@@ -99,13 +99,13 @@ export class GraphManager extends Serializable {
 				this.viewports.set(graph.id, viewport);
 			}
 
-			if (!this.history)
-				throw new Error("GraphManager has no ActionHistory!");
+			if (!this.actionManager)
+				throw new Error("GraphManager has no ActionManager!");
 
 			if (!this.projectManager)
 				throw new Error("GraphManager has no ProjectManager!");
 
-			editor = new GraphEditor(graph, this.history, this.projectManager, viewport);
+			editor = new GraphEditor(graph, this.projectManager.actionManager, this.projectManager)
 
 			this.editors.set(graph.id, editor);
 		}

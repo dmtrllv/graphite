@@ -3,7 +3,9 @@ import { NodeEdge } from "../edge";
 import type { GraphNode } from "../nodes";
 import type { GraphEditor } from "../editor";
 import type { ProjectManager } from "../../project-manager";
+import { action } from "../../actions";
 
+@action({ id: "graph.node.connect", history: true })
 export class ConnectNodesAction extends GraphAction {
 	private created: NodeEdge | null = null;
 	private source: GraphNode;

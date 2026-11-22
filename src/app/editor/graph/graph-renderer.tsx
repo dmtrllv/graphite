@@ -170,17 +170,6 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			if (target.closest("input, textarea, select, [contenteditable='true']"))
 				return;
 
-			if (event.ctrlKey && event.key.toLowerCase() === "z") {
-				event.preventDefault();
-
-				if (event.shiftKey)
-					editor.history.redo();
-				else
-					editor.history.undo();
-
-				return;
-			}
-
 			if (event.ctrlKey && event.code === "Space") {
 				event.preventDefault();
 
@@ -203,14 +192,6 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			if (event.key === "Escape" && nodePicker) {
 				setNodePicker(null);
 				return;
-			}
-
-			if (event.key === "Delete" || event.key === "Backspace") {
-				if (nodePicker)
-					return;
-
-				event.preventDefault();
-				editor.removeSelectedNodes();
 			}
 		};
 

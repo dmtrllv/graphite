@@ -72,7 +72,7 @@ export class MoveNodesTool extends GraphEditorToolBase {
 		if (changes.every(change => change.before.distance(change.after) === 0))
 			return;
 
-		this.editor.history.recordApplied(new MoveNodesAction(this.editor, this.editor.projectManager, changes));
+		this.editor.actionManager.recordApplied(new MoveNodesAction(this.editor, this.editor.projectManager, changes));
 	}
 
 	public override cancel(): void {

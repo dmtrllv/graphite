@@ -1,10 +1,11 @@
 import { observable } from "../reactive";
-import { EditorLayout } from "./editor-layout";
+import { EditorLayout, LayoutPanel } from "./editor-layout";
 import { Menubar, MenuItem, MenuSeparator } from "./menubar";
 import { ProjectManager } from "./project-manager";
 import { SettingsManager } from "./settings-manager";
-import { WindowManager } from "./window";
-import { ActionHistory } from "./actions";
+import { WindowManager, type Window } from "./window";
+import { ActionManager } from "./actions";
+import { GraphEditor, DeleteNodesAction } from "./graph";
 
 @observable
 export class Editor {
@@ -22,7 +23,7 @@ export class Editor {
 	@observable
 	public accessor settings: SettingsManager = new SettingsManager();
 
-	public readonly history = new ActionHistory();
+	public readonly actionManager = new ActionManager();
 
 	public readonly layout: EditorLayout = new EditorLayout(null);
 	public readonly windowManager: WindowManager = new WindowManager(this.layout);
@@ -46,13 +47,8 @@ export class Editor {
 			})
 		]),
 		new MenuItem("edit", "Edit", undefined, [
-			new MenuItem("undo", "Undo", () => {
-				this.history.undo();
-			}),
-			new MenuItem("redo", "Redo", () => {
-				this.history.redo();
-				
-			})
+			new MenuItem("undo", "Undo", () => this.actionManager.executeById("history.undo")),
+			new MenuItem("redo", "Redo", () => this.actionManager.executeById("history.redo")),
 		]),
 		new MenuItem("view", "View", undefined, [
 			new MenuItem("world_graph", "World Graph", () => {
@@ -63,6 +59,46 @@ export class Editor {
 			new MenuItem("new_simulation_graph", "New Simulation Graph", () => this.projectManager.createSimulationGraph())
 		])
 	]);
+
+	public constructor() {
+		this.actionManager.register(DeleteNodesAction, () => {
+			const editor = this.getActiveGraphEditor();
+			return editor?.selectedNodes.length ? new DeleteNodesAction(editor, this.projectManager, editor.selectedNodes) : null;
+		});
+	}
+
+	private getActiveGraphEditor(): GraphEditor | null {
+		const getEditor = (window: Window | undefined): GraphEditor | null => {
+			if (!window || window.component !== "graph-editor")
+				return null;
+
+			return (window.props as { editor?: GraphEditor }).editor ?? null;
+		};
+
+		for (const window of [...this.windowManager.floatingWindows].reverse()) {
+			const editor = getEditor(window);
+			if (editor)
+				return editor;
+		}
+
+		const find = (layout: EditorLayout): GraphEditor | null => {
+			for (const child of layout.children) {
+				if (child instanceof LayoutPanel) {
+					const editor = getEditor(child.tabs[child.activeTab]);
+					if (editor)
+						return editor;
+				} else {
+					const editor = find(child);
+					if (editor)
+						return editor;
+				}
+			}
+
+			return null;
+		};
+
+		return find(this.layout);
+	}
 
 	public async init(): Promise<void> { }
 }

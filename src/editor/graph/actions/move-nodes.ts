@@ -3,6 +3,7 @@ import type { GraphNode } from "../nodes";
 import { Vec2 } from "../types";
 import type { GraphEditor } from "../editor";
 import type { ProjectManager } from "../../project-manager";
+import { action } from "../../actions";
 
 export type NodePositionChange = {
 	node: GraphNode;
@@ -10,6 +11,7 @@ export type NodePositionChange = {
 	after: Vec2;
 };
 
+@action({ id: "graph.node.move", history: true })
 export class MoveNodesAction extends GraphAction {
 	public constructor(graphEditor: GraphEditor, projectManager: ProjectManager, private changes: NodePositionChange[]) {
 		super(graphEditor, projectManager);

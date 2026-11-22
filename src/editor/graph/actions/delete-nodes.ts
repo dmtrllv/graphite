@@ -3,7 +3,9 @@ import type { NodeEdge } from "../edge";
 import type { GraphNode } from "../nodes";
 import type { GraphEditor } from "../editor";
 import type { ProjectManager } from "../../project-manager";
+import { action } from "../../actions";
 
+@action({ id: "graph.node.delete", shortcut: ["Delete", "Backspace"], history: true })
 export class DeleteNodesAction extends GraphAction {
 	private edges: NodeEdge[];
 	private nodes: GraphNode[];

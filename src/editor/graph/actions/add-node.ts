@@ -3,7 +3,9 @@ import { type GraphNode, type GraphNodeType } from "../nodes";
 import type { Vec2 } from "../types";
 import type { GraphEditor } from "../editor";
 import type { ProjectManager } from "../../project-manager";
+import { action } from "../../actions";
 
+@action({ id: "graph.node.add", history: true })
 export class AddNodeAction extends GraphAction {
 	public node: GraphNode | null = null;
 	private type: GraphNodeType<any>;

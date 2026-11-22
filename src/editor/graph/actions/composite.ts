@@ -1,5 +1,6 @@
-import type { EditorAction } from "../../actions";
+import { action, type EditorAction } from "../../actions";
 
+@action({ id: "action.composite", history: true })
 export class CompositeAction implements EditorAction {
 	public constructor(private actions: EditorAction[]) { }
 
