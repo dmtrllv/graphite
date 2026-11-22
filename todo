@@ -7,12 +7,12 @@ UI:
 	☐ show history panel for quick navigation
 
 Editor:
-	☐ option to auto reload last project
-	☐ global tool/action history manager
-		☐ opening and closing panels/windows is part of it
+	✔ option to auto reload last project @done(26-11-22 22:57)
+	✔ global tool/action history manager @done(26-11-22 22:57)
+		✔ opening and closing panels/windows is part of it @done(26-11-22 22:57)
 
 Graph:
-	☐ Graphs should have a single fixed output node
+	✔ Graphs should have a single fixed output node @done(26-11-22 22:57)
 	☐ Graph input nodes shuold not contain input field (those are defined in the graph properties panel)
 	☐ Add Pass Node
 	☐ Add Map nodes
