@@ -12,13 +12,24 @@ export type WindowOptions = WindowOpenOptions & {
 	check?: (window: Window) => boolean | undefined;
 };
 
+type LayoutPlacement = {
+	layout: EditorLayout;
+	parent: EditorLayout;
+	index: number;
+	direction: EditorLayout["direction"];
+	size: number;
+	children: {
+		child: EditorLayout | LayoutPanel;
+		size: number;
+	}[];
+};
+
 export type WindowPlacement =
 	| { state: "floating"; bounds: WindowBounds }
 	| {
 		state: "docked";
 		panel: LayoutPanel;
-		parent: EditorLayout;
-		panelIndex: number;
+		path: LayoutPlacement[];
 		tabIndex: number;
 		activeWindow: Window | undefined;
 		panelSize: number;
@@ -303,15 +314,72 @@ export class WindowManager {
 		if (!panel)
 			return;
 
+		const path: LayoutPlacement[] = [];
+		
+		let layout = panel.parent;
+
+		while (layout && layout !== this.layout) {
+			const parent = layout.parent;
+
+			if (!parent)
+				break;
+
+			path.unshift({
+				layout,
+				parent,
+				index: parent.children.indexOf(layout),
+				direction: layout.direction,
+				size: layout.size,
+				children: layout.children.map(child => ({ child, size: child.size }))
+			});
+
+			layout = parent;
+		}
+
 		this.placements.set(key, {
 			state: "docked",
 			panel,
-			parent: panel.parent,
-			panelIndex: panel.parent.children.indexOf(panel),
+			path,
 			tabIndex: panel.tabs.indexOf(window),
 			activeWindow: panel.tabs[panel.activeTab],
 			panelSize: panel.size
 		});
+	}
+
+	private restoreLayoutPath(path: LayoutPlacement[]): boolean {
+		for (const placement of path) {
+			const { layout, parent, index, direction, size, children } = placement;
+
+			if (this.isLayoutAttached(layout))
+				continue;
+
+			if (!this.isLayoutAttached(parent))
+				return false;
+
+			for (const { child, size } of children) {
+				const previousParent = child.parent;
+
+				if (previousParent && previousParent !== layout)
+					previousParent.children = previousParent.children.filter(item => item !== child);
+
+				child.parent = layout;
+				child.size = size;
+			}
+
+			layout.direction = direction;
+			layout.size = size;
+			layout.children = children.map(({ child }) => child);
+
+			const insertionIndex = Math.max(0, Math.min(index, parent.children.length));
+
+			parent.children = [
+				...parent.children.slice(0, insertionIndex),
+				layout,
+				...parent.children.slice(insertionIndex)
+			];
+		}
+
+		return true;
 	}
 
 	private restorePlacement(window: Window, key?: object): boolean {
@@ -330,10 +398,11 @@ export class WindowManager {
 			return true;
 		}
 
-		const { panel, parent, panelIndex, tabIndex, activeWindow, panelSize } = placement;
+		const { panel, path, tabIndex, activeWindow, panelSize } = placement;
 
 		if (this.getPanel(panel.id) === panel) {
 			const index = Math.max(0, Math.min(tabIndex, panel.tabs.length));
+
 			panel.tabs = [...panel.tabs.slice(0, index), window, ...panel.tabs.slice(index)];
 
 			if (activeWindow && panel.tabs.includes(activeWindow))
@@ -345,18 +414,23 @@ export class WindowManager {
 			return true;
 		}
 
-		if (this.isLayoutAttached(parent)) {
-			panel.parent = parent;
-			panel.tabs = [window];
-			panel.activeTab = 0;
-			panel.size = panelSize;
-			window.state = "docked";
-			const index = Math.max(0, Math.min(panelIndex, parent.children.length));
-			parent.children = [...parent.children.slice(0, index), panel, ...parent.children.slice(index)];
+		if (!this.restoreLayoutPath(path)) {
+			this.dockToRoot(window);
 			return true;
 		}
 
-		this.dockToRoot(window);
+		const parent = path.length ? path[path.length - 1]!.layout : this.layout;
+		const index = Math.max(0, Math.min(path.length ? path[path.length - 1]!.children.findIndex(item => item.child === panel) : parent.children.length, parent.children.length));
+
+		panel.parent = parent;
+		panel.tabs = [window];
+		panel.activeTab = 0;
+		panel.size = panelSize;
+
+		if (!parent.children.includes(panel))
+			parent.children = [...parent.children.slice(0, index), panel, ...parent.children.slice(index)];
+
+		window.state = "docked";
 		return true;
 	}
 }

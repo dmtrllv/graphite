@@ -1,10 +1,10 @@
 UI:
-	☐ FIX: sub graph nodes in other subgraph cannot be removed
-	☐ Collapsable sub graph properties panel
+	✔ FIX: sub graph nodes in other subgraph cannot be removed @done(26-11-22 22:18)
+	✔ Collapsable sub graph properties panel @done(26-11-22 22:18)
+	✔ graph props panel name input must only be validated on change end @done(26-11-22 05:33)
 	☐ a node library panel per graph
 	☐ better input components
-	✔ graph props panel name input must only be validated on change end @done(26-11-22 05:33)
-		now it stops accepting keys when it matches a name already used
+	☐ show history panel for quick navigation
 
 Editor:
 	☐ option to auto reload last project
