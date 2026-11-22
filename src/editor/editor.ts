@@ -46,10 +46,11 @@ export class Editor {
 			})
 		]),
 		new MenuItem("edit", "Edit", undefined, [
-			new MenuItem("undo", "Settings", () => {
-				
+			new MenuItem("undo", "Undo", () => {
+				this.history.undo();
 			}),
-			new MenuItem("redo", "Settings", () => {
+			new MenuItem("redo", "Redo", () => {
+				this.history.redo();
 				
 			})
 		]),

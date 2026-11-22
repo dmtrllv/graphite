@@ -46,7 +46,7 @@ export class WindowManager {
 			return found as Window<P>;
 
 		const window = new Window(this, title, component, props, { ...options, placementKey });
-		this.windows.push(window);
+		this.windows = [...this.windows, window];
 
 		if (!this.restorePlacement(window, placementKey)) {
 			if (float)
@@ -106,7 +106,7 @@ export class WindowManager {
 		this.detach(window);
 
 		if (position === "center") {
-			target.tabs.push(window);
+			target.tabs = [...target.tabs, window];
 			target.activate(window);
 		} else {
 			this.split(target, new LayoutPanel(target.parent, [window]), position);
@@ -117,7 +117,7 @@ export class WindowManager {
 
 	public dockToRoot(window: Window): void {
 		this.detach(window);
-		this.layout.children.push(new LayoutPanel(this.layout, [window]));
+		this.layout.children = [...this.layout.children, new LayoutPanel(this.layout, [window])];
 		window.state = "docked";
 	}
 
@@ -132,7 +132,7 @@ export class WindowManager {
 			window.bounds = { ...window.bounds, ...bounds };
 		}
 
-		this.floatingWindows.push(window);
+		this.floatingWindows = [...this.floatingWindows, window];
 		window.state = "floating";
 	}
 
@@ -157,7 +157,7 @@ export class WindowManager {
 		else
 			split.children = [target, panel];
 
-		parent.children[index] = split;
+		parent.children = parent.children.map((child, i) => i === index ? split : child);
 	}
 
 	private findPanel(window: Window): LayoutPanel | null {
@@ -193,7 +193,7 @@ export class WindowManager {
 		if (index === -1)
 			return;
 
-		panel.tabs.splice(index, 1);
+		panel.tabs = panel.tabs.filter(item => item !== window);
 
 		if (panel.activeTab >= panel.tabs.length)
 			panel.activeTab = panel.tabs.length - 1;
@@ -211,7 +211,7 @@ export class WindowManager {
 		if (index === -1)
 			return;
 
-		parent.children.splice(index, 1);
+		parent.children = parent.children.filter(child => child !== panel);
 		this.normalize(parent);
 	}
 
@@ -241,7 +241,7 @@ export class WindowManager {
 
 		child.parent = parent;
 		child.size = layout.size;
-		parent.children[index] = child;
+		parent.children = parent.children.map((item, i) => i === index ? child : item);
 		this.normalize(parent);
 	}
 
@@ -316,7 +316,8 @@ export class WindowManager {
 		const { panel, parent, panelIndex, tabIndex, activeWindow, panelSize } = placement;
 
 		if (this.getPanel(panel.id) === panel) {
-			panel.tabs.splice(Math.max(0, Math.min(tabIndex, panel.tabs.length)), 0, window);
+			const index = Math.max(0, Math.min(tabIndex, panel.tabs.length));
+			panel.tabs = [...panel.tabs.slice(0, index), window, ...panel.tabs.slice(index)];
 
 			if (activeWindow && panel.tabs.includes(activeWindow))
 				panel.activeTab = panel.tabs.indexOf(activeWindow);
@@ -332,8 +333,9 @@ export class WindowManager {
 			panel.tabs = [window];
 			panel.activeTab = 0;
 			panel.size = panelSize;
-			parent.children.splice(Math.max(0, Math.min(panelIndex, parent.children.length)), 0, panel);
 			window.state = "docked";
+			const index = Math.max(0, Math.min(panelIndex, parent.children.length));
+			parent.children = [...parent.children.slice(0, index), panel, ...parent.children.slice(index)];
 			return true;
 		}
 
