@@ -9,8 +9,9 @@ export type WindowBounds = {
 };
 
 export type WindowOpenOptions = Partial<WindowBounds> & {
-	singleInstance?: boolean;
-	onClose?: () => void;
+	singleInstance?: (boolean) | undefined;
+	onClose?: (() => void) | undefined;
+	placementKey?: (object) | undefined;
 };
 
 @observable
@@ -35,6 +36,8 @@ export class Window<P extends object = any> {
 	public readonly isSingleInstance: boolean;
 	public readonly onClose: () => void;
 
+	public readonly placementKey?: object | undefined;
+
 	public constructor(manager: WindowManager, title: string, component: string, props: P, options: WindowOpenOptions) {
 		this.manager = manager;
 		this.title = title;
@@ -43,6 +46,7 @@ export class Window<P extends object = any> {
 
 		const {
 			onClose = () => {},
+			placementKey,
 			singleInstance = false,
 			width = 480,
 			height = 320,
@@ -53,6 +57,7 @@ export class Window<P extends object = any> {
 		this.isSingleInstance = singleInstance;
 		this.bounds = { width, height, x, y };
 		this.onClose = onClose;
+		this.placementKey = placementKey;
 	}
 
 	public close(): void {

@@ -39,7 +39,7 @@ export class CutEdgesTool extends GraphEditorToolBase {
 		const edges = this.hitTest(this.start, end);
 
 		if (edges.length)
-			this.editor.history.execute(new DeleteEdgesAction(this.editor.graph, edges));
+			this.editor.history.execute(new DeleteEdgesAction(this.editor, this.editor.projectManager, edges));
 
 		this.editor.edgeCut = null;
 		this.start = null;

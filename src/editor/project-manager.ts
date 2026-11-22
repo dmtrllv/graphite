@@ -65,8 +65,8 @@ export class ProjectManager {
 
 	public newProject(name?: string): void {
 		this.history.clear();
-		this.activeProject.dispose();
 		this.editor.windowManager.closeAll();
+		this.activeProject.dispose();
 		this.activeProject = this.createNewProject(name);
 	}
 
@@ -113,7 +113,7 @@ export class ProjectManager {
 		const settings = this.editor.settings.loadProjectSettings(name);
 		const project = deserializeProject(this, JSON.parse(json), info.lastSave, settings);
 		const oldProject = this.activeProject;
-		
+
 		this.editor.windowManager.closeAll();
 		this.activeProject = project;
 
@@ -130,14 +130,23 @@ export class ProjectManager {
 		const options: WindowOptions = {
 			singleInstance: false,
 			check: window => window.component === "graph-editor" && window.props["editor"] === editor,
-			onClose: () => graph.manager?.closeEditor(graph, editor)
+			placementKey: editor
 		};
 
-		this.editor.windowManager.open(graph.name, "graph-editor", {
+		const window = this.editor.windowManager.open(graph.name, "graph-editor", {
 			editor,
 			onCreateSubgraph: (parentEditor: GraphEditor, position: Vec2) => this.createSubgraph(parentEditor, position),
 			projectManager: this
 		}, options);
+
+		this.editor.windowManager.activateWindow(window);
+	}
+
+	public activateGraphEditor(editor: GraphEditor): void {
+		if (editor.graph.manager !== this.activeProject.graphManager)
+			return;
+
+		this.openGraph(editor);
 	}
 
 	public createSubgraph(editor: GraphEditor, position: Vec2): void {

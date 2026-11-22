@@ -1,25 +1,28 @@
-import type { Graph } from "../graph";
+import { GraphAction } from "./graph-action";
 import { type GraphNode, type GraphNodeType } from "../nodes";
 import type { Vec2 } from "../types";
-import type { EditorAction } from "../../actions";
+import type { GraphEditor } from "../editor";
+import type { ProjectManager } from "../../project-manager";
 
-export class AddNodeAction implements EditorAction {
+export class AddNodeAction extends GraphAction {
 	public node: GraphNode | null = null;
+	private type: GraphNodeType<any>;
+	private position: Vec2;
 
-	public constructor(
-		private graph: Graph, 
-		private type: GraphNodeType<any>, 
-		private position: Vec2
-	) { }
+	public constructor(graphEditor: GraphEditor, projectManager: ProjectManager, type: GraphNodeType<any>, position: Vec2) {
+		super(graphEditor, projectManager);
+		this.type = type;
+		this.position = position;
+	}
 
-	public execute(): void {
+	protected executeAction(): void {
 		if (this.node)
 			this.graph.restoreNode(this.node);
 		else
 			this.node = this.graph.addNode(this.type, this.position);
 	}
 
-	public undo(): void {
+	protected undoAction(): void {
 		if (this.node)
 			this.graph.removeNode(this.node);
 	}

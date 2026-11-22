@@ -1,21 +1,27 @@
-import type { Graph } from "../graph";
+import { GraphAction } from "./graph-action";
 import { NodeEdge } from "../edge";
 import type { GraphNode } from "../nodes";
-import type { EditorAction } from "../../actions";
+import type { GraphEditor } from "../editor";
+import type { ProjectManager } from "../../project-manager";
 
-export class ConnectNodesAction implements EditorAction {
+export class ConnectNodesAction extends GraphAction {
 	private created: NodeEdge | null = null;
+	private source: GraphNode;
+	private sourceOutput: string;
+	private target: GraphNode;
+	private targetInput: string;
+	private replaced: NodeEdge | undefined
 
-	public constructor(
-		private graph: Graph,
-		private source: GraphNode,
-		private sourceOutput: string,
-		private target: GraphNode,
-		private targetInput: string,
-		private replaced: NodeEdge | undefined
-	) { }
+	public constructor(graphEditor: GraphEditor, projectManager: ProjectManager, source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string, replaced: NodeEdge | undefined) {
+		super(graphEditor, projectManager);
+		this.source = source;
+		this.sourceOutput = sourceOutput;
+		this.target = target;
+		this.targetInput = targetInput;
+		this.replaced = replaced;
+	}
 
-	public execute(): void {
+	protected executeAction(): void {
 		if (this.created) {
 			if (this.replaced)
 				this.graph.removeEdge(this.replaced);
@@ -33,7 +39,7 @@ export class ConnectNodesAction implements EditorAction {
 			this.graph.restoreEdge(this.replaced);
 	}
 
-	public undo(): void {
+	protected undoAction(): void {
 		if (this.created)
 			this.graph.removeEdge(this.created);
 

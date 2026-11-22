@@ -99,7 +99,7 @@ export class SelectTool extends GraphEditorToolBase {
 			this.layout.endNodeDrag();
 
 			if (changes.some(change => change.before.distance(change.after) > 0))
-				this.editor.history.recordApplied(new MoveNodesAction(changes));
+				this.editor.history.recordApplied(new MoveNodesAction(this.editor, this.editor.projectManager, changes));
 
 			this.invalidate();
 		}

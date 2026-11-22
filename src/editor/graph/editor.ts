@@ -7,6 +7,7 @@ import { Vec2 } from "./types";
 import { GraphViewport } from "./viewport";
 import { ConnectNodesAction, AddNodeAction, DeleteNodesAction } from "./actions";
 import type { ActionHistory } from "../actions";
+import type { ProjectManager } from "../project-manager";
 
 @observable
 export class GraphEditor {
@@ -37,12 +38,14 @@ export class GraphEditor {
 	public accessor edgeCut: EdgeSlice | null = null;
 
 	public readonly history: ActionHistory;
+	public readonly projectManager: ProjectManager;
 
-	public constructor(graph: Graph, history: ActionHistory, viewport: GraphViewport = new GraphViewport()) {
-		this.graph = graph;
-		this.history = history;
-		this.viewport = viewport;
-	}
+	public constructor(graph: Graph, history: ActionHistory, projectManager: ProjectManager, viewport: GraphViewport = new GraphViewport()) {
+	this.graph = graph;
+	this.history = history;
+	this.projectManager = projectManager;
+	this.viewport = viewport;
+}
 
 	public getCanvasMousePosition(position: Vec2, canvas: HTMLCanvasElement): Vec2 {
 		return this.viewport.getCanvasMousePosition(position, canvas);
@@ -96,7 +99,7 @@ export class GraphEditor {
 
 		if (sourcePort && targetPort) {
 			const replaced = this.graph.index.getInputEdge(target, targetInput);
-			this.history.execute(new ConnectNodesAction(this.graph, source, sourceOutput, target, targetInput, replaced));
+			this.history.execute(new ConnectNodesAction(this, this.projectManager, source, sourceOutput, target, targetInput, replaced));
 		}
 
 		this.draggingEdge = null;
@@ -107,7 +110,7 @@ export class GraphEditor {
 	}
 
 	public addNode(type: GraphNodeType<any>, position: Vec2): GraphNode {
-		const action = new AddNodeAction(this.graph, type, position);
+		const action = new AddNodeAction(this, this.projectManager, type, position);
 		this.history.execute(action);
 		this.selectedNodes = [action.node!];
 		return action.node!;
@@ -119,7 +122,7 @@ export class GraphEditor {
 		if (!nodes.length)
 			return;
 
-		this.history.execute(new DeleteNodesAction(this.graph, nodes));
+		this.history.execute(new DeleteNodesAction(this, this.projectManager, nodes));
 		this.selectedNodes = [];
 	}
 

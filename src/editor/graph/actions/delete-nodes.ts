@@ -1,23 +1,25 @@
-import type { Graph } from "../graph";
+import { GraphAction } from "./graph-action";
 import type { NodeEdge } from "../edge";
 import type { GraphNode } from "../nodes";
-import type { EditorAction } from "../../actions";
+import type { GraphEditor } from "../editor";
+import type { ProjectManager } from "../../project-manager";
 
-export class DeleteNodesAction implements EditorAction {
+export class DeleteNodesAction extends GraphAction {
 	private edges: NodeEdge[];
 	private nodes: GraphNode[];
 
-	public constructor(private graph: Graph, nodes: GraphNode[]) {
-		this.nodes = nodes.filter(node => node.name !== graph.outputNodeName);
-		this.edges = [...new Set(this.nodes.flatMap(node => graph.index.getConnectedEdges(node)))];
+	public constructor(graphEditor: GraphEditor, projectManager: ProjectManager, nodes: GraphNode[]) {
+		super(graphEditor, projectManager);
+		this.nodes = nodes.filter(node => node.name !== this.graph.outputNodeName);
+		this.edges = [...new Set(this.nodes.flatMap(node => this.graph.index.getConnectedEdges(node)))];
 	}
 
-	public execute(): void {
+	protected executeAction(): void {
 		for (const node of this.nodes)
 			this.graph.removeNode(node);
 	}
 
-	public undo(): void {
+	protected undoAction(): void {
 		for (const node of this.nodes)
 			this.graph.restoreNode(node);
 

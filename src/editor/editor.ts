@@ -25,7 +25,7 @@ export class Editor {
 	public readonly history = new ActionHistory();
 
 	public readonly layout: EditorLayout = new EditorLayout(null);
-	public readonly windowManager: WindowManager = new WindowManager(this.layout, this.history);
+	public readonly windowManager: WindowManager = new WindowManager(this.layout);
 	public readonly projectManager: ProjectManager = new ProjectManager(this);
 
 

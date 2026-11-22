@@ -1,16 +1,19 @@
-import type { EditorAction } from "../../actions";
-import type { Graph, } from "../graph";
+import { GraphAction } from "./graph-action";
 import type { NodeEdge } from "../edge";
+import type { GraphEditor } from "../editor";
+import type { ProjectManager } from "../../project-manager";
 
-export class DeleteEdgesAction implements EditorAction {
-	public constructor(private graph: Graph, private edges: NodeEdge[]) { }
+export class DeleteEdgesAction extends GraphAction {
+	public constructor(graphEditor: GraphEditor, projectManager: ProjectManager, private edges: NodeEdge[]) {
+		super(graphEditor, projectManager);
+	}
 
-	public execute(): void {
+	protected executeAction(): void {
 		for (const edge of this.edges)
 			this.graph.removeEdge(edge);
 	}
 
-	public undo(): void {
+	protected undoAction(): void {
 		for (const edge of this.edges)
 			this.graph.restoreEdge(edge);
 	}

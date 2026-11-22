@@ -49,12 +49,14 @@ export class Project extends Serializable {
 		this.settings = settings;
 		this.graphManager = graphManager;
 		this.graphManager.setHistory(manager.history);
+		this.graphManager.setProjectManager(manager);
 		this.simulationManager = simulationManager;
 		this.bindSubscriptions();
 	}
 
 	protected override initialize() {
 		this.graphManager.setHistory(this.manager.history);
+		this.graphManager.setProjectManager(this.manager);
 		this.simulationManager.setGraphManager(this.graphManager);
 		this.bindSubscriptions();
 	}
@@ -79,5 +81,6 @@ export class Project extends Serializable {
 
 	public dispose() {
 		this.unsubscribeSettings.forEach(unsubscribe => unsubscribe());
+		this.graphManager.disposeEditors();
 	}
 }

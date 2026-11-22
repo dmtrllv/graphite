@@ -6,6 +6,7 @@ import { GraphEditor } from "./editor";
 import { GraphViewport } from "./viewport";
 import { validateSimulationGraph } from "./simulation-graph";
 import type { ActionHistory } from "../actions";
+import type { ProjectManager } from "../project-manager";
 
 @observable
 @serializable({ type: "graph-manager", create: () => new GraphManager(false) })
@@ -27,6 +28,7 @@ export class GraphManager extends Serializable {
 	public accessor catalogVersion = 0;
 
 	private history?: ActionHistory;
+	private projectManager?: ProjectManager;
 
 	public get worldGraph(): WorldGraph {
 		const graph = [...this.graphs.values()].find((graph): graph is WorldGraph => graph instanceof WorldGraph);
@@ -41,6 +43,10 @@ export class GraphManager extends Serializable {
 		super();
 		if (createWorldGraph)
 			this.createWorldGraph();
+	}
+
+	public setProjectManager(projectManager: ProjectManager): void {
+		this.projectManager = projectManager;
 	}
 
 	protected override initialize(): void {
@@ -96,8 +102,11 @@ export class GraphManager extends Serializable {
 			if (!this.history)
 				throw new Error("GraphManager has no ActionHistory!");
 
-			editor = new GraphEditor(graph, this.history, viewport);
-			
+			if (!this.projectManager)
+				throw new Error("GraphManager has no ProjectManager!");
+
+			editor = new GraphEditor(graph, this.history, this.projectManager, viewport);
+
 			this.editors.set(graph.id, editor);
 		}
 
@@ -291,6 +300,15 @@ export class GraphManager extends Serializable {
 
 		editor.dispose();
 		this.editors.delete(graph.id);
+	}
+
+	public disposeEditors(): void {
+		for (const [id, editor] of this.editors) {
+			const graph = this.graphs.get(id);
+
+			if (graph)
+				this.closeEditor(graph, editor);
+		}
 	}
 }
 
