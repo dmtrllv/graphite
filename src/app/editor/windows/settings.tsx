@@ -1,14 +1,14 @@
 import { memo, useState } from "react";
-import type { Settings } from "../../../editor/settings";
-import { mapChildren } from "../../../utils";
-import type { ProjectManager } from "../../../editor/project-manager";
-import { useObservable } from "@reactive";
+import { mapChildren } from "@utils";
+import type { ProjectManager, Settings } from "@editor";
+import { useObservable, useSubscribe } from "@reactive";
 import { Toggle } from "../../inputs/toggle";
+import { useEditor } from "../editor";
 
 import "./styles/settings.scss";
 
 const Preferences = ({ settings }: { settings: Settings }) => {
-	const preferences = settings.preferences;
+	const preferences = useObservable(settings.preferences);
 
 	return (
 		<>
@@ -24,17 +24,34 @@ const Preferences = ({ settings }: { settings: Settings }) => {
 };
 
 const Graph = ({ settings }: { settings: Settings }) => {
-	const graph = settings.graph;
+	const graph = useObservable(settings.graph);
 
 	return (
 		<>
 			<div className="input-field">
 				<label>Line Width:</label>
-				<input type="number" value={graph.lineWidth} onChange={(e) => graph.lineWidth = +e.target.value} />
+				<input value={graph.lineWidth} onChange={(e) => graph.lineWidth = +e.target.value} />
 			</div>
 			<div className="input-field">
 				<label>Curve:</label>
-				<input type="number" value={graph.curve} onChange={(e) => graph.curve = +e.target.value} />
+				<input value={graph.curve} onChange={(e) => graph.curve = +e.target.value} />
+			</div>
+		</>
+	);
+};
+
+const App = ({ settings }: { settings: Settings }) => {
+	const editor = useEditor();
+	const appSettings = useObservable(settings.app);
+
+	useSubscribe(appSettings, () => {
+		editor.settings.saveAppSettings();
+	}, { recursive: true });
+
+	return (
+		<>
+			<div className="input-field">
+				<Toggle label="Open last project" value={appSettings.openLastProjectOnStartup} onChange={v => appSettings.openLastProjectOnStartup = v} />
 			</div>
 		</>
 	);
@@ -43,15 +60,22 @@ const Graph = ({ settings }: { settings: Settings }) => {
 const SETTINGS = {
 	Preferences,
 	Graph,
+	App,
 } as const;
 
 export const SettingsView = memo(({ projectManager }: { projectManager: ProjectManager }) => {
+	const editor = useEditor();
 	const manager = useObservable(projectManager, { recursive: true });
 	const settings = manager.activeProject.settings;
 
 	const [active, setActive] = useState<keyof typeof SETTINGS>("Preferences");
 
 	const Component = SETTINGS[active];
+
+	useSubscribe(settings.preferences, () => {
+		const p = projectManager.activeProject;
+		editor.settings.saveProjectSettings(p.info.name, p.settings);
+	}, { recursive: true });
 
 	return (
 		<div className="settings-view">

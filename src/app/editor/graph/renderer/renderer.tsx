@@ -22,6 +22,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 	const [structureVersion, setStructureVersion] = useState(graph.structureVersion);
 	const [editorVersion, setEditorVersion] = useState(0);
 	const [catalogVersion, setCatalogVersion] = useState(graph.manager!.catalogVersion);
+	const [viewportVersion, setViewportVersion] = useState(0);
 	const store = useMemo(() => new GraphRendererStore(editor, projectManager.activeProject.settings.graph), [editor, projectManager.activeProject]);
 	const layout = store.layout;
 	const manager = graph.manager!;
@@ -63,7 +64,10 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 
 	useEffect(() => {
 		const unsubscribers = [
-			subscribe(viewport, { recursive: true }, invalidate),
+			subscribe(viewport, { recursive: true }, () => {
+				setViewportVersion(version => version + 1);
+				invalidate();
+			}),
 			subscribe(editor.selection, { recursive: true }, () => {
 				setEditorVersion(version => version + 1);
 				invalidate();
@@ -113,7 +117,7 @@ export const GraphRenderer = ({ projectManager, editor, onCreateSubgraph }: Grap
 			onContextMenu={event => event.preventDefault()}
 			onMouseLeave={interaction.onMouseLeave}>
 			<canvas ref={canvas} />
-			<div className="graph" style={style}>
+			<div className="graph" style={style} data-viewport-version={viewportVersion}>
 				{mapChildren(graph.nodes, (key, node) => (
 					<GraphNodeView key={`${graph.id}:${key}`} node={node} editor={editor} layout={layout}
 						selected={editor.isSelected(node)}

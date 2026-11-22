@@ -5,7 +5,7 @@ export * from "./editor-layout";
 export * from "./project";
 export * from "./project-serializer";
 export * from "./project-manager";
-export * from "./settings-manager";
+export * from "./settings/settings-manager";
 export * from "./settings";
 export * from "./window";
 export * from "./simulation";

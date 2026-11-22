@@ -28,7 +28,7 @@ export class ProjectManager {
 	public accessor projects: ProjectInfo[] = this.loadProjectInfos();
 
 	@observable
-	public accessor activeProject: Project;
+	public accessor activeProject!: Project;
 
 	private readonly editor: Editor;
 
@@ -38,7 +38,10 @@ export class ProjectManager {
 
 	public constructor(editor: Editor) {
 		this.editor = editor;
-		this.activeProject = this.createNewProject();
+		if (editor.settings.appSettings.openLastProjectOnStartup && this.projects[0])
+			this.loadProject(this.projects[0].name);
+		else
+			this.activeProject = this.createNewProject();
 	}
 
 	private loadProjectInfos(): ProjectInfo[] {
@@ -101,7 +104,9 @@ export class ProjectManager {
 	}
 
 	public loadProject(name: string): void {
-		if (this.activeProject.info.name === name)
+		const oldProject = this.activeProject as Project | undefined;
+
+		if (oldProject && (oldProject.info.name === name))
 			return;
 
 		const json = localStorage.getItem(projectKey(name));
@@ -112,17 +117,21 @@ export class ProjectManager {
 
 		const settings = this.editor.settings.loadProjectSettings(name);
 		const project = deserializeProject(this, JSON.parse(json), info.lastSave, settings);
-		const oldProject = this.activeProject;
 
 		this.editor.windowManager.closeAll();
 		this.activeProject = project;
+
+		const projects = [...this.projects];
+		projects.splice(projects.indexOf(info), 1);
+		this.projects = [info, ...projects];
+		this.saveProjectInfos();
 
 		const graph = project.graphManager.worldGraph;
 		this.openGraph(project.graphManager.openEditor(graph));
 
 		this.actionManager.history.clear();
 
-		oldProject.dispose();
+		oldProject?.dispose();
 	}
 
 	public openGraph(editor: GraphEditor): void {

@@ -2,7 +2,7 @@ import { observable } from "../reactive";
 import { EditorLayout, LayoutPanel } from "./editor-layout";
 import { Menubar, MenuItem, MenuSeparator } from "./menubar";
 import { ProjectManager } from "./project-manager";
-import { SettingsManager } from "./settings-manager";
+import { SettingsManager } from "./settings/settings-manager";
 import { WindowManager, type Window } from "./window";
 import { ActionManager } from "./actions";
 import { GraphEditor, DeleteNodesAction } from "./graph";
@@ -28,7 +28,6 @@ export class Editor {
 	public readonly layout: EditorLayout = new EditorLayout(null);
 	public readonly windowManager: WindowManager = new WindowManager(this.layout);
 	public readonly projectManager: ProjectManager = new ProjectManager(this);
-
 
 	public readonly menubar: Menubar = new Menubar([
 		new MenuItem("file", "File", undefined, [

@@ -65,7 +65,7 @@ export class Project extends Serializable {
 		this.info = info;
 		this.bindSubscriptions();
 	}
-
+	
 	private bindSubscriptions() {
 		this.unsubscribeSettings.forEach(unsubscribe => unsubscribe());
 		this.unsubscribeSettings = [

@@ -44,6 +44,7 @@ type PendingReference = { readonly pending: true; };
 const PENDING: PendingReference = { pending: true };
 
 const metadataKey = Symbol("serializable");
+const contextKey = Symbol("serializationContext");
 const metadataRegistry = new WeakMap<Function, SerializableMetadata>();
 const typeRegistry = new Map<string, SerializableDescriptor>();
 const constructorRegistry = new WeakMap<Function, string>();
@@ -131,7 +132,7 @@ export abstract class Serializable {
 	protected initialize(): void { }
 
 	public clone(): this {
-		return (this.constructor as any).deserialize(this.serialize()) as this;
+		return (this.constructor as any).deserialize(this.serialize(), (this as any)[contextKey]) as this;
 	}
 }
 
@@ -323,7 +324,9 @@ const deserializeDocument = <T extends Serializable>(rootType: new (...args: any
 		if (!descriptor)
 			throw new Error(`Unknown serializable type '${value.$type}' at '${path}'.`);
 
-		const instance = descriptor.create(value, inheritedContext);
+		const instance = Object.assign(descriptor.create(value, inheritedContext), {
+			[contextKey]: context
+		});
 
 		if (!(instance instanceof type) && type !== Serializable)
 			throw new TypeError(`Unexpected serialized type '${value.$type}' at '${path}'.`);

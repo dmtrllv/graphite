@@ -1,5 +1,6 @@
 import { computed, observable } from "@reactive";
-import { Serializable, serializable } from "./serializable";
+import { Serializable, serializable } from "../serializable";
+import type { SettingsManager } from "./settings-manager";
 
 @observable
 @serializable({ type: "settings:preferences", create: () => new Preferences() })
@@ -52,16 +53,23 @@ export class GraphSettings extends Serializable {
 }
 
 @observable
-@serializable({ type: "settings", create: () => new Settings() })
+@serializable({ type: "settings", create: (_, ctx) =>new Settings(ctx["manager"]) })
 export class Settings extends Serializable {
 	@serializable(Preferences)
 	public readonly preferences!: Preferences;
 
 	@serializable(GraphSettings)
 	public readonly graph!: GraphSettings;
+	
+	private readonly manager: SettingsManager;
 
-	public constructor() {
+	public get app() {
+		return this.manager.appSettings;
+	}
+
+	public constructor(manager: SettingsManager) {
 		super();
+		this.manager = manager;
 		this.preferences = new Preferences();
 		this.graph = new GraphSettings();
 	}
