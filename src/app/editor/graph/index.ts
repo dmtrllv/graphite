@@ -1,2 +1,1 @@
-export * from "./graph-renderer";
-export * from "./graph-editor";
+export * from "./editor";

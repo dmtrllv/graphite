@@ -3,8 +3,8 @@ import { Bool, F16, F32, I32, Type, U32, Vec2, Vec3, Vec4 } from "@editor/graph/
 import type { GraphLayout } from "@editor/graph/renderer";
 import React, { useCallback, useRef } from "react";
 import { useObservable } from "@reactive";
-import { Toggle } from "../../inputs/toggle";
-import { Vec2Input, Vec3Input, Vec4Input } from "../../inputs/vector";
+import { Toggle } from "../../../inputs/toggle";
+import { Vec2Input, Vec3Input, Vec4Input } from "../../../inputs/vector";
 
 type NodePropViewProps = {
 	node: GraphNode;

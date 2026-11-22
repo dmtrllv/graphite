@@ -78,11 +78,11 @@
 
 						.input-point {
 							position: absolute;
-							left: -21px;
+							left: -26px;
 							top: 50%;
 							transform: translateY(-50%);
-							width: 10px;
-							height: 15px;
+							width: 15px;
+							height: 20px;
 							&::after {
 								content: "";
 								position: absolute;
@@ -99,18 +99,18 @@
 							&:hover,
 							&.hovered {
 								&::after {
-									width: 5px;
+									width: 8px;
 								}
 							}
 						}
 
 						.output-point {
 							position: absolute;
-							right: -21px;
+							right: -26px;
 							top: 50%;
 							transform: translateY(-50%);
-							width: 10px;
-							height: 15px;
+							width: 15px;
+							height: 20px;
 							&::after {
 								content: "";
 								position: absolute;
@@ -126,7 +126,8 @@
 							&:hover,
 							&.hovered {
 								&::after {
-									width: 5px;
+									width: 8px;
+									height: 13px;
 								}
 							}
 						}

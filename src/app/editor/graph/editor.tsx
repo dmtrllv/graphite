@@ -1,10 +1,10 @@
 import type { GraphEditor, Vec2 } from "@editor";
 import { useObservable } from "@reactive";
-import { GraphRenderer } from "./graph-renderer";
-import { GraphProperties } from "./graph-properties";
+import { GraphRenderer } from "./renderer";
+import { GraphProperties } from "./properties";
 import type { ProjectManager } from "@editor";
 
-import "./styles/graph.scss";
+import "./styles/editor.scss";
 
 type GraphEditorProps = {
 	editor: GraphEditor;
