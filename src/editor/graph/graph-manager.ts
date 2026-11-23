@@ -57,7 +57,6 @@ export class GraphManager extends Serializable {
 		if (worldGraphs.length !== 1)
 			throw new Error("GraphManager must contain exactly one WorldGraph!");
 
-		const names = new Set<number>();
 		const graphNames = new Set<string>();
 
 		for (const [id, graph] of this.graphs) {

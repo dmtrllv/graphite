@@ -102,7 +102,6 @@ const SETTINGS = {
 } as const;
 
 export const SettingsView = memo(({ projectManager }: { projectManager: ProjectManager }) => {
-	const editor = useEditor();
 	const manager = useObservable(projectManager, { recursive: true });
 	const settings = manager.activeProject.settings;
 

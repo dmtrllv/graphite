@@ -22,7 +22,7 @@ type NodePropViewProps = {
 	settings: GraphSettings;
 };
 
-export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames, outputTypes, hideInputElement, settings }: NodePropViewProps) => {
+export const NodePropView = ({ node, editor, layout, name, portKey = name, value, withInput, withOutput, outputNames, outputTypes, hideInputElement }: NodePropViewProps) => {
 	const inputRef = useCallback((element: HTMLDivElement | null) => {
 		if (withInput)
 			layout.setPortElement(node, "input", portKey, element);
