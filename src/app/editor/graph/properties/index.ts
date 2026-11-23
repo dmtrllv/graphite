@@ -1,1 +1,0 @@
-export { GraphProperties } from "./properties";
