@@ -23,29 +23,35 @@ export class ConnectNodesAction extends GraphAction {
 		this.replaced = replaced;
 	}
 
+
 	protected executeAction(): void {
 		if (this.created) {
-			if (this.replaced)
+			if (this.replaced && this.graph.edges.get(this.replaced.id) === this.replaced)
 				this.graph.removeEdge(this.replaced);
 
-			this.graph.restoreEdge(this.created);
+			try {
+				this.graph.restoreEdge(this.created);
+			} catch (error) {
+				if (this.replaced && !this.graph.edges.has(this.replaced.id))
+					this.graph.restoreEdge(this.replaced);
+
+				throw error;
+			}
+
 			return;
 		}
 
-		if (this.replaced)
-			this.graph.removeEdge(this.replaced);
-
 		this.created = this.graph.addEdge(this.source, this.sourceOutput, this.target, this.targetInput);
 
-		if (!this.created && this.replaced)
-			this.graph.restoreEdge(this.replaced);
+		if (!this.created)
+			throw new Error("Cannot connect incompatible or unregistered graph nodes!");
 	}
 
 	protected undoAction(): void {
-		if (this.created)
+		if (this.created && this.graph.edges.get(this.created.id) === this.created)
 			this.graph.removeEdge(this.created);
 
-		if (this.replaced)
+		if (this.replaced && !this.graph.edges.has(this.replaced.id))
 			this.graph.restoreEdge(this.replaced);
 	}
 }

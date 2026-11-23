@@ -7,21 +7,27 @@ type RegisteredAction = {
 	activation: ActivationConstructor | null;
 };
 
+
 const normalizeShortcut = (shortcut: string): string => {
 	const parts = shortcut.split("+").map(part => part.trim());
 	const key = parts.pop()!;
 	const modifiers = new Set(parts.map(part => {
 		switch (part.toLowerCase()) {
-			case "control": return "Ctrl";
+			case "control":
+			case "ctrl":
 			case "command":
 			case "cmd":
-			case "meta": return "Mod";
+			case "meta":
+			case "mod": return "Mod";
+			case "alt": return "Alt";
+			case "shift": return "Shift";
 			default: return part;
 		}
 	}));
-	const order = ["Mod", "Ctrl", "Alt", "Shift"];
+	const order = ["Mod", "Alt", "Shift"];
 	return [...order.filter(modifier => modifiers.has(modifier)), key.length === 1 ? key.toUpperCase() : key].join("+");
 };
+
 
 const getEventShortcut = (event: KeyboardEvent): string => {
 	const modifiers = [];
@@ -68,34 +74,51 @@ export class ActionManager {
 		if (this.actions.has(metadata.id) || this.commands.has(metadata.id))
 			throw new Error(`Action '${metadata.id}' is already registered.`);
 
+		let registered: RegisteredAction;
+
 		if (contextualFactory) {
 			if (!metadata.activation || activationOrFactory !== metadata.activation())
 				throw new Error(`Action '${metadata.id}' must be registered with its declared activation type.`);
 
 			const activation = metadata.activation();
-			this.actions.set(metadata.id, {
+
+			registered = {
 				activation,
 				factory: context => context instanceof activation
 					? Reflect.apply(contextualFactory, undefined, [context]) as EditorAction | null
 					: null
-			});
+			};
 		} else {
 			if (metadata.activation)
 				throw new Error(`Action '${metadata.id}' requires an activation context.`);
 
 			const factory = activationOrFactory as () => EditorAction | null;
-			this.actions.set(metadata.id, {
+
+			registered = {
 				activation: null,
 				factory: () => factory()
-			});
+			};
 		}
 
-		if (metadata.shortcut) {
-			const shortcuts = Array.isArray(metadata.shortcut) ? metadata.shortcut : [metadata.shortcut];
+		const keys = metadata.shortcut ? (Array.isArray(metadata.shortcut) ? metadata.shortcut : [metadata.shortcut]).map(normalizeShortcut) : [];
+		const uniqueKeys = new Set(keys);
 
-			for (const shortcut of shortcuts)
-				this.bindShortcut(metadata.id, shortcut);
+		if (uniqueKeys.size !== keys.length)
+			throw new Error(`Action '${metadata.id}' contains duplicate shortcuts!`);
+
+		for (const key of keys) {
+			for (const existingId of this.shortcuts.get(key) ?? []) {
+				const existing = this.actions.get(existingId);
+
+				if ((existing?.activation ?? null) === registered.activation)
+					throw new Error(`Shortcut '${key}' is already assigned to '${existingId}'.`);
+			}
 		}
+
+		this.actions.set(metadata.id, registered);
+
+		for (const key of keys)
+			this.shortcuts.set(key, [...(this.shortcuts.get(key) ?? []), metadata.id]);
 	}
 
 	public activate(context: object): void {

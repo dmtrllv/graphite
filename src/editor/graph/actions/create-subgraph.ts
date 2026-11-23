@@ -67,7 +67,8 @@ export class CreateSubgraphAction extends GraphAction {
 	}
 
 	protected undoAction(): void {
-		this.viewport = this.manager.viewports.get(this.graph.id) ?? null;
+		if (this.addedGraph)
+			this.viewport = this.manager.viewports.get(this.addedGraph.id) ?? null;
 
 		if (this.node && this.graphEditor.graph.nodes.get(this.node.id) === this.node)
 			this.graphEditor.graph.removeNode(this.node);

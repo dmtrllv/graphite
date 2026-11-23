@@ -6,8 +6,6 @@ import { F32, Type, Vec2 } from "./types";
 import { NodeEdge } from "./edge";
 import { Serializable, serializable, arrayOf, mapOf } from "../serializable";
 
-const RECONCILING_GRAPHS = new WeakSet<Graph>();
-
 @observable
 @serializable({ type: "graph:port", create: () => new GraphInterfacePort() })
 export class GraphInterfacePort extends Serializable {
@@ -25,7 +23,9 @@ export class GraphInterfacePort extends Serializable {
 export abstract class Graph extends Serializable {
 	private _nodeIdCounter = 0;
 	private _edgeIdCounter = 0;
-	private _manager?: GraphManager;
+	private _manager: GraphManager | undefined;
+
+	private _reconcilingEdges = false;
 
 	public get manager(): GraphManager | undefined {
 		return this._manager;
@@ -102,7 +102,15 @@ export abstract class Graph extends Serializable {
 	}
 
 	public setManager(manager: GraphManager): void {
+		if (this._manager && this._manager !== manager)
+			throw new Error(`Graph ${this.id} already belongs to another GraphManager!`);
+
 		this._manager = manager;
+	}
+
+	public detachManager(manager: GraphManager): void {
+		if (this._manager === manager)
+			this._manager = undefined;
 	}
 
 	public createOutputNode(): void {
@@ -112,7 +120,26 @@ export abstract class Graph extends Serializable {
 		this.outputNodeId = this.addNode(this.outputNodeType).id;
 	}
 
+	private validatePorts = (ports: GraphInterfacePort[], direction: string) => {
+		const ids = new Set<string>();
+		const names = new Set<string>();
+
+		for (const port of ports) {
+			if (!port.id || ids.has(port.id))
+				throw new Error(`Graph ${direction} has a duplicate or empty port ID!`);
+
+			if (!port.name.trim() || names.has(port.name))
+				throw new Error(`Graph ${direction} has a duplicate or empty port name!`);
+
+			ids.add(port.id);
+			names.add(port.name);
+		}
+	};
+
 	public validate(): void {
+		this.validatePorts(this.inputs, "inputs");
+		this.validatePorts(this.outputs, "outputs");
+
 		for (const [id, node] of this.nodes) {
 			if (id !== node.id)
 				throw new Error(`Node map key ${id} does not match node ID ${node.id}!`);
@@ -192,9 +219,15 @@ export abstract class Graph extends Serializable {
 		return node;
 	}
 
+
 	public restoreNode(node: GraphNode): void {
-		if (this.nodes.has(node.id))
+		const existing = this.nodes.get(node.id);
+
+		if (existing === node)
 			return;
+
+		if (existing)
+			throw new Error(`Node ID ${node.id} is already occupied in graph ${this.id}!`);
 
 		if (node.graph !== this)
 			throw new Error(`Cannot restore node ${node.id} into a different graph!`);
@@ -213,6 +246,7 @@ export abstract class Graph extends Serializable {
 		if ("graphId" in node && node.graphId !== null)
 			this._manager?.notifySubgraphTopologyChanged();
 	}
+
 
 	public removeNode(id: number): void;
 	public removeNode(node: GraphNode): void;
@@ -236,7 +270,7 @@ export abstract class Graph extends Serializable {
 	}
 
 	public addEdge(source: GraphNode, sourceOutput: string, target: GraphNode, targetInput: string): NodeEdge | null {
-		if (source.graph !== this || target.graph !== this || source === target)
+		if (source === target || this.nodes.get(source.id) !== source || this.nodes.get(target.id) !== target)
 			return null;
 
 		const sourcePort = GraphNode.getPort(source, sourceOutput, "output");
@@ -250,12 +284,13 @@ export abstract class Graph extends Serializable {
 		if (foundEdge)
 			return foundEdge;
 
+		const edge = new NodeEdge(this._edgeIdCounter, source, sourceOutput, target, targetInput);
 		const inputEdge = this.index.getInputEdge(target, targetInput);
 
 		if (inputEdge)
 			this.removeEdge(inputEdge);
 
-		const edge = new NodeEdge(this._edgeIdCounter++, source, sourceOutput, target, targetInput);
+		this._edgeIdCounter++;
 		this.edges.set(edge.id, edge);
 		this.index.add(edge);
 		this.structureVersion++;
@@ -276,13 +311,17 @@ export abstract class Graph extends Serializable {
 		this.structureVersion++;
 	}
 
-
 	public restoreEdge(edge: NodeEdge): void {
-		if (this.edges.has(edge.id))
+		const existing = this.edges.get(edge.id);
+
+		if (existing === edge)
 			return;
 
-		if (edge.source.graph !== this || edge.target.graph !== this)
-			throw new Error(`Cannot restore edge ${edge.id} into a different graph!`);
+		if (existing)
+			throw new Error(`Edge ID ${edge.id} is already occupied in graph ${this.id}!`);
+
+		if (this.nodes.get(edge.source.id) !== edge.source || this.nodes.get(edge.target.id) !== edge.target)
+			throw new Error(`Cannot restore edge ${edge.id} with unregistered nodes!`);
 
 		const source = GraphNode.getPort(edge.source, edge.sourceOutput, "output");
 		const target = GraphNode.getPort(edge.target, edge.targetInput, "input");
@@ -292,8 +331,8 @@ export abstract class Graph extends Serializable {
 
 		const inputEdge = this.index.getInputEdge(edge.target, edge.targetInput);
 
-		if (inputEdge)
-			this.removeEdge(inputEdge);
+		if (inputEdge && inputEdge !== edge)
+			throw new Error(`Cannot restore edge ${edge.id}: target input is occupied by edge ${inputEdge.id}!`);
 
 		this.edges.set(edge.id, edge);
 		this.index.add(edge);
@@ -301,12 +340,11 @@ export abstract class Graph extends Serializable {
 		this.structureVersion++;
 	}
 
-
 	public reconcileEdges(): void {
-		if (RECONCILING_GRAPHS.has(this))
+		if (this._reconcilingEdges)
 			return;
 
-		RECONCILING_GRAPHS.add(this);
+		this._reconcilingEdges = true;
 
 		try {
 			for (const edge of [...this.edges.values()]) {
@@ -317,7 +355,7 @@ export abstract class Graph extends Serializable {
 					this.removeEdge(edge);
 			}
 		} finally {
-			RECONCILING_GRAPHS.delete(this);
+			this._reconcilingEdges = false;
 		}
 	}
 
@@ -358,9 +396,6 @@ export abstract class Graph extends Serializable {
 
 		if (changes.name !== undefined && ports.some(item => item.id !== id && item.name === changes.name))
 			throw new Error(`Graph ${direction} "${changes.name}" already exists!`);
-
-		if (direction === "input")
-			this.removeInterfaceNodes(id);
 
 		const updated = ports.map(item => {
 			if (item.id !== id)

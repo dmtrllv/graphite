@@ -9,50 +9,64 @@ export class CompositeAction implements EditorAction {
 	public execute(): void {
 		const executed: EditorAction[] = [];
 
-		for (const current of this.actions) {
-			if (this.applied.includes(current))
-				continue;
+		try {
+			for (const current of this.actions) {
+				if (this.applied.includes(current))
+					continue;
 
-			try {
 				current.execute();
-			} catch (error) {
-				const failures: unknown[] = [];
+				this.applied.push(current);
+				executed.push(current);
+			}
+		} catch (error) {
+			const failures: unknown[] = [];
 
+			for (const current of executed.reverse()) {
 				try {
 					current.undo();
+					this.applied.splice(this.applied.indexOf(current), 1);
 				} catch (rollbackError) {
 					failures.push(rollbackError);
 				}
-
-				for (const applied of [...executed].reverse()) {
-					try {
-						applied.undo();
-						this.applied.splice(this.applied.indexOf(applied), 1);
-					} catch (rollbackError) {
-						failures.push(rollbackError);
-					}
-				}
-
-				if (failures.length)
-					throw new Error(`Composite execution rollback failed: ${failures.map(String).join("; ")}. Original error: ${String(error)}`);
-
-				throw error;
 			}
 
-			this.applied.push(current);
-			executed.push(current);
+			if (failures.length)
+				throw new Error(`Composite execution rollback failed: ${failures.map(String).join("; ")}. Original error: ${String(error)}`);
+
+			throw error;
 		}
 	}
 
 	public undo(): void {
-		for (const current of [...this.actions].reverse()) {
-			const index = this.applied.indexOf(current);
+		const undone: EditorAction[] = [];
 
-			if (index === -1)
-				continue;
+		try {
+			for (const current of [...this.actions].reverse()) {
+				const index = this.applied.indexOf(current);
 
-			current.undo();
-			this.applied.splice(index, 1);
+				if (index === -1)
+					continue;
+
+				current.undo();
+				this.applied.splice(index, 1);
+				undone.push(current);
+			}
+		} catch (error) {
+			const failures: unknown[] = [];
+
+			for (const current of undone.reverse()) {
+				try {
+					current.execute();
+					this.applied.push(current);
+				} catch (rollbackError) {
+					failures.push(rollbackError);
+				}
+			}
+
+			if (failures.length)
+				throw new Error(`Composite undo rollback failed: ${failures.map(String).join("; ")}. Original error: ${String(error)}`);
+
+			throw error;
 		}
 	}
 }

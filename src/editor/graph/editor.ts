@@ -97,7 +97,7 @@ export class GraphEditor {
 		const sourcePort = GraphNode.getPort(source, sourceOutput, "output");
 		const targetPort = GraphNode.getPort(target, targetInput, "input");
 
-		if (sourcePort && targetPort) {
+		if (sourcePort && targetPort && source !== target && GraphNode.canConnect(sourcePort, targetPort) && !this.graph.getEdge(source, sourceOutput, target, targetInput)) {
 			const replaced = this.graph.index.getInputEdge(target, targetInput);
 			this.actionManager.execute(new ConnectNodesAction(this, this.projectManager, source, sourceOutput, target, targetInput, replaced));
 		}

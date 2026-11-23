@@ -85,4 +85,9 @@ export class Editor {
 	}
 
 	public async init(): Promise<void> { }
+
+	public dispose(): void {
+		this.windowManager.closeAll();
+		this.projectManager.activeProject?.dispose();
+	}
 }

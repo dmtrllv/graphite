@@ -52,10 +52,23 @@ export class GraphManager extends Serializable {
 	protected override initialize(): void {
 		this._idCounter = 0;
 
-		if (![...this.graphs.values()].some(graph => graph instanceof WorldGraph))
-			throw new Error("GraphManager must contain a WorldGraph!");
+		const worldGraphs = [...this.graphs.values()].filter(graph => graph instanceof WorldGraph);
 
-		for (const graph of this.graphs.values()) {
+		if (worldGraphs.length !== 1)
+			throw new Error("GraphManager must contain exactly one WorldGraph!");
+
+		const names = new Set<number>();
+		const graphNames = new Set<string>();
+
+		for (const [id, graph] of this.graphs) {
+			if (id !== graph.id)
+				throw new Error(`Graph map key ${id} does not match graph ID ${graph.id}!`);
+
+			if (graphNames.has(graph.name))
+				throw new DuplicateGraphNameError(graph.name);
+
+			graphNames.add(graph.name);
+
 			graph.setManager(this);
 			this._idCounter = Math.max(this._idCounter, graph.id + 1);
 
@@ -149,6 +162,9 @@ export class GraphManager extends Serializable {
 		if (this.graphs.has(graph.id))
 			throw new Error(`Graph with ID ${graph.id} already exists!`);
 
+		if (graph.manager && graph.manager !== this)
+			throw new Error(`Graph ${graph.id} already belongs to another GraphManager!`);
+
 		if (graph instanceof WorldGraph && [...this.graphs.values()].some(item => item instanceof WorldGraph))
 			throw new Error("A GraphManager can only contain one World Graph!");
 
@@ -167,21 +183,35 @@ export class GraphManager extends Serializable {
 			this.validateReferences();
 		} catch (error) {
 			this.graphs.delete(graph.id);
+			graph.detachManager(this);
 			throw error;
 		}
 
 		if (!this.viewports.has(graph.id))
 			this.viewports.set(graph.id, new GraphViewport());
+
+		this._idCounter = Math.max(this._idCounter, graph.id + 1);
 		this.catalogVersion++;
 		return graph;
 	}
 
 	public restore(graph: Graph, viewport?: GraphViewport): void {
-		if (viewport)
-			this.viewports.set(graph.id, viewport);
+		if (this.graphs.get(graph.id) === graph)
+			throw new Error(`Graph ${graph.id} is already registered!`);
 
 		this.register(graph);
-		this._idCounter = Math.max(this._idCounter, graph.id + 1);
+
+		try {
+			if (viewport)
+				this.viewports.set(graph.id, viewport);
+
+			this._idCounter = Math.max(this._idCounter, graph.id + 1);
+		} catch (error) {
+			this.graphs.delete(graph.id);
+			this.viewports.delete(graph.id);
+			graph.detachManager(this);
+			throw error;
+		}
 	}
 
 	public notifySubgraphTopologyChanged(): void {
@@ -266,23 +296,25 @@ export class GraphManager extends Serializable {
 
 		this.projectManager?.checkRemovableGraph(graph);
 
-		for (const candidate of this.graphs.values()) {
-			if (candidate === graph)
-				continue;
+		const references = [...this.graphs.values()].flatMap(candidate =>
+			[...candidate.nodes.values()].filter(node => node instanceof SubgraphNode && node.graphId === graph.id)
+		);
 
-			for (const node of [...candidate.nodes.values()]) {
-				if (node instanceof SubgraphNode && node.graphId === graph.id)
-					candidate.removeNode(node);
-			}
-		}
+		if (references.length)
+			throw new Error(`Cannot remove graph "${graph.name}" because it is referenced by ${references.length} SubgraphNode(s)!`);
 
 		const editor = this.editors.get(graph.id);
 
-		if (editor)
-			this.closeEditor(graph, editor);
+		if (editor) {
+			if (this.projectManager)
+				this.projectManager.closeGraphEditor(editor);
+			else
+				this.closeEditor(graph, editor);
+		}
 
 		this.graphs.delete(graph.id);
 		this.viewports.delete(graph.id);
+		graph.detachManager(this);
 		this.catalogVersion++;
 	}
 

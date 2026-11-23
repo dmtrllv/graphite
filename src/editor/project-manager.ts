@@ -132,23 +132,40 @@ export class ProjectManager {
 		oldProject?.dispose();
 	}
 
+	public closeGraphEditor(editor: GraphEditor): void {
+		const window = this.editor.windowManager.windows.find(window => window.component === "graph-editor" && window.props["editor"] === editor);
+
+		if (window)
+			window.close();
+		else
+			editor.graph.manager?.closeEditor(editor.graph, editor);
+	}
+
 	public checkRemovableGraph(graph: Graph): void {
 		if (this.activeProject.graphManager !== graph.manager)
 			return;
 
-		const references = [...this.activeProject.simulationManager.simulations.values()]
-			.filter(simulation => simulation.graphId === graph.id);
+		const simulations = [...this.activeProject.simulationManager.simulations.values()].filter(simulation => simulation.graphId === graph.id);
+
+		if (simulations.length)
+			throw new Error(`Cannot remove graph "${graph.name}" because it is referenced by simulations: ${simulations.map(simulation => simulation.name).join(", ")}!`);
+
+		const references = [...graph.manager!.graphs.values()].flatMap(candidate =>
+			[...candidate.nodes.values()].filter(node => node instanceof SubgraphNode && node.graphId === graph.id)
+		);
 
 		if (references.length)
-			throw new Error(`Cannot remove graph "${graph.name}" because it is referenced by simulations: ${references.map(simulation => simulation.name).join(", ")}!`);
+			throw new Error(`Cannot remove graph "${graph.name}" because it is referenced by ${references.length} SubgraphNode(s)!`);
 	}
+
 
 	public openGraph(editor: GraphEditor): void {
 		const graph = editor.graph;
 		const options: WindowOptions = {
 			singleInstance: false,
 			check: window => window.component === "graph-editor" && window.props["editor"] === editor,
-			placementKey: editor
+			placementKey: editor,
+			onClose: () => graph.manager?.closeEditor(graph, editor),
 		};
 
 		const window = this.editor.windowManager.open(graph.name, "graph-editor", {
