@@ -1,0 +1,1 @@
+export const tag = <T extends string>(tag: T): symbol & { readonly tag: T } => Object.assign(Symbol(tag), { tag });
