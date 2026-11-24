@@ -12,7 +12,7 @@ const a = subGraph.addNode(ValueNode, 0);
 const b = subGraph.addNode(ValueNode, 1);
 
 const add = subGraph.addNode(BinaryOpNode, BinaryOp.add);
-
+console.log(a, b);
 subGraph.connect(a, "value", add, "a");
 subGraph.connect(b, "value", add, "b");
 subGraph.connect(b, "value", add, "b");
@@ -22,7 +22,5 @@ const negate = subGraph.addNode(UnaryOpNode, UnaryOp.negate);
 subGraph.connect(add, "value", negate, "a");
 
 const test = graphs.worldGraph.addNode(SubGraphNode, subGraph);
-
-
 
 console.log(graphs.worldGraph);

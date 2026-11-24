@@ -1,3 +1,4 @@
+import type { GraphNodeType } from "../compiler/graph/graph";
 import { assert } from "./assert";
 
 export class Allocator<T extends {}> {
@@ -54,6 +55,11 @@ export class Allocator<T extends {}> {
 	public all() {
 		return Array.from(this.iter());
 	}
+
+	public includes(item: T) {
+		return this.items.includes(item);
+	}
+	
 }
 
 type ObjectConstructor<T extends object, Args extends any[] = any[]> = (new (...args: Args) => T) | (abstract new (...args: Args) => T)

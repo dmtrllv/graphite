@@ -1,29 +1,23 @@
-import { Graph, type GraphNodeType, type MatchingNodeInputPortNames, type NodeType } from "./graph";
-import type { GraphManager } from "./graph-manager";
-import { DEFAULT_NODES, Node, SubGraphInputNode, SubGraphOutputNode } from "./nodes";
+import { Graph, type GraphNodeType, type MatchingNodeInputPortNames } from "./graph";
+import { DEFAULT_NODES, GraphInputNode, Node, type NodeType } from "./nodes";
 
 export class SubGraph extends Graph {
-	public readonly outputNode: Node;
-
 	public override get nodeTypes(): NodeType<any, any>[] {
 		return [
 			...DEFAULT_NODES,
-			SubGraphInputNode
+			GraphInputNode
 		];
 	}
 
-	public constructor(id: number, name: string, manager: GraphManager) {
-		super(id, name, manager);
-		this.outputNode = this.addNode(SubGraphOutputNode, this);
-	}
+
 
 	public override addNode<U extends NodeType<Node, Args>, Args extends any[]>(type: U, ...args: Args): InstanceType<U> {
-		
+
 		return super.addNode(type, ...args);
 	}
 
 	public override removeNode(node: GraphNodeType<this>): void {
-		
+
 		return super.removeEdge(node);
 	}
 
