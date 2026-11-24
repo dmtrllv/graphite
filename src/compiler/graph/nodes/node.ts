@@ -25,7 +25,7 @@ export abstract class Node<T extends {} = any> {
 		this.props = this.deserializeProps(props);
 	}
 	
-	public abstract compile(ctx: CompileContext, inputs: Record<string, string>): CompiledNode | Promise<CompiledNode>;
+	//public abstract compile(): CompiledNode | Promise<CompiledNode>;
 
 	protected deserializeProps(props: T) {
 		return props;

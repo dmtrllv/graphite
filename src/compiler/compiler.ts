@@ -1,5 +1,5 @@
 import { CompileContext } from "./context";
-import type { CompiledGraph, Graph, GraphManager } from "./graph";
+import type { Graph, GraphManager } from "./graph";
 
 export class Compiler {
 	public static readonly compile = (manager: GraphManager) => new Compiler(manager).compile(manager.worldGraph);
@@ -24,8 +24,8 @@ export class Compiler {
 		const resolvers: GraphCompileResolver[] = [];
 		this.compilingGraphs.set(graph, resolvers);
 
-		const ctx = new CompileContext(this, this.manager);
-		const compiledGraph = await graph.compile(ctx);
+		const ctx = new CompileContext();
+		const compiledGraph = null;
 		this.graphs.set(graph, compiledGraph);
 		this.compilingGraphs.delete(graph);
 		await Promise.all(resolvers.map(r => r(compiledGraph)));
@@ -34,3 +34,5 @@ export class Compiler {
 }
 
 type GraphCompileResolver = (graph: CompiledGraph) => void;
+
+type CompiledGraph = any;

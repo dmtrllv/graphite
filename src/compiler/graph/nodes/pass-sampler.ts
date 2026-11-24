@@ -1,7 +1,6 @@
-import type { CompileContext } from "../../context";
 import { Vec2 } from "../../types";
 import type { GraphManager } from "../graph-manager";
-import { Node, type CompiledNode } from "./node";
+import { Node } from "./node";
 
 export class PassBufferSampler extends Node {
 	public override getInputs(_graph: GraphManager) {
@@ -15,9 +14,5 @@ export class PassBufferSampler extends Node {
 		return {
 			value: this.getInputs().buffer.type
 		}
-	}
-
-	public override compile(ctx: CompileContext, inputs: Record<string, string>): CompiledNode | Promise<CompiledNode> {
-		throw new Error("Method not implemented.");
 	}
 }

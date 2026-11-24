@@ -23,19 +23,6 @@ export class SimulationInputNode extends Node<{ iterationCount?: number }> {
 	public override getOutputs(manager: GraphManager): NodePorts {
 		return this.getInputs(manager);
 	}
-
-	public override compile(_ctx: CompileContext, inputs: Record<string, string>): CompiledNode {
-		const value = this.props.iterationCount ?? 1;
-		const literal = Number.isInteger(value) ? `${value}.0` : `${value}`;
-
-		return {
-			outputs: {
-				...inputs,
-				iterationCount: inputs["iterationCount"] ?? literal
-			},
-			statements: []
-		};
-	}
 }
 
 export class SimulationOutputNode extends Node {
@@ -51,9 +38,5 @@ export class SimulationOutputNode extends Node {
 
 	public override getOutputs(manager: GraphManager): NodePorts {
 		return this.getInputs(manager);
-	}
-
-	public override compile(_ctx: CompileContext, inputs: Record<string, string>): CompiledNode {
-		return { outputs: inputs, statements: [] };
 	}
 }

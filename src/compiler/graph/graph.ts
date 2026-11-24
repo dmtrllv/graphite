@@ -1,12 +1,11 @@
 import { Allocator, assert, Err, Ok, Result } from "@utils";
 import { Node, type NodeType } from "./nodes/node";
-import { getWGSLType, type Type } from "../types";
-import { getNodeType, GraphOutputNode, type CompiledNode, type NodeOutputName, type NodeProps } from "./nodes";
+import { type Type } from "../types";
+import { getNodeType, GraphOutputNode, type NodeOutputName, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
 import type { MatchingNodeInputPortNames } from "./graph-manager";
-import { Group, compileNode, type GroupType } from "./group";
+import { Group, type GroupType } from "./group";
 import { getGroupType } from "./group-types";
-import type { CompileContext } from "../context";
 
 export abstract class Graph {
 	public readonly id: number;
@@ -258,61 +257,6 @@ export abstract class Graph {
 
 		return false;
 	}
-
-	public async compile(ctx: CompileContext): Promise<CompiledGraph> {
-		const functionName = `graph_${this.id}_${this.name.replace(/[^a-zA-Z0-9_]/g, "_")}`;
-		const inputType = `${functionName}_Input`;
-		const outputType = `${functionName}_Output`;
-
-		const inputs = this.inputs;
-		const outputs = this.outputs;
-		const resolved = new Map<Node, CompiledNode>();
-		const outputExpressions: Record<string, string> = {};
-		const statements = new Set<string>();
-		const outputEdges = this.getNodeInputEdges(this.outputNode);
-
-		for (const name of Object.keys(outputs)) {
-			const edge = outputEdges[name]!;
-			const source = this.getNode(edge.source)!;
-			const compiled = await compileNode(this, ctx, source, null, resolved);
-
-			outputExpressions[name] = compiled.outputs[edge.outputPort]!;
-			compiled.statements.forEach(statement => statements.add(statement));
-		}
-
-		const inputFields = Object.entries(inputs).map(([name, type]) => `\t${name}: ${getWGSLType(type)},`).join("\n");
-		const outputFields = Object.entries(outputs).map(([name, type]) => `\t${name}: ${getWGSLType(type)},`).join("\n");
-		const outputValues = Object.keys(outputs).map(name => outputExpressions[name]).join(",\n\t\t");
-
-		const source = [
-			`struct ${inputType} {`,
-			inputFields,
-			"};",
-			"",
-			`struct ${outputType} {`,
-			outputFields,
-			"};",
-			"",
-			`fn ${functionName}(input: ${inputType}) -> ${outputType} {`,
-			...[...statements].map(statement => `\t${statement}`),
-			`\treturn ${outputType}(`,
-			`\t\t${outputValues}`,
-			"\t);",
-			"}"
-		].join("\n");
-
-		return { functionName, inputType, outputType, source };
-	}
-
-	private getNodeInputEdges(node: Node): Record<string, Edge> {
-		const edges: Record<string, Edge> = {};
-
-		for (const edge of this.edges)
-			if (edge.target === node.id)
-				edges[edge.inputPort] = edge;
-
-		return edges;
-	}
 }
 
 export type CompiledExpression = {
@@ -355,10 +299,3 @@ export type EdgeProps = Omit<Edge, "id">;
 export type GraphNodeType<T extends Graph> = InstanceType<T["nodeTypes"][number]>;
 
 export type GraphIO = Record<string, Type>;
-
-export type CompiledGraph = {
-	readonly functionName: string;
-	readonly inputType: string;
-	readonly outputType: string;
-	readonly source: string;
-};

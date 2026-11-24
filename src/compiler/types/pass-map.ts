@@ -19,9 +19,9 @@ export type PassMap = {
 	readonly buffers: Record<string, PassBuffer>;
 }
 
-export const createPassMap = (buffers?: Record<string, PassBuffer>): PassMap => {
+export const createPassMap = (buffers: Record<string, PassBuffer> = {}): PassMap => {
 	return {
 		name: "pass-map",
-		buffers: {}
+		buffers: buffers
 	};
 };
