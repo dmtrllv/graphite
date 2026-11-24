@@ -5,7 +5,7 @@ import { getNodeType, GraphOutputNode, type CompiledNode, type NodeOutputName, t
 import { GraphError } from "./error";
 import type { MatchingNodeInputPortNames } from "./graph-manager";
 import { Group, compileNode, type GroupType } from "./group";
-import { getGroupType } from "./group_types";
+import { getGroupType } from "./group-types";
 import type { CompileContext } from "../context";
 
 export abstract class Graph {
@@ -26,14 +26,10 @@ export abstract class Graph {
 	public get groups(): Group[] {
 		return this._groups.all();
 	}
-
-	protected get outputNodeType(): NodeType<GraphOutputNode, any> {
-		return GraphOutputNode;
-	}
-
+	
 	public get outputNode() {
 		const node = assert.notNull(this.getNode(0));
-		assert(() => node instanceof this.outputNodeType, `First node is not a ${this.outputNodeType.name}!`);
+		assert(() => node instanceof GraphOutputNode, `First node is not a ${GraphOutputNode.name}!`);
 		return node;
 	}
 
@@ -59,7 +55,7 @@ export abstract class Graph {
 		edges.forEach(edge => this._edges.allocWithId(Edge, edge));
 		groups.forEach(group => this._groups.allocAt(group.id, getGroupType(group.type), group.id, group.name, group.nodes, group.parent));
 		if (!this._nodes.get(0))
-			this._nodes.allocWithId(this.outputNodeType, this.id, { graphId: id });
+			this._nodes.allocWithId(GraphOutputNode, this.id, { graphId: id });
 	}
 
 	public getNode(id: number): Node | undefined;

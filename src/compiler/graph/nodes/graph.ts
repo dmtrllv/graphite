@@ -1,25 +1,14 @@
-import { assert } from "@utils";
-import type { GraphManager } from "../graph-manager";
+import type { CompileContext } from "../../context";
 import { Node, type CompiledNode } from "./node";
 
 export class GraphOutputNode extends Node<{ graphId: number }> {
-	public override compile(): CompiledNode {
-		throw new Error("GraphOutputNode is a graph compilation boundary and cannot be compiled as an expression!");
+	public override compile(ctx: CompileContext, inputs: Record<string, string>): CompiledNode | Promise<CompiledNode> {
+		throw new Error("Method not implemented.");
 	}
 }
 
 export class GraphInputNode extends Node<{ graphId: number; inputName: string; }> {
-	public override getOutputs(manager: GraphManager) {
-		const graph = manager.getGraph(this.props.graphId);
-		return { value: assert.notNull(graph.inputs[this.props.inputName]) };
-	}
-
-	public override compile(): CompiledNode {
-		return {
-			outputs: {
-				value: `input.${this.props.inputName}`
-			},
-			statements: []
-		};
+	public override compile(ctx: CompileContext, inputs: Record<string, string>): CompiledNode | Promise<CompiledNode> {
+		throw new Error("Method not implemented.");
 	}
 }
