@@ -38,6 +38,10 @@ export type NodePorts = Record<string, Type>;
 
 export type NodeType<T extends Node<Props>, Props extends {}> = new (id: number, graphId: number, props: Props) => T;
 
+export const isNodeType = <T extends Node<any>>(type: any, NodeClass: NodeType<T, any>): type is NodeType<T, NodeProps<T>> => {
+	return type.prototype === NodeClass.prototype || type.prototype instanceof NodeClass;
+};
+
 export type NodeProps<T> = T extends Node<infer Props> ? Props : never;
 export type NodeInputName<T extends Node> = keyof ReturnType<T["getInputs"]>;
 export type NodeOutputName<T extends Node> = keyof ReturnType<T["getOutputs"]>;
