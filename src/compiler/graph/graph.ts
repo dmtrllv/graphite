@@ -1,7 +1,7 @@
 import { Allocator, assert, Err, Ok, Result } from "@utils";
 import { Node, type NodeType } from "./nodes/node";
 import { getWGSLType, type Type } from "../types";
-import { getNodeType, GraphOutputNode, type NodeOutputName, type NodeProps } from "./nodes";
+import { getNodeType, GraphOutputNode, type CompiledNode, type NodeOutputName, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
 import type { MatchingNodeInputPortNames } from "./graph-manager";
 import { Group, type GroupType } from "./group";
@@ -272,28 +272,31 @@ export abstract class Graph {
 		const inputs = this.inputs;
 		const outputs = this.outputs;
 
-		const resolved = new Map<Node, CompiledExpression>();
+		const resolved = new Map<Node, CompiledNode>();
 
-		const walk = async (node: Node): Promise<CompiledExpression> => {
+		const walk = async (node: Node): Promise<CompiledNode> => {
 			const cached = resolved.get(node);
 			if (cached)
 				return cached;
 
+			const inputs: Record<string, string> = {};
 			const statements: string[] = [];
-			const inputExpressions: Record<string, string> = {};
 
 			for (const [input, edge] of Object.entries(this.getNodeInputEdges(node))) {
 				const source = assert.notNull(this.getNode(edge.source));
 				const compiled = await walk(source);
 				statements.push(...compiled.statements);
-				inputExpressions[input] = compiled.expression;
+				inputs[input] = assert.notNull(compiled.outputs[edge.outputPort], `Missing output "${edge.outputPort}" on node "${source.type}"!`);
 			}
 
-			const expression = await node.compile(ctx, inputExpressions);
-			const compiled = { expression, statements };
+			const compiled = await node.compile(ctx, inputs);
+			const result = {
+				outputs: compiled.outputs,
+				statements: [...statements, ...compiled.statements]
+			};
 
-			resolved.set(node, compiled);
-			return compiled;
+			resolved.set(node, result);
+			return result;
 		};
 
 		const outputEdges = this.getNodeInputEdges(this.outputNode);
@@ -304,7 +307,8 @@ export abstract class Graph {
 			const edge = assert.notNull(outputEdges[name], `Missing graph output connection "${name}"!`);
 			const source = assert.notNull(this.getNode(edge.source));
 			const compiled = await walk(source);
-			outputExpressions[name] = compiled.expression;
+
+			outputExpressions[name] = assert.notNull(compiled.outputs[edge.outputPort]);
 			statements.push(...compiled.statements);
 		}
 

@@ -8,7 +8,10 @@ export class ValueNode extends Node<{ name?: string, value: number }> {
 		};
 	}
 
-	public override compile(): string {
-		return `${this.props.value}.0`;
+	public override compile() {
+		return {
+			outputs: { value: `${this.props.value}.0` },
+			statements: []
+		};
 	}
 };
