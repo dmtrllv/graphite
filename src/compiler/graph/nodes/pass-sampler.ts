@@ -8,7 +8,7 @@ export class PassBufferSampler extends Node<{ graphId: number, bufferKey: string
 		const graph = manager.getGraph(this.props.graphId, PassGraph);
 
 		return {
-			buffer: graph.inputs[this.props.bufferKey]!,
+			buffer: graph.outputs[this.props.bufferKey]!,
 			position: Vec2
 		};
 	}
@@ -17,7 +17,7 @@ export class PassBufferSampler extends Node<{ graphId: number, bufferKey: string
 		const graph = manager.getGraph(this.props.graphId, PassGraph);
 
 		return {
-			value: graph.inputs[this.props.bufferKey]!
+			value: graph.outputs[this.props.bufferKey]!
 		};
 	}
 }

@@ -1,9 +1,11 @@
+import { PassGraph } from "./pass";
 import { SubGraph } from "./subgraph";
 import { WorldGraph } from "./world";
 
 export const Graphs = {
 	WorldGraph,
 	SubGraph,
+	PassGraph,
 } as const;
 
 export const getGraphType = (name: string) => {

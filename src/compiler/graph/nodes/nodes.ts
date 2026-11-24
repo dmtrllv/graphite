@@ -1,6 +1,8 @@
-import { assert } from "../../../utils";
+import { assert } from "@utils";
 import { GraphInputNode, GraphOutputNode } from "./graph";
 import { MathNodes } from "./math";
+import { PassNode } from "./pass";
+import { PassBufferSampler } from "./pass-sampler";
 import { SimulationInputNode, SimulationOutputNode } from "./simulation";
 import { SubGraphNode } from "./subgraph";
 import { ValueNode } from "./value";
@@ -17,7 +19,9 @@ export const ALL_NODES = [
 	GraphOutputNode,
 	GraphInputNode,
 	SimulationInputNode,
-	SimulationOutputNode
+	SimulationOutputNode,
+	PassNode,
+	PassBufferSampler,
 ];
 
 export const getNodeType = (type: string): (typeof ALL_NODES)[number] => {
