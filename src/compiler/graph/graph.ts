@@ -82,23 +82,33 @@ export abstract class Graph {
 		return this._groups.allocWithId(type, name, [], parent?.id);
 	}
 
-	private getNodeGroup<T extends GraphNodeType<this>>(node: T): Group | undefined {
-		return this.groups.find(g => g.nodes.includes(node.id));
+	private getNodeGroup(nodeId: number): Group | null {
+		return this.groups.find(g => g.nodes.includes(nodeId)) ?? null;
+	}
+
+	private isGroupWithin(group: Group | null, parent: Group | null): boolean {
+		while (group) {
+			if (group === parent)
+				return true;
+			group = group.parent === null ? null : this._groups.get(group.parent)!;
+		}
+		return parent === null;
 	}
 
 	public transferNode<T extends GraphNodeType<this>>(node: T, group: Group | null) {
-		const currentGroup = this.getNodeGroup(node);
-
-		if(currentGroup === group)
+		const currentGroup = this.getNodeGroup(node.id);
+		if (currentGroup === group)
 			return;
 
-		// todo check if it makes sense with the edges?
-		// check that the groups and its node edges only go levels deeper
-		if(currentGroup)
-			currentGroup.removeNode(node.id);
+		for (const edge of this.edges) {
+			if (edge.source === node.id && !this.isGroupWithin(this.getNodeGroup(edge.target), group))
+				return;
+			if (edge.target === node.id && !this.isGroupWithin(group, this.getNodeGroup(edge.source)))
+				return;
+		}
 
-		if(group)
-			group.addNode(node.id);
+		currentGroup?.removeNode(node.id);
+		group?.addNode(node.id);
 	}
 
 	public removeGroup(id: number): void;
