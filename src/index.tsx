@@ -1,3 +1,4 @@
+import { Compiler } from "./compiler";
 import { BinaryOp, BinaryOpNode, GraphManager, SubGraph, SubGraphNode, UnaryOp, UnaryOpNode, ValueNode, SimulationGroup } from "./compiler/graph";
 
 const manager = new GraphManager();
@@ -42,6 +43,8 @@ const serialized2 = testManager.serialize();
 const s1 = JSON.stringify(serialized, null, 4);
 const s2 = JSON.stringify(serialized2, null, 4);
 
-console.log(s1);
-console.log(s2);
 console.log("Serialization round-trip:", s1 === s2);
+
+const result = await Compiler.compile(manager);
+
+console.log(result.source);

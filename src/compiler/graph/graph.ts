@@ -4,7 +4,7 @@ import { getWGSLType, type Type } from "../types";
 import { getNodeType, GraphOutputNode, type CompiledNode, type NodeOutputName, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
 import type { MatchingNodeInputPortNames } from "./graph-manager";
-import { Group, type GroupType } from "./group";
+import { Group, compileNode, type GroupType } from "./group";
 import { getGroupType } from "./group_types";
 import type { CompileContext } from "../context";
 
@@ -263,7 +263,6 @@ export abstract class Graph {
 		return false;
 	}
 
-
 	public async compile(ctx: CompileContext): Promise<CompiledGraph> {
 		const functionName = `graph_${this.id}_${this.name.replace(/[^a-zA-Z0-9_]/g, "_")}`;
 		const inputType = `${functionName}_Input`;
@@ -271,50 +270,22 @@ export abstract class Graph {
 
 		const inputs = this.inputs;
 		const outputs = this.outputs;
-
 		const resolved = new Map<Node, CompiledNode>();
-
-		const walk = async (node: Node): Promise<CompiledNode> => {
-			const cached = resolved.get(node);
-			if (cached)
-				return cached;
-
-			const inputs: Record<string, string> = {};
-			const statements: string[] = [];
-
-			for (const [input, edge] of Object.entries(this.getNodeInputEdges(node))) {
-				const source = assert.notNull(this.getNode(edge.source));
-				const compiled = await walk(source);
-				statements.push(...compiled.statements);
-				inputs[input] = assert.notNull(compiled.outputs[edge.outputPort], `Missing output "${edge.outputPort}" on node "${source.type}"!`);
-			}
-
-			const compiled = await node.compile(ctx, inputs);
-			const result = {
-				outputs: compiled.outputs,
-				statements: [...statements, ...compiled.statements]
-			};
-
-			resolved.set(node, result);
-			return result;
-		};
-
-		const outputEdges = this.getNodeInputEdges(this.outputNode);
 		const outputExpressions: Record<string, string> = {};
-		const statements: string[] = [];
+		const statements = new Set<string>();
+		const outputEdges = this.getNodeInputEdges(this.outputNode);
 
 		for (const name of Object.keys(outputs)) {
-			const edge = assert.notNull(outputEdges[name], `Missing graph output connection "${name}"!`);
-			const source = assert.notNull(this.getNode(edge.source));
-			const compiled = await walk(source);
+			const edge = outputEdges[name]!;
+			const source = this.getNode(edge.source)!;
+			const compiled = await compileNode(this, ctx, source, null, resolved);
 
-			outputExpressions[name] = assert.notNull(compiled.outputs[edge.outputPort]);
-			statements.push(...compiled.statements);
+			outputExpressions[name] = compiled.outputs[edge.outputPort]!;
+			compiled.statements.forEach(statement => statements.add(statement));
 		}
 
 		const inputFields = Object.entries(inputs).map(([name, type]) => `\t${name}: ${getWGSLType(type)},`).join("\n");
 		const outputFields = Object.entries(outputs).map(([name, type]) => `\t${name}: ${getWGSLType(type)},`).join("\n");
-
 		const outputValues = Object.keys(outputs).map(name => outputExpressions[name]).join(",\n\t\t");
 
 		const source = [
@@ -327,7 +298,7 @@ export abstract class Graph {
 			"};",
 			"",
 			`fn ${functionName}(input: ${inputType}) -> ${outputType} {`,
-			...statements.map(statement => `\t${statement}`),
+			...[...statements].map(statement => `\t${statement}`),
 			`\treturn ${outputType}(`,
 			`\t\t${outputValues}`,
 			"\t);",
@@ -336,7 +307,6 @@ export abstract class Graph {
 
 		return { functionName, inputType, outputType, source };
 	}
-
 
 	private getNodeInputEdges(node: Node): Record<string, Edge> {
 		const edges: Record<string, Edge> = {};
