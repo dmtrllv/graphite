@@ -1,4 +1,4 @@
-import type { PassMap, Type } from "../types";
+import type { PassBufferType, Type } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES, GraphInputNode, type NodeType } from "./nodes";
 
@@ -30,7 +30,7 @@ export class PassGraph extends Graph {
 			delete this.passInputs[name];
 	}
 
-	public setPassOutput(name: string, type: PassMap) {
+	public setPassOutput(name: string, type: PassBufferType) {
 		this.passOutputs[name] = type;
 	}
 
@@ -41,4 +41,4 @@ export class PassGraph extends Graph {
 }
 
 export type PassInputs = Record<string, Type>;
-export type PassOutputs = Record<string, PassMap>;
+export type PassOutputs = Record<string, PassBufferType>;
