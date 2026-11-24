@@ -8,6 +8,7 @@ export const GraphError = createTaggedEnum({
 	InvalidNodeType: (graph: Graph<any>, node: NodeType<any, any>) => `Invalid node type ${node.name} at graph ${graph.name}`,
 	EdgeCycle: () => `Edge creates a cycle`,
 	DuplicateGraphName: (name: string) => `Duplicate graph name ${name}`,
+	MissingPort: (node: Node, type: "input" | "output", port: string) => `Missing ${type} port ${port} on ${node.type}`,
 	Error: (err: Error) => err.name,
 });
 

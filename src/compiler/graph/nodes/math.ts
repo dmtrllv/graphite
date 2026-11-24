@@ -36,7 +36,6 @@ abstract class AbstractMathNode<T extends MathOpTypes> extends Node<{ op: EnumTy
 	protected override deserializeProps(props: { op: EnumType<T>; }): { op: EnumType<T>; } {
 		if (!isVariant(this.opType, props.op)) {
 			const op = this.opType[props.op];
-			console.log("deserialized props", props, isVariant(this.opType, props.op));
 			if (!op)
 				throw new Error("Could not parse op enum variant");
 			return { op };

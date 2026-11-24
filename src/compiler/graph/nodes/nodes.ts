@@ -6,18 +6,19 @@ import { PassBufferSampler } from "./pass-sampler";
 import { SimulationInputNode, SimulationOutputNode } from "./simulation";
 import { SubGraphNode } from "./subgraph";
 import { ValueNode } from "./value";
+import { TextureSampler } from "./texture-sampler";
 
 export const DEFAULT_NODES = [
 	...MathNodes,
 	ValueNode,
 	SubGraphNode,
 	GraphInputNode,
+	TextureSampler,
 ];
 
 export const ALL_NODES = [
 	...DEFAULT_NODES,
 	GraphOutputNode,
-	GraphInputNode,
 	SimulationInputNode,
 	SimulationOutputNode,
 	PassNode,

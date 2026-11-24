@@ -39,7 +39,7 @@ export class Allocator<T extends {}> {
 		if (freeIndex > -1)
 			this.freeList.splice(freeIndex, 1);
 
-		for(let i = this.nextId(); i < id; i++)
+		for(let i = this.items.length; i < id; i++)
 			this.freeList.push(i);
 
 		const item = new type(...args) as InstanceType<U>;

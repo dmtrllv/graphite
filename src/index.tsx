@@ -17,9 +17,9 @@ const b = manager.addNode(subGraph, ValueNode, { value: 5 });
 const add = manager.addNode(subGraph, BinaryOpNode, { op: BinaryOp.add });
 const negate = manager.addNode(subGraph, UnaryOpNode, { op: UnaryOp.negate });
 
-subGraph.connect(a, "value", add, "a");
-subGraph.connect(b, "value", add, "b");
-subGraph.connect(add, "value", negate, "a");
+manager.connect(subGraph, a, "value", add, "a");
+manager.connect(subGraph, b, "value", add, "b");
+manager.connect(subGraph, add, "value", negate, "a");
 
 const groupA = subGraph.addGroup(SimulationGroup, "Simulation");
 const groupB = subGraph.addGroup(SimulationGroup, "Nested Simulation", groupA);
@@ -43,18 +43,18 @@ const heightA = manager.addNode(heightPass, ValueNode, { value: 1 });
 const heightB = manager.addNode(heightPass, ValueNode, { value: 2 });
 const heightAdd = manager.addNode(heightPass, BinaryOpNode, { op: BinaryOp.add });
 
-heightPass.connect(heightA, "value", heightAdd, "a");
-heightPass.connect(heightB, "value", heightAdd, "b");
+manager.connect(heightPass, heightA, "value", heightAdd, "a");
+manager.connect(heightPass, heightB, "value", heightAdd, "b");
 
 const normalValue = manager.addNode(normalPass, ValueNode, { value: 1 });
 const normalNegate = manager.addNode(normalPass, UnaryOpNode, { op: UnaryOp.negate });
 
-normalPass.connect(normalValue, "value", normalNegate, "a");
+manager.connect(normalPass, normalValue, "value", normalNegate, "a");
 
 const heightNode = manager.addNode(world, PassNode, { graphId: heightPass.id });
 const normalNode = manager.addNode(world, PassNode, { graphId: normalPass.id });
 
-world.connect(heightNode, "height", normalNode, "height");
+manager.connect(world, heightNode, "height", normalNode, "height");
 
 manager.addNode(world, SubGraphNode, { graph: subGraph.id });
 

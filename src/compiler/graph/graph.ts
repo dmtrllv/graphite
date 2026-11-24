@@ -1,9 +1,8 @@
 import { Allocator, assert, Err, Ok, Result } from "@utils";
 import { Node, type NodeType } from "./nodes/node";
 import { type Type } from "../types";
-import { getNodeType, GraphOutputNode, type NodeOutputName, type NodeProps } from "./nodes";
+import { getNodeType, GraphOutputNode, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
-import type { MatchingNodeInputPortNames } from "./graph-manager";
 import { Group, type GroupType } from "./group";
 import { getGroupType } from "./group-types";
 
@@ -28,7 +27,7 @@ export abstract class Graph<Props extends {}> {
 	public get groups(): Group[] {
 		return this._groups.all();
 	}
-	
+
 	public get outputNode() {
 		const node = assert.notNull(this.getNode(0));
 		assert(() => node instanceof GraphOutputNode, `First node is not a ${GraphOutputNode.name}!`);
@@ -76,7 +75,12 @@ export abstract class Graph<Props extends {}> {
 	}
 
 	public addNode<T extends GraphNodeType<this>, P extends NodeProps<T>>(type: NodeType<T, P>, props: P): T {
+		assert(() => this.nodeTypes.includes(type), `invalid node type ${type.name} for graph ${this.name}`);
 		return this._nodes.allocWithId(type, this.id, props);
+	}
+
+	public addEdge(props: EdgeProps): any {
+		return this._edges.allocWithId(Edge, props)
 	}
 
 	private isGroupIONode(group: Group, node: Node): boolean {
@@ -178,50 +182,6 @@ export abstract class Graph<Props extends {}> {
 		this.removeNodeAt(node.id);
 	}
 
-	public connect<Source extends GraphNodeType<this>, K extends NodeOutputName<Source>, Target extends GraphNodeType<this>>(source: Source, outputPort: K, target: Target, inputPort: MatchingNodeInputPortNames<Target, Source, K>): Edge {
-		assert(() => source.graphId === this.id, "Source node belongs to another graph!");
-		assert(() => target.graphId === this.id, "Target node belongs to another graph!");
-		assert(() => !this.createsCycle(source, target), "Edge create a cycle!");
-
-		return this._edges.allocWithId(Edge, {
-			source: source.id,
-			outputPort: outputPort.toString(),
-			target: target.id,
-			inputPort: inputPort.toString()
-		});
-	}
-
-	public tryConnect<Source extends NodeType<any, any>, Target extends NodeType<any, any>>(source: InstanceType<Source>, outputPort: string | number | symbol, target: InstanceType<Target>, inputPort: string | number | symbol): Result<Edge, GraphError> {
-		if (source.graphId !== this.id)
-			return Err(GraphError.InvalidNode(this, source));
-
-		if (target.graphId !== this.id)
-			return Err(GraphError.InvalidNode(this, target));
-
-		if (this.createsCycle(source, target))
-			return Err(GraphError.EdgeCycle());
-
-		return Ok(this._edges.allocWithId(Edge, {
-			source: source.id,
-			outputPort: outputPort.toString(),
-			target: target.id,
-			inputPort: inputPort.toString()
-		}));
-	}
-
-	public canConnect<Source extends NodeType<any, any>, Target extends NodeType<any, any>>(source: InstanceType<Source>, target: InstanceType<Target>): boolean {
-		if (source.graphId !== this.id)
-			return false;
-
-		if (target.graphId !== this.id)
-			return false;
-
-		if (this.createsCycle(source, target))
-			return false;
-
-		return true;
-	}
-
 	public removeEdge(edge: Edge) {
 		this._edges.free(edge.id);
 	}
@@ -236,32 +196,6 @@ export abstract class Graph<Props extends {}> {
 			edges: this.edges,
 			groups: this.groups,
 		};
-	}
-
-	private createsCycle<Source extends NodeType<any, any>, Target extends NodeType<any, any>>(source: InstanceType<Source>, target: InstanceType<Target>): boolean {
-		if (source.id === target.id)
-			return true;
-
-		const visited = new Set<number>();
-		const stack = [target.id];
-
-		while (stack.length > 0) {
-			const id = stack.pop()!;
-
-			if (id === source.id)
-				return true;
-
-			if (visited.has(id))
-				continue;
-
-			visited.add(id);
-
-			for (const edge of this.edges)
-				if (edge.source === id)
-					stack.push(edge.target);
-		}
-
-		return false;
 	}
 }
 

@@ -1,5 +1,5 @@
 import { Allocator, assert, Err, Ok, Result } from "@utils";
-import { Graph, type GraphNodeType, type GraphProps, type GraphType, type SerializedGraph } from "./graph";
+import { Edge, Graph, type GraphNodeType, type GraphProps, type GraphType, type SerializedGraph } from "./graph";
 import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
 import { isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
@@ -60,14 +60,16 @@ export class GraphManager {
 	}
 
 	public tryAddNode<T extends Node<P>, P extends {}>(idOrGraph: number | Graph<any>, type: NodeType<T, P>, props: P): Result<T, GraphError> {
-		const graph = typeof idOrGraph === "number" ? this.getGraph(idOrGraph) : idOrGraph;
+		return Result.try(() => {
+			const graph = typeof idOrGraph === "number" ? this.getGraph(idOrGraph) : idOrGraph;
 
-		if (isNodeType(type, SubGraphNode)) {
-			const subGraph = this.getGraph((props as any).graph);
-			assert(() => subGraph !== graph && !this.hasDependency(subGraph, graph), "Recursive subgraphs are not allowed!");
-		}
+			if (isNodeType(type, SubGraphNode)) {
+				const subGraph = this.getGraph((props as any).graph);
+				assert(() => subGraph !== graph && !this.hasDependency(subGraph, graph), "Recursive subgraphs are not allowed!");
+			}
 
-		return graph.tryAddNode(type, props);
+			return graph.tryAddNode(type, props);
+		}, GraphError.Error);
 	}
 
 	private hasDependency(graph: Graph<any>, target: Graph<any>, visited = new Set<number>()): boolean {
@@ -85,6 +87,90 @@ export class GraphManager {
 		}
 
 		return false;
+	}
+
+	public connect<T extends Graph<any>, Source extends GraphNodeType<T>, K extends NodeOutputName<Source>, Target extends GraphNodeType<T>>(graph: T, source: Source, outputPort: K, target: Target, inputPort: MatchingNodeInputPortNames<Target, Source, K>): Edge {
+		assert(() => source.graphId === graph.id, "Source node belongs to another graph!");
+		assert(() => target.graphId === graph.id, "Target node belongs to another graph!");
+		assert(() => !this.createsCycle(graph, source, target), "Edge create a cycle!");
+		assert(() => outputPort in source.getOutputs(this), `Missing output port ${outputPort.toString()}!`);
+		assert(() => inputPort in target.getInputs(this), `Missing input port ${outputPort.toString()}!`);
+
+		return graph.addEdge({
+			source: source.id,
+			outputPort: outputPort.toString(),
+			target: target.id,
+			inputPort: inputPort.toString()
+		});
+	}
+
+	public tryConnect<T extends Graph<any>, Source extends NodeType<any, any>, Target extends NodeType<any, any>>(graph: T, source: InstanceType<Source>, outputPort: string | number | symbol, target: InstanceType<Target>, inputPort: string | number | symbol): Result<Edge, GraphError> {
+		if (source.graphId !== graph.id)
+			return Err(GraphError.InvalidNode(graph, source));
+
+		if (target.graphId !== graph.id)
+			return Err(GraphError.InvalidNode(graph, target));
+
+		if (this.createsCycle(graph, source, target))
+			return Err(GraphError.EdgeCycle());
+
+		if(outputPort in source.getOutputs(this))
+			return Err(GraphError.MissingPort(source, "output", outputPort.toString()));
+
+		if(inputPort in target.getInputs(this))
+			return Err(GraphError.MissingPort(target, "input", inputPort.toString()));
+
+		return Ok(graph.addEdge({
+			source: source.id,
+			outputPort: outputPort.toString(),
+			target: target.id,
+			inputPort: inputPort.toString()
+		}));
+	}
+
+	private createsCycle<T extends Graph<any>, Source extends NodeType<any, any>, Target extends NodeType<any, any>>(graph: T, source: InstanceType<Source>, target: InstanceType<Target>): boolean {
+		if (source.id === target.id)
+			return true;
+
+		const visited = new Set<number>();
+		const stack = [target.id];
+
+		while (stack.length > 0) {
+			const id = stack.pop()!;
+
+			if (id === source.id)
+				return true;
+
+			if (visited.has(id))
+				continue;
+
+			visited.add(id);
+
+			for (const edge of graph.edges)
+				if (edge.source === id)
+					stack.push(edge.target);
+		}
+
+		return false;
+	}
+
+	public canConnect<T extends Graph<any>, Source extends NodeType<any, any>, Target extends NodeType<any, any>>(graph: T, source: InstanceType<Source>, outputPort: string | number | symbol, target: InstanceType<Target>, inputPort: string | number | symbol): boolean {
+		if (source.graphId !== graph.id)
+			return false;
+
+		if (target.graphId !== graph.id)
+			return false;
+
+		if (this.createsCycle(graph, source, target))
+			return false;
+
+		if(outputPort in source.getOutputs(this))
+			return false;
+
+		if(inputPort in target.getInputs(this))
+			return false;
+
+		return true;
 	}
 }
 
