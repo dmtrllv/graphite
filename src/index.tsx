@@ -6,8 +6,8 @@ import { ValueType, Vec3 } from "./compiler/types";
 const manager = new GraphManager();
 const world = manager.worldGraph;
 
-const subGraph = manager.createGraph(SubGraph, "Reusable");
-const nestedSubGraph = manager.createGraph(SubGraph, "Nested");
+const subGraph = manager.createGraph(SubGraph, "Reusable", {});
+const nestedSubGraph = manager.createGraph(SubGraph, "Nested", {});
 
 manager.addNode(nestedSubGraph, ValueNode, { value: 42 });
 manager.addNode(subGraph, SubGraphNode, { graph: nestedSubGraph.id });
@@ -29,8 +29,9 @@ subGraph.transferNode(add, groupB);
 subGraph.transferNode(a, groupA);
 subGraph.transferNode(b, groupA);
 
-const heightPass = manager.createGraph(PassGraph, "Height");
-const normalPass = manager.createGraph(PassGraph, "Normals");
+const heightPass = manager.createGraph(PassGraph, "Height", { inputs: {}, outputs: {} });
+
+const normalPass = manager.createGraph(PassGraph, "Normals", { inputs: {}, outputs: {} });
 
 heightPass.setPassInput("seed", ValueType);
 heightPass.setPassOutput("height", ValueType);

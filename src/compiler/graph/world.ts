@@ -5,7 +5,7 @@ import { PassNode } from "./nodes/pass";
 import { PassBufferSampler } from "./nodes/pass-sampler";
 import type { PassOutputs } from "./pass";
 
-export class WorldGraph extends Graph {
+export class WorldGraph extends Graph<WorldGraphProps> {
 	public override get nodeTypes() {
 		return [
 			...DEFAULT_NODES,
@@ -14,21 +14,23 @@ export class WorldGraph extends Graph {
 		];
 	}
 
-	private worldOutputs: PassOutputs = {};
-
 	public override get outputs() {
 		return {
 			elevation: ValueType,
-			...this.worldOutputs,
+			...this.props.outputs,
 		};
 	}
 
 	public setOutput(name: string, type: PassBufferType) {
-		this.worldOutputs[name] = type;
+		this.props.outputs[name] = type;
 	}
 
 	public removeOutput(name: string) {
-		if (this.worldOutputs[name])
-			delete this.worldOutputs[name];
+		if (this.props.outputs[name])
+			delete this.props.outputs[name];
 	}
 }
+
+export type WorldGraphProps = { 
+	readonly outputs: PassOutputs;
+};

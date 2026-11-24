@@ -1,12 +1,12 @@
 import { Allocator, assert, Err, Ok, Result } from "@utils";
-import { Graph, type GraphNodeType, type GraphType, type SerializedGraph } from "./graph";
+import { Graph, type GraphNodeType, type GraphProps, type GraphType, type SerializedGraph } from "./graph";
 import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
 import { isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
 import { GraphError } from "./error";
 
 export class GraphManager {
-	private readonly graphs: Allocator<Graph>;
+	private readonly graphs: Allocator<Graph<any>>;
 
 	public get worldGraph(): WorldGraph {
 		return this.getGraph(0) as WorldGraph;
@@ -15,40 +15,40 @@ export class GraphManager {
 	public constructor(graphs?: SerializedGraphs) {
 		this.graphs = new Allocator(Graph);
 		if (graphs?.length)
-			graphs.forEach(g => this.graphs.allocAt(g.id, getGraphType(g.type), g.id, g.name, g.nodes, g.edges, g.groups));
+			graphs.forEach(g => this.graphs.allocAt(g.id, getGraphType(g.type), g.id, g.name, g.props, g.nodes, g.edges, g.groups));
 		else
-			this.graphs.allocWithId(WorldGraph, "World");
+			this.graphs.allocWithId(WorldGraph, "World", { outputs: {} });
 	}
 
 	public serialize(): SerializedGraphs {
 		return this.graphs.all().map(g => g.serialize());
 	}
 
-	public getGraph(id: number): Graph;
-	public getGraph<T extends Graph>(id: number, type: GraphType<T>): T;
-	public getGraph(id: number, type?: GraphType<any>): Graph {
+	public getGraph(id: number): Graph<any>;
+	public getGraph<T extends Graph<any>>(id: number, type: GraphType<T, any>): T;
+	public getGraph(id: number, type?: GraphType<any, any>): Graph<any> {
 		const graph = assert.notNull(this.graphs.get(id));
 		if (type)
 			assert(() => graph instanceof type, `Graph with id ${id} is not an instance of ${type.name}!`);
 		return graph;
 	}
 
-	public getGraphs<T extends Graph>(type: GraphType<T>): T[] {
+	public getGraphs<T extends Graph<any>>(type: GraphType<T, any>): T[] {
 		return this.graphs.all().filter(graph => graph instanceof type) as T[];
 	}
 
-	public createGraph<T extends Graph>(type: GraphType<T>, name: string): T {
+	public createGraph<T extends Graph<any>>(type: GraphType<T, any>, name: string, props: GraphProps<T>): T {
 		assert(() => !this.graphs.all().find(g => g.name === name), `Graph with name ${name} already exists`);
-		return this.graphs.allocWithId(type, name);
+		return this.graphs.allocWithId(type, name, props);
 	}
 
-	public tryCreateGraph<T extends Graph>(type: GraphType<T>, name: string): Result<T, GraphError> {
+	public tryCreateGraph<T extends Graph<any>>(type: GraphType<T, any>, name: string, props: GraphProps<T>): Result<T, GraphError> {
 		if (this.graphs.all().find(g => g.name === name))
 			return Err(GraphError.DuplicateGraphName(name));
-		return Ok(this.graphs.allocWithId(type, name));
+		return Ok(this.graphs.allocWithId(type, name, props));
 	}
 
-	public addNode<T extends Graph, U extends GraphNodeType<T>, P extends NodeProps<U>>(idOrGraph: number | T, type: NodeType<U, P>, props: P): U {
+	public addNode<T extends Graph<any>, U extends GraphNodeType<T>, P extends NodeProps<U>>(idOrGraph: number | T, type: NodeType<U, P>, props: P): U {
 		const graph = typeof idOrGraph === "number" ? this.getGraph(idOrGraph) : idOrGraph;
 
 		if (isNodeType(type, SubGraphNode)) {
@@ -59,7 +59,7 @@ export class GraphManager {
 		return graph.addNode(type, props);
 	}
 
-	public tryAddNode<T extends Node<P>, P extends {}>(idOrGraph: number | Graph, type: NodeType<T, P>, props: P): Result<T, GraphError> {
+	public tryAddNode<T extends Node<P>, P extends {}>(idOrGraph: number | Graph<any>, type: NodeType<T, P>, props: P): Result<T, GraphError> {
 		const graph = typeof idOrGraph === "number" ? this.getGraph(idOrGraph) : idOrGraph;
 
 		if (isNodeType(type, SubGraphNode)) {
@@ -70,7 +70,7 @@ export class GraphManager {
 		return graph.tryAddNode(type, props);
 	}
 
-	private hasDependency(graph: Graph, target: Graph, visited = new Set<number>()): boolean {
+	private hasDependency(graph: Graph<any>, target: Graph<any>, visited = new Set<number>()): boolean {
 		if (graph === target)
 			return true;
 

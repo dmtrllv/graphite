@@ -8,7 +8,7 @@ import { PassBufferSampler } from "./nodes/pass-sampler";
  * It can only be instantiated in the `WorldGraph` which will serve as the composition
  * of all the passes.
  */
-export class PassGraph extends Graph {
+export class PassGraph extends Graph<PassProps> {
 	public override get nodeTypes(): NodeType<any, any>[] {
 		return [
 			...DEFAULT_NODES,
@@ -17,35 +17,37 @@ export class PassGraph extends Graph {
 		];
 	}
 
-	private passInputs: PassInputs = {};
-	private passOutputs: PassOutputs = {};
-
 	public override get inputs() {
-		return this.passInputs;
+		return this.props.inputs;
 	}
 
 	public override get outputs() {
-		return this.passOutputs;
+		return this.props.outputs;
 	}
 
 	public setPassInput(name: string, type: Type) {
-		this.passInputs[name] = type;
+		this.props.inputs[name] = type;
 	}
 
 	public removePassInput(name: string) {
-		if (this.passInputs[name])
-			delete this.passInputs[name];
+		if (this.props.inputs[name])
+			delete this.props.inputs[name];
 	}
 
 	public setPassOutput(name: string, type: PassBufferType) {
-		this.passOutputs[name] = type;
+		this.props.outputs[name] = type;
 	}
 
 	public removePassOutput(name: string) {
-		if (this.passOutputs[name])
-			delete this.passOutputs[name];
+		if (this.props.outputs[name])
+			delete this.props.outputs[name];
 	}
 }
 
 export type PassInputs = Record<string, Type>;
 export type PassOutputs = Record<string, PassBufferType>;
+
+export type PassProps =  {
+	readonly inputs: PassInputs;
+	readonly outputs: PassOutputs;
+};

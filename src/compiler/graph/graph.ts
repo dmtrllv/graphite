@@ -10,7 +10,7 @@ import { getGroupType } from "./group-types";
 /**
  * The base class for all graphs
  */
-export abstract class Graph {
+export abstract class Graph<Props extends {}> {
 	public readonly id: number;
 
 	protected readonly _nodes: Allocator<Node>;
@@ -44,12 +44,14 @@ export abstract class Graph {
 	}
 
 	public name: string;
+	public readonly props: Props;
 
 	public abstract get nodeTypes(): NodeType<any, any>[];
 
-	public constructor(id: number, name: string, nodes: Node[] = [], edges: Edge[] = [], groups: Group[] = []) {
+	public constructor(id: number, name: string, props: Props, nodes: Node[] = [], edges: Edge[] = [], groups: Group[] = []) {
 		this.id = id;
 		this.name = name;
+		this.props = props;
 		this._nodes = new Allocator(Node);
 		this._edges = new Allocator(Edge);
 		this._groups = new Allocator(Group);
@@ -229,6 +231,7 @@ export abstract class Graph {
 			type: this.constructor.name,
 			id: this.id,
 			name: this.name,
+			props: this.props,
 			nodes: this.nodes,
 			edges: this.edges,
 			groups: this.groups,
@@ -271,15 +274,16 @@ export type SerializedGraph = {
 	readonly type: string;
 	readonly id: number;
 	readonly name: string;
+	readonly props: object;
 	readonly nodes: Node[];
 	readonly edges: Edge[];
 	readonly groups: Group[];
 }
 
-export type GraphType<T extends Graph> = new (id: number, name: string, nodes?: Node[], edges?: Edge[], groups?: Group[]) => T;
+export type GraphType<T extends Graph<Props>, Props extends {}> = new (id: number, name: string, props: Props, nodes?: Node[], edges?: Edge[], groups?: Group[]) => T;
 
-export type GraphInputName<T extends Graph> = keyof T["inputs"];
-export type GraphOutputName<T extends Graph> = keyof T["outputs"];
+export type GraphInputName<T extends Graph<any>> = keyof T["inputs"];
+export type GraphOutputName<T extends Graph<any>> = keyof T["outputs"];
 
 export class Edge {
 	public readonly id!: number;
@@ -299,6 +303,8 @@ export class Edge {
 
 export type EdgeProps = Omit<Edge, "id">;
 
-export type GraphNodeType<T extends Graph> = InstanceType<T["nodeTypes"][number]>;
+export type GraphNodeType<T extends Graph<any>> = InstanceType<T["nodeTypes"][number]>;
 
 export type GraphIO = Record<string, Type>;
+
+export type GraphProps<T extends Graph<any>> = T extends Graph<infer Props> ? Props : never;
