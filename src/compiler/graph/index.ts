@@ -5,3 +5,4 @@ export * from "./graph";
 export * from "./error";
 export * from "./nodes";
 export * from "./graphs";
+export * from "./simulation";

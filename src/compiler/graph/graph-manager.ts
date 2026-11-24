@@ -1,8 +1,7 @@
 import { Allocator, assert, Err, Ok, Result } from "@utils";
-import { Edge, Graph, type GraphNodeType, type GraphType, type SerializedGraph } from "./graph";
+import { Graph, type GraphNodeType, type GraphType, type SerializedGraph } from "./graph";
 import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
-import { SubGraph } from "./subgraph";
 import { isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
 import { GraphError } from "./error";
 
@@ -25,21 +24,26 @@ export class GraphManager {
 		return this.graphs.all().map(g => g.serialize());
 	}
 
-	public getGraph(id: number): Graph {
-		return assert.notNull(this.graphs.get(id));
+	public getGraph(id: number): Graph;
+	public getGraph<T extends Graph>(id: number, type: GraphType<T>): T;
+	public getGraph(id: number, type?: GraphType<any>): Graph {
+		const graph = assert.notNull(this.graphs.get(id));
+		if (type)
+			assert(() => !(graph instanceof type), `Graph with id ${id} is not an instance of ${type.name}!`);
+		return graph;
 	}
 
 	public getGraphs<T extends Graph>(type: GraphType<T>): T[] {
 		return this.graphs.all().filter(graph => graph instanceof type) as T[];
 	}
 
-	public createGraph<T extends SubGraph>(type: GraphType<T>, name: string): T {
+	public createGraph<T extends Graph>(type: GraphType<T>, name: string): T {
 		assert(() => !this.graphs.all().find(g => g.name === name), `Graph with name ${name} already exists`);
 		return this.graphs.allocWithId(type, name);
 	}
 
-	public tryCreateGraph<T extends SubGraph>(type: GraphType<T>, name: string): Result<T, GraphError> {
-		if(this.graphs.all().find(g => g.name === name))
+	public tryCreateGraph<T extends Graph>(type: GraphType<T>, name: string): Result<T, GraphError> {
+		if (this.graphs.all().find(g => g.name === name))
 			return Err(GraphError.DuplicateGraphName(name));
 		return Ok(this.graphs.allocWithId(type, name));
 	}

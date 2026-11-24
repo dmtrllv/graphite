@@ -4,12 +4,15 @@ import type { Type } from "../types";
 import { getNodeType, GraphOutputNode, type NodeOutputName, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
 import type { MatchingNodeInputPortNames } from "./graph-manager";
+import { Group } from "./group";
+import { getGroupType } from "./group_types";
 
 export abstract class Graph {
 	public readonly id: number;
 
-	private readonly _nodes: Allocator<Node>;
-	private readonly _edges: Allocator<Edge>;
+	protected readonly _nodes: Allocator<Node>;
+	protected readonly _edges: Allocator<Edge>;
+	protected readonly _groups: Allocator<Group>;
 
 	public get nodes(): GraphNodeType<this>[] {
 		return this._nodes.all() as GraphNodeType<this>[];
@@ -19,9 +22,17 @@ export abstract class Graph {
 		return this._edges.all();
 	}
 
+	public get groups(): Group[] {
+		return this._groups.all();
+	}
+
+	protected get outputNodeType(): NodeType<GraphOutputNode, any> {
+		return GraphOutputNode;
+	}
+
 	public get outputNode() {
 		const node = assert.notNull(this.getNode(0));
-		assert(() => node instanceof GraphOutputNode, `First node is not a GraphOutputNode!`);
+		assert(() => node instanceof this.outputNodeType, `First node is not a ${this.outputNodeType.name}!`);
 		return node;
 	}
 
@@ -37,13 +48,17 @@ export abstract class Graph {
 
 	public abstract get nodeTypes(): NodeType<any, any>[];
 
-	public constructor(id: number, name: string, nodes: Node[] = [], edges: Edge[] = []) {
+	public constructor(id: number, name: string, nodes: Node[] = [], edges: Edge[] = [], groups: Group[] = []) {
 		this.id = id;
 		this.name = name;
 		this._nodes = new Allocator(Node);
 		this._edges = new Allocator(Edge);
+		this._groups = new Allocator(Group);
 		nodes.forEach(node => this._nodes.allocAt(node.id, getNodeType(node.type), node.id, this.id, node.props as any));
 		edges.forEach(edge => this._edges.allocWithId(Edge, edge));
+		groups.forEach(group =>this._groups.allocAt(group.id, getGroupType(group.type), group.id, group.nodes, group.groups));
+		if(!this._nodes.get(0))
+			this._nodes.allocWithId(this.outputNodeType, this.id, { graphId: id });
 	}
 
 	public getNode(id: number): Node | undefined;

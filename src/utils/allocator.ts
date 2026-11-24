@@ -1,4 +1,3 @@
-import type { GraphNodeType } from "../compiler/graph/graph";
 import { assert } from "./assert";
 
 export class Allocator<T extends {}> {
