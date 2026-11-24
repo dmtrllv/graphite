@@ -1,3 +1,4 @@
+import type { CompileContext } from "../../context";
 import { type Type } from "../../types";
 import type { GraphManager } from "../graph-manager";
 
@@ -23,6 +24,8 @@ export abstract class Node<T extends {} = any> {
 		this.graphId = graphId;
 		this.props = this.deserializeProps(props);
 	}
+	
+	public abstract compile(ctx: CompileContext, inputs: Record<string, string>): string;
 
 	protected deserializeProps(props: T) {
 		return props;

@@ -6,6 +6,7 @@ import { GraphError } from "./error";
 import type { MatchingNodeInputPortNames } from "./graph-manager";
 import { Group, type GroupType } from "./group";
 import { getGroupType } from "./group_types";
+import type { CompileContext } from "../context";
 
 export abstract class Graph {
 	public readonly id: number;
@@ -261,7 +262,59 @@ export abstract class Graph {
 
 		return false;
 	}
+
+	public async compile(ctx: CompileContext): Promise<CompiledGraph> {
+		const resolved = new Map<Node, CompiledExpression>();
+
+		const walk = async (node: Node): Promise<CompiledExpression> => {
+			const cached = resolved.get(node);
+			if (cached)
+				return cached;
+
+			const statements: string[] = [];
+			const inputs: Record<string, string> = {};
+
+			for (const [input, edge] of Object.entries(this.getNodeInputEdges(node))) {
+				const source = assert.notNull(this.getNode(edge.source));
+				const compiled = await walk(source);
+
+				statements.push(...compiled.statements);
+				inputs[input] = compiled.expression;
+			}
+
+			const expression = await node.compile(ctx, inputs);
+			const compiled = { expression, statements };
+
+			resolved.set(node, compiled);
+			return compiled;
+		};
+
+		const output = await walk(this.outputNode);
+
+		return {
+			inputs: this.inputs,
+			outputs: this.outputs,
+			source: output.statements.join("\n")
+		};
+	}
+
+	private getNodeInputEdges(node: Node): Record<string, Edge> {
+		const edges: Record<string, Edge> = {};
+
+		for (const edge of this.edges)
+			if (edge.target === node.id)
+				edges[edge.inputPort] = edge;
+
+		return edges;
+	}
 }
+
+export type CompiledExpression = {
+	readonly expression: string;
+	readonly statements: string[];
+};
+
+type NodeExpressions = Record<string, string>;
 
 export type SerializedGraph = {
 	readonly type: string;
@@ -298,3 +351,9 @@ export type EdgeProps = Omit<Edge, "id">;
 export type GraphNodeType<T extends Graph> = InstanceType<T["nodeTypes"][number]>;
 
 export type GraphIO = Record<string, Type>;
+
+export type CompiledGraph = {
+	readonly inputs: Record<string, Type>;
+	readonly outputs: Record<string, Type>;
+	readonly source: string;
+};

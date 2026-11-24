@@ -1,6 +1,7 @@
-import { createEnum, isVariant, type Enum, type EnumType } from "@utils";
+import { createEnum, isVariant, type EnumType } from "@utils";
 import { Node } from "./node";
 import { ValueType } from "../../types";
+import type { CompileContext } from "../../context";
 
 export const UnaryOp = createEnum(
 	"not",
@@ -55,6 +56,10 @@ export class UnaryOpNode extends AbstractMathNode<typeof UnaryOp> {
 			a: ValueType,
 		};
 	}
+
+	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
+		throw new Error("Method not implemented.");
+	}
 }
 
 export class BinaryOpNode extends AbstractMathNode<typeof BinaryOp> {
@@ -67,6 +72,10 @@ export class BinaryOpNode extends AbstractMathNode<typeof BinaryOp> {
 			a: ValueType,
 			b: ValueType,
 		};
+	}
+
+	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
+		throw new Error("Method not implemented.");
 	}
 }
 
@@ -81,6 +90,10 @@ export class TernaryOpNode extends AbstractMathNode<typeof TernaryOp> {
 			b: ValueType,
 			c: ValueType,
 		};
+	}
+
+	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
+		throw new Error("Method not implemented.");
 	}
 }
 
