@@ -1,26 +1,28 @@
-import { GraphManager } from "./compiler/graph/graph-manager";
-import { SubGraphNode } from "./compiler/graph/nodes";
-import { BinaryOp, BinaryOpNode, UnaryOp, UnaryOpNode } from "./compiler/graph/nodes/math";
-import { ValueNode } from "./compiler/graph/nodes/value";
-import { SubGraph } from "./compiler/graph/subgraph";
+import { BinaryOp, BinaryOpNode, GraphManager, SubGraph, UnaryOp, UnaryOpNode, ValueNode } from "./compiler/graph";
 
-const graphs = new GraphManager();
+const manager = new GraphManager();
 
-const subGraph = graphs.createGraph(SubGraph, "Test");
+const subGraph = manager.createGraph(SubGraph, "Test");
 
-const a = subGraph.addNode(ValueNode, 0);
-const b = subGraph.addNode(ValueNode, 1);
+const a = manager.addNode(subGraph, ValueNode, { value: 0 });
+const b = manager.addNode(subGraph, ValueNode, { value: 1 });
 
-const add = subGraph.addNode(BinaryOpNode, BinaryOp.add);
-console.log(a, b);
-subGraph.connect(a, "value", add, "a");
-subGraph.connect(b, "value", add, "b");
-subGraph.connect(b, "value", add, "b");
+const add = manager.addNode(subGraph, BinaryOpNode, { op: BinaryOp.add });
 
-const negate = subGraph.addNode(UnaryOpNode, UnaryOp.negate);
+manager.connect(subGraph, a, "value", add, "a");
+manager.connect(subGraph, b, "value", add, "b");
 
-subGraph.connect(add, "value", negate, "a");
+const negate = manager.addNode(subGraph, UnaryOpNode, { op: UnaryOp.negate });
 
-const test = graphs.worldGraph.addNode(SubGraphNode, subGraph);
+manager.connect(subGraph, add, "value", negate, "a");
 
-console.log(graphs.worldGraph);
+const serialized = manager.serialize();
+
+console.log();
+
+const testManager = new GraphManager(serialized);
+const serialized2 = testManager.serialize();
+const s1 = JSON.stringify(serialized, null, 4);
+const s2 = JSON.stringify(serialized2, null, 4);
+
+console.log(s1 === s2);

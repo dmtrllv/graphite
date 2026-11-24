@@ -4,3 +4,4 @@ export * from "./graph-manager";
 export * from "./graph";
 export * from "./error";
 export * from "./nodes";
+export * from "./graphs";

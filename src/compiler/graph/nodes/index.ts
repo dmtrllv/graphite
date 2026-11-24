@@ -1,6 +1,6 @@
 export * from "./value";
 export * from "./node";
 export * from "./math";
-export * from "./default";
+export * from "./nodes";
 export * from "./graph";
 export * from "./subgraph";

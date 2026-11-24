@@ -1,21 +1,14 @@
-import type { SubGraph } from "../subgraph";
+import type { GraphManager } from "../graph-manager";
 import { Node } from "./node";
 
-export const isSubGraphNode = (node: Node): node is SubGraphNode<any> => node instanceof SubGraphNode;
+export const isSubGraphNode = (node: Node): node is SubGraphNode => node instanceof SubGraphNode;
 
-export class SubGraphNode<T extends SubGraph> extends Node {
-	public readonly graph: T;
-
-	public override get inputs() {
-		return this.graph.inputs;
+export class SubGraphNode extends Node<{ graph: number }> {
+	public override getInputs(manager: GraphManager) {
+		return manager.getGraph(this.props.graph).inputs;
 	}
 
-	public override get outputs() {
-		return this.graph.outputs;
-	}
-
-	public constructor(id: number, graph: T) {
-		super(id);
-		this.graph = graph;
+	public override getOutputs(manager: GraphManager) {
+		return manager.getGraph(this.props.graph).outputs;
 	}
 }

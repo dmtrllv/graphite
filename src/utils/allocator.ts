@@ -33,6 +33,21 @@ export class Allocator<T extends {}> {
 		return [id, item];
 	}
 
+	public allocAt<U extends new (...args: any[]) => T>(id: number, type: U, ...args: ConstructorParameters<U>): [number, InstanceType<U>] {
+		assert(() => type === this.type || type.prototype instanceof this.type, `type ${type.name} does not extend ${this.type.name}!`);
+		const freeIndex = this.freeList.indexOf(id);
+		
+		if (freeIndex > -1)
+			this.freeList.splice(freeIndex, 1);
+
+		for(let i = this.nextId(); i < id; i++)
+			this.freeList.push(i);
+
+		const item = new type(...args) as InstanceType<U>;
+		this.items[id] = item;
+		return [id, item];
+	}
+
 	public get(id: number): T | undefined {
 		return this.items[id];
 	}
@@ -59,7 +74,7 @@ export class Allocator<T extends {}> {
 	public includes(item: T) {
 		return this.items.includes(item);
 	}
-	
+
 }
 
 type ObjectConstructor<T extends object, Args extends any[] = any[]> = (new (...args: Args) => T) | (abstract new (...args: Args) => T)

@@ -1,39 +1,43 @@
 import { type Type } from "../../types";
-import { type Edge, } from "../graph";
+import type { GraphManager } from "../graph-manager";
 
-export abstract class Node {
+export abstract class Node<T extends {} = {}> {
 	public readonly id: number;
+	public readonly graphId: number;
+	public readonly props: T;
 
-	private _inputEdges: Partial<Record<NodeInputPortName<this>, Edge | undefined>> = {};
-	private _outputEdges: Partial<Record<NodeOutputPortName<this>, Edge[]>> = {};
+	public get type() {
+		return this.constructor.name;
+	}
 
-	public get inputs(): NodePorts {
+	public getInputs(_graph: GraphManager): NodePorts {
 		return {};
 	}
 
-	public get outputs(): NodePorts {
+	public getOutputs(_graph: GraphManager): NodePorts {
 		return {};
 	}
 
-	public constructor(id: number) {
+	public constructor(id: number, graphId: number, props: T) {
 		this.id = id;
+		this.graphId = graphId;
+		this.props = props;
 	}
 
-	public getInputEdge(port: NodeInputPortName<this>): Edge | undefined {
-		return this._inputEdges[port];
+	public toJSON() {
+		return {
+			type: this.type,
+			id: this.id,
+			graphId: this.graphId,
+			props: this.props
+		};
 	}
-
-
-	public getOutputEdges(port: NodeInputPortName<this>): Edge[] {
-		return this._outputEdges[port] || [];
-	}
-
-	//public abstract compile(context: CompileContext): void;
 }
 
 export type NodePorts = Record<string, Type>;
 
-export type NodeType<T extends Node, Args extends any[]> = new (id: number, ...args: Args) => T;
+export type NodeType<T extends Node<Props>, Props extends {}> = new (id: number, graphId: number, props: Props) => T;
 
-export type NodeInputPortName<T extends Node> = keyof T["inputs"];
-export type NodeOutputPortName<T extends Node> = keyof T["outputs"];
+export type NodeProps<T> = T extends Node<infer Props> ? Props : never;
+export type NodeInputName<T extends Node> = keyof ReturnType<T["getInputs"]>;
+export type NodeOutputName<T extends Node> = keyof ReturnType<T["getOutputs"]>;

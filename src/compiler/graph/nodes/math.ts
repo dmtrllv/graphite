@@ -22,24 +22,16 @@ export const TernaryOp = createEnum(
 
 export type MathOp = EnumType<typeof BinaryOp | typeof UnaryOp | typeof TernaryOp>;
 
-abstract class AbstractMathNode<T extends MathOp> extends Node {
-	public op: T;
-
-	public override get outputs() {
+abstract class AbstractMathNode<T extends MathOp> extends Node<{ op: T }> {
+	public override getOutputs() {
 		return {
 			value: ValueType
 		};
 	}
-
-	public constructor(id: number, op: T) {
-		super(id);
-		this.op = op;
-	}
-
 }
 
 export class UnaryOpNode extends AbstractMathNode<EnumType<typeof UnaryOp>> {
-	public override get inputs() {
+	public override getInputs() {
 		return {
 			a: ValueType,
 		};
@@ -47,7 +39,7 @@ export class UnaryOpNode extends AbstractMathNode<EnumType<typeof UnaryOp>> {
 }
 
 export class BinaryOpNode extends AbstractMathNode<EnumType<typeof BinaryOp>> {
-	public override get inputs() {
+	public override getInputs() {
 		return {
 			a: ValueType,
 			b: ValueType,
@@ -56,7 +48,7 @@ export class BinaryOpNode extends AbstractMathNode<EnumType<typeof BinaryOp>> {
 }
 
 export class TernaryOpNode extends AbstractMathNode<EnumType<typeof TernaryOp>> {
-	public override get inputs() {
+	public override getInputs() {
 		return {
 			a: ValueType,
 			b: ValueType,
