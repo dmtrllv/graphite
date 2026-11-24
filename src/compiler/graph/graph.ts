@@ -78,8 +78,20 @@ export abstract class Graph {
 		return this._nodes.allocWithId(type, this.id, props);
 	}
 
+	private isGroupIONode(group: Group, node: Node): boolean {
+		return (group.inputNodeType && (node instanceof group.inputNodeType)) || (group.outputNodeType && (node instanceof group.outputNodeType)) || false;
+	}
+
 	public addGroup<T extends Group>(type: GroupType<T>, name: string, parent?: Group): T {
-		return this._groups.allocWithId(type, name, [], parent?.id);
+		const group = this._groups.allocWithId(type, name, [], parent?.id);
+
+		if (group.inputNodeType)
+			group.addNode(this._nodes.allocWithId(group.inputNodeType, this.id, {}).id);
+
+		if (group.outputNodeType)
+			group.addNode(this._nodes.allocWithId(group.outputNodeType, this.id, {}).id);
+
+		return group;
 	}
 
 	private getNodeGroup(nodeId: number): Group | null {
@@ -97,7 +109,11 @@ export abstract class Graph {
 
 	public transferNode<T extends GraphNodeType<this>>(node: T, group: Group | null) {
 		const currentGroup = this.getNodeGroup(node.id);
+
 		if (currentGroup === group)
+			return;
+
+		if (currentGroup && this.isGroupIONode(currentGroup, node))
 			return;
 
 		for (const edge of this.edges) {
@@ -150,6 +166,11 @@ export abstract class Graph {
 	}
 
 	public removeNode(node: GraphNodeType<this>) {
+		const group = this.getNodeGroup(node.id);
+		
+		if (group && this.isGroupIONode(group, node))
+			return;
+
 		this.removeNodeAt(node.id);
 	}
 
