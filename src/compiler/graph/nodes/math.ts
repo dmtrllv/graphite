@@ -1,4 +1,4 @@
-import { createEnum, isVariant, type EnumType } from "@utils";
+import { createEnum, isVariant, matchEnum, type EnumType } from "@utils";
 import { Node } from "./node";
 import { ValueType } from "../../types";
 import type { CompileContext } from "../../context";
@@ -58,7 +58,12 @@ export class UnaryOpNode extends AbstractMathNode<typeof UnaryOp> {
 	}
 
 	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
-		throw new Error("Method not implemented.");
+		const a = inputs["a"];
+		return matchEnum(this.props.op, {
+			"not": () => `!(${a})`,
+			"negate": () => `-(${a})`,
+			"inverse": () => `1.0 / (${a})`,
+		});
 	}
 }
 
@@ -75,7 +80,12 @@ export class BinaryOpNode extends AbstractMathNode<typeof BinaryOp> {
 	}
 
 	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
-		throw new Error("Method not implemented.");
+		const a = inputs["a"];
+		const b = inputs["b"];
+		return matchEnum(this.props.op, {
+			"add": () => `(${a} + ${b})`,
+			"sub": () => `(${a} - ${b})`,
+		});
 	}
 }
 
@@ -92,8 +102,11 @@ export class TernaryOpNode extends AbstractMathNode<typeof TernaryOp> {
 		};
 	}
 
-	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
-		throw new Error("Method not implemented.");
+	public override compile(_ctx: CompileContext, _inputs: Record<string, string>): string {
+		//const a = inputs["a"];
+		//const b = inputs["b"];
+		//const c = inputs["c"];
+		throw new Error("todo");
 	}
 }
 
