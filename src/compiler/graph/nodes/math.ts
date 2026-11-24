@@ -57,7 +57,7 @@ export class UnaryOpNode extends AbstractMathNode<typeof UnaryOp> {
 		};
 	}
 
-	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
+	public override compile(_: CompileContext, inputs: Record<string, string>): string {
 		const a = inputs["a"];
 		return matchEnum(this.props.op, {
 			"not": () => `!(${a})`,
@@ -79,7 +79,7 @@ export class BinaryOpNode extends AbstractMathNode<typeof BinaryOp> {
 		};
 	}
 
-	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
+	public override compile(_: CompileContext, inputs: Record<string, string>): string {
 		const a = inputs["a"];
 		const b = inputs["b"];
 		return matchEnum(this.props.op, {
@@ -102,7 +102,7 @@ export class TernaryOpNode extends AbstractMathNode<typeof TernaryOp> {
 		};
 	}
 
-	public override compile(_ctx: CompileContext, _inputs: Record<string, string>): string {
+	public override compile(_: CompileContext, _inputs: Record<string, string>): string {
 		//const a = inputs["a"];
 		//const b = inputs["b"];
 		//const c = inputs["c"];

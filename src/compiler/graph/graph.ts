@@ -1,6 +1,6 @@
 import { Allocator, assert, Err, Ok, Result } from "@utils";
 import { Node, type NodeType } from "./nodes/node";
-import type { Type } from "../types";
+import { getWGSLType, type Type } from "../types";
 import { getNodeType, GraphOutputNode, type NodeOutputName, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
 import type { MatchingNodeInputPortNames } from "./graph-manager";
@@ -263,7 +263,15 @@ export abstract class Graph {
 		return false;
 	}
 
+
 	public async compile(ctx: CompileContext): Promise<CompiledGraph> {
+		const functionName = `graph_${this.id}_${this.name.replace(/[^a-zA-Z0-9_]/g, "_")}`;
+		const inputType = `${functionName}_Input`;
+		const outputType = `${functionName}_Output`;
+
+		const inputs = this.inputs;
+		const outputs = this.outputs;
+
 		const resolved = new Map<Node, CompiledExpression>();
 
 		const walk = async (node: Node): Promise<CompiledExpression> => {
@@ -272,31 +280,59 @@ export abstract class Graph {
 				return cached;
 
 			const statements: string[] = [];
-			const inputs: Record<string, string> = {};
+			const inputExpressions: Record<string, string> = {};
 
 			for (const [input, edge] of Object.entries(this.getNodeInputEdges(node))) {
 				const source = assert.notNull(this.getNode(edge.source));
 				const compiled = await walk(source);
-
 				statements.push(...compiled.statements);
-				inputs[input] = compiled.expression;
+				inputExpressions[input] = compiled.expression;
 			}
 
-			const expression = await node.compile(ctx, inputs);
+			const expression = await node.compile(ctx, inputExpressions);
 			const compiled = { expression, statements };
 
 			resolved.set(node, compiled);
 			return compiled;
 		};
 
-		const output = await walk(this.outputNode);
+		const outputEdges = this.getNodeInputEdges(this.outputNode);
+		const outputExpressions: Record<string, string> = {};
+		const statements: string[] = [];
 
-		return {
-			inputs: this.inputs,
-			outputs: this.outputs,
-			source: output.statements.join("\n")
-		};
+		for (const name of Object.keys(outputs)) {
+			const edge = assert.notNull(outputEdges[name], `Missing graph output connection "${name}"!`);
+			const source = assert.notNull(this.getNode(edge.source));
+			const compiled = await walk(source);
+			outputExpressions[name] = compiled.expression;
+			statements.push(...compiled.statements);
+		}
+
+		const inputFields = Object.entries(inputs).map(([name, type]) => `\t${name}: ${getWGSLType(type)},`).join("\n");
+		const outputFields = Object.entries(outputs).map(([name, type]) => `\t${name}: ${getWGSLType(type)},`).join("\n");
+
+		const outputValues = Object.keys(outputs).map(name => outputExpressions[name]).join(",\n\t\t");
+
+		const source = [
+			`struct ${inputType} {`,
+			inputFields,
+			"};",
+			"",
+			`struct ${outputType} {`,
+			outputFields,
+			"};",
+			"",
+			`fn ${functionName}(input: ${inputType}) -> ${outputType} {`,
+			...statements.map(statement => `\t${statement}`),
+			`\treturn ${outputType}(`,
+			`\t\t${outputValues}`,
+			"\t);",
+			"}"
+		].join("\n");
+
+		return { functionName, inputType, outputType, source };
 	}
+
 
 	private getNodeInputEdges(node: Node): Record<string, Edge> {
 		const edges: Record<string, Edge> = {};
@@ -313,8 +349,6 @@ export type CompiledExpression = {
 	readonly expression: string;
 	readonly statements: string[];
 };
-
-type NodeExpressions = Record<string, string>;
 
 export type SerializedGraph = {
 	readonly type: string;
@@ -353,7 +387,8 @@ export type GraphNodeType<T extends Graph> = InstanceType<T["nodeTypes"][number]
 export type GraphIO = Record<string, Type>;
 
 export type CompiledGraph = {
-	readonly inputs: Record<string, Type>;
-	readonly outputs: Record<string, Type>;
+	readonly functionName: string;
+	readonly inputType: string;
+	readonly outputType: string;
 	readonly source: string;
 };

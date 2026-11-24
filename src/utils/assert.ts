@@ -4,8 +4,8 @@ const assertFn = (expr: () => boolean, error: string): void => {
 };
 
 export const assert = Object.assign(assertFn, {
-	notNull: <T>(val: T): NonNullable<T> => {
-		assertFn(() => val !== null && val !== undefined, `Value is null!`);
+	notNull: <T>(val: T, msg: string = `Value is null!`): NonNullable<T> => {
+		assertFn(() => val !== null && val !== undefined, msg);
 		return val as NonNullable<T>;
 	},
 });

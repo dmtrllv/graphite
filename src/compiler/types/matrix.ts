@@ -1,5 +1,5 @@
 export type MatrixType = {
-	readonly name: "vector";
+	readonly name: "matrix";
 	readonly rows: number;
 	readonly columns: number;
 };

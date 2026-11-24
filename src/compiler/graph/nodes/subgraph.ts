@@ -13,7 +13,7 @@ export class SubGraphNode extends Node<{ graph: number }> {
 		return manager.getGraph(this.props.graph).outputs;
 	}
 
-	public override compile(ctx: CompileContext, inputs: Record<string, string>): string {
+	public override compile(_ctx: CompileContext, _inputs: Record<string, string>): string {
 		throw new Error("Method not implemented.");
 	}
 }
