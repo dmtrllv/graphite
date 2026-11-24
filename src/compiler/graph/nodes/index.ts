@@ -4,3 +4,4 @@ export * from "./math";
 export * from "./nodes";
 export * from "./graph";
 export * from "./subgraph";
+export * from "./simulation";

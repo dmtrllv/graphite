@@ -4,7 +4,7 @@ import type { Type } from "../types";
 import { getNodeType, GraphOutputNode, type NodeOutputName, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
 import type { MatchingNodeInputPortNames } from "./graph-manager";
-import { Group } from "./group";
+import { Group, type GroupType } from "./group";
 import { getGroupType } from "./group_types";
 
 export abstract class Graph {
@@ -56,15 +56,18 @@ export abstract class Graph {
 		this._groups = new Allocator(Group);
 		nodes.forEach(node => this._nodes.allocAt(node.id, getNodeType(node.type), node.id, this.id, node.props as any));
 		edges.forEach(edge => this._edges.allocWithId(Edge, edge));
-		groups.forEach(group =>this._groups.allocAt(group.id, getGroupType(group.type), group.id, group.nodes, group.groups));
-		if(!this._nodes.get(0))
+		groups.forEach(group => this._groups.allocAt(group.id, getGroupType(group.type), group.id, group.name, group.nodes, group.parent));
+		if (!this._nodes.get(0))
 			this._nodes.allocWithId(this.outputNodeType, this.id, { graphId: id });
 	}
 
 	public getNode(id: number): Node | undefined;
-	public getNode<T extends Node>(id: number, type: NodeType<T, any>): T | undefined;
-	public getNode(id: number): Node | undefined {
-		return this._nodes.get(id);
+	public getNode<T extends Node>(id: number, type: NodeType<T, any>): T;
+	public getNode<T extends Node>(id: number, type?: NodeType<T, any>): T | undefined {
+		const node = this._nodes.get(id);
+		if (node && type)
+			assert(() => node instanceof type, `node is not a ${type.name}!`);
+		return node as T;
 	}
 
 	public getEdge(id: number): Edge | undefined {
@@ -75,18 +78,69 @@ export abstract class Graph {
 		return this._nodes.allocWithId(type, this.id, props);
 	}
 
+	public addGroup<T extends Group>(type: GroupType<T>, name: string, parent?: Group): T {
+		return this._groups.allocWithId(type, name, [], parent?.id);
+	}
+
+	private getNodeGroup<T extends GraphNodeType<this>>(node: T): Group | undefined {
+		return this.groups.find(g => g.nodes.includes(node.id));
+	}
+
+	public transferNode<T extends GraphNodeType<this>>(node: T, group: Group | null) {
+		const currentGroup = this.getNodeGroup(node);
+
+		if(currentGroup === group)
+			return;
+
+		// todo check if it makes sense with the edges?
+		// check that the groups and its node edges only go levels deeper
+		if(currentGroup)
+			currentGroup.removeNode(node.id);
+
+		if(group)
+			group.addNode(node.id);
+	}
+
+	public removeGroup(id: number): void;
+	public removeGroup(group: Group): void;
+	public removeGroup(idOrGroup: number | Group) {
+		let group: Group;
+
+		if (typeof idOrGroup === "number") {
+			group = assert.notNull(this._groups.get(idOrGroup));
+		} else {
+			group = idOrGroup;
+		}
+
+		this._groups.all().filter(g => g.parent === group.id).forEach(g => {
+			this.removeGroup(g);
+		});
+
+		group.nodes.forEach(node => this.removeNodeAt(node));
+
+		this._groups.free(group.id);
+	}
+
 	public tryAddNode<T extends Node<Props>, Props extends {}>(type: NodeType<T, Props>, props: Props): Result<T, GraphError> {
 		if (!this.nodeTypes.includes(type))
 			return Err(GraphError.InvalidNodeType(this, type));
 		return Ok(this._nodes.allocWithId(type, this.id, props));
 	}
 
-	public removeNode(node: GraphNodeType<this>) {
+	private removeNodeAt(index: number) {
+		const node = this.getNode(index);
+		if (!node)
+			return;
+
 		for (const edge of this.edges)
 			if (edge.source === node.id || edge.target === node.id)
 				this._edges.free(edge.id);
 
 		this._nodes.free(node.id);
+	}
+
+	public removeNode(node: GraphNodeType<this>) {
+		this.removeNodeAt(node.id);
 	}
 
 	public connect<Source extends GraphNodeType<this>, K extends NodeOutputName<Source>, Target extends GraphNodeType<this>>(source: Source, outputPort: K, target: Target, inputPort: MatchingNodeInputPortNames<Target, Source, K>): Edge {
