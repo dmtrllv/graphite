@@ -1,11 +1,15 @@
-import { createEnum, type EnumType } from "@utils";
+import { createTaggedEnum, type TaggedEnumType } from "@utils";
+import type { Graph } from "./graph";
+import type { Node, NodeType } from "./nodes";
 
-export const GraphError = createEnum(
-	"InvalidGraph",
-	"InvalidNode",
-	"InvalidNodeType",
-	"InvalidEdge",
-	"NotInitialized"
-);
+export const GraphError = createTaggedEnum({
+	InvalidGraph: (graph: Graph) => `Invalid graph ${graph.name}`,
+	InvalidNode: (graph: Graph, node: Node) => `Invalid node ${node.id} at graph ${graph.name}`,
+	InvalidNodeType: (graph: Graph, node: NodeType<any, any>) => `Invalid node type ${node.name} at graph ${graph.name}`,
+	EdgeCycle: () => `Edge creates a cycle`,
+	DuplicateGraphName: (name: string) => `Duplicate graph name ${name}`,
+});
 
-export type GraphError = EnumType<typeof GraphError>;
+export type GraphError = TaggedEnumType<typeof GraphError>;
+
+export const graphErrorToString = (error: GraphError) => error.toString();

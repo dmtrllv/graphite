@@ -1,8 +1,14 @@
 import { BinaryOp, BinaryOpNode, GraphManager, SubGraph, SubGraphNode, UnaryOp, UnaryOpNode, ValueNode } from "./compiler/graph";
+import { createTaggedEnum, type TaggedEnumType, isTaggedVariant, matchEnum } from "./utils";
 
 const manager = new GraphManager();
 
 const subGraph = manager.createGraph(SubGraph, "Test");
+
+const subGraph2 = manager.tryCreateGraph(SubGraph, "Test");
+if (subGraph2.isErr()) {
+	console.error(subGraph2.error.toString());
+}
 
 const a = manager.addNode(subGraph, ValueNode, { value: 0 });
 const b = manager.addNode(subGraph, ValueNode, { value: 1 });
@@ -27,3 +33,27 @@ const s2 = JSON.stringify(serialized2, null, 4);
 
 console.log(serialized);
 console.log(s1 === s2);
+
+const Foo = createTaggedEnum({
+	Bar: () => "Bar",
+	Baz: (baz: string) => ({ baz }),
+});
+
+type Foo = TaggedEnumType<typeof Foo>;
+
+const bar = Foo.Baz("test");
+
+const test = (foo: Foo) => {
+	if (isTaggedVariant(foo, "Bar")) {
+		console.log("got bar", foo.toString());
+	} else if (isTaggedVariant(foo, "Baz")) {
+		console.log("got baz", foo.baz);
+	}
+}
+
+test(bar);
+
+console.log(matchEnum(bar, {
+	Bar: value => value.toString(),
+	Baz: value => value.baz
+}));

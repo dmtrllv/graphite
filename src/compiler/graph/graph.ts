@@ -62,7 +62,7 @@ export abstract class Graph {
 
 	public tryAddNode<T extends Node<Props>, Props extends {}>(type: NodeType<T, Props>, props: Props): Result<T, GraphError> {
 		if (!this.nodeTypes.includes(type))
-			return Err(GraphError.InvalidNodeType);
+			return Err(GraphError.InvalidNodeType(this, type));
 		return Ok(this._nodes.allocWithId(type, this.id, props));
 	}
 
@@ -89,13 +89,13 @@ export abstract class Graph {
 
 	public tryConnect<Source extends NodeType<any, any>, Target extends NodeType<any, any>>(source: InstanceType<Source>, outputPort: string | number | symbol, target: InstanceType<Target>, inputPort: string | number | symbol): Result<Edge, GraphError> {
 		if (source.graphId === this.id)
-			return Err(GraphError.InvalidNode);
+			return Err(GraphError.InvalidNode(this, source));
 
 		if (target.graphId === this.id)
-			return Err(GraphError.InvalidNode);
+			return Err(GraphError.InvalidNode(this, target));
 
 		if (this.createsCycle(source, target))
-			return Err(GraphError.InvalidEdge);
+			return Err(GraphError.EdgeCycle());
 
 		return Ok(this._edges.allocWithId(Edge, {
 			source: source.id,
@@ -105,7 +105,7 @@ export abstract class Graph {
 		}));
 	}
 
-	public canConnect<Source extends NodeType<any, any>, Target extends NodeType<any, any>>(source: InstanceType<Source>, outputPort: string | number | symbol, target: InstanceType<Target>, inputPort: string | number | symbol): boolean {
+	public canConnect<Source extends NodeType<any, any>, Target extends NodeType<any, any>>(source: InstanceType<Source>, target: InstanceType<Target>): boolean {
 		if (source.graphId === this.id)
 			return false;
 

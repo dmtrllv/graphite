@@ -1,10 +1,10 @@
-import { Allocator, assert, Result } from "@utils";
+import { Allocator, assert, Err, Ok, Result } from "@utils";
 import { Edge, Graph, type GraphNodeType, type GraphType, type SerializedGraph } from "./graph";
 import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
 import { SubGraph } from "./subgraph";
 import { isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
-import type { GraphError } from "./error";
+import { GraphError } from "./error";
 
 export class GraphManager {
 	private readonly graphs: Allocator<Graph>;
@@ -34,7 +34,14 @@ export class GraphManager {
 	}
 
 	public createGraph<T extends SubGraph>(type: GraphType<T>, name: string): T {
+		assert(() => !this.graphs.all().find(g => g.name === name), `Graph with name ${name} already exists`);
 		return this.graphs.allocWithId(type, name);
+	}
+
+	public tryCreateGraph<T extends SubGraph>(type: GraphType<T>, name: string): Result<T, GraphError> {
+		if(this.graphs.all().find(g => g.name === name))
+			return Err(GraphError.DuplicateGraphName(name));
+		return Ok(this.graphs.allocWithId(type, name));
 	}
 
 	public addNode<T extends Graph, U extends GraphNodeType<T>, P extends NodeProps<U>>(idOrGraph: number | T, type: NodeType<U, P>, props: P): U {

@@ -1,7 +1,7 @@
 import { type Type } from "../../types";
 import type { GraphManager } from "../graph-manager";
 
-export abstract class Node<T extends {} = {}> {
+export abstract class Node<T extends {} = any> {
 	public readonly id: number;
 	public readonly graphId: number;
 	public readonly props: T;
@@ -21,7 +21,11 @@ export abstract class Node<T extends {} = {}> {
 	public constructor(id: number, graphId: number, props: T) {
 		this.id = id;
 		this.graphId = graphId;
-		this.props = props;
+		this.props = this.deserializeProps(props);
+	}
+
+	protected deserializeProps(props: T) {
+		return props;
 	}
 
 	public toJSON() {
