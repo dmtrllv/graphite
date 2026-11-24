@@ -1,7 +1,8 @@
-import { ValueType } from "../types";
+import { ValueType, type PassBufferType } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES } from "./nodes";
 import { PassNode } from "./nodes/pass";
+import type { PassOutputs } from "./pass";
 
 export class WorldGraph extends Graph {
 	public override get nodeTypes() {
@@ -11,9 +12,21 @@ export class WorldGraph extends Graph {
 		];
 	}
 
+	private worldOutputs: PassOutputs = {};
+
 	public override get outputs() {
 		return {
-			elevation: ValueType
+			elevation: ValueType,
+			...this.worldOutputs,
 		};
+	}
+
+	public setOutput(name: string, type: PassBufferType) {
+		this.worldOutputs[name] = type;
+	}
+
+	public removeOutput(name: string) {
+		if (this.worldOutputs[name])
+			delete this.worldOutputs[name];
 	}
 }
