@@ -4,3 +4,4 @@ export * from "./vector";
 export * from "./matrix";
 export * from "./wgsl";
 export * from "./pass-map";
+export * from "./texture";
