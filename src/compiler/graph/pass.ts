@@ -2,6 +2,11 @@ import type { PassBufferType, Type } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES, GraphInputNode, type NodeType } from "./nodes";
 
+/**
+ * A `PassGraph` is an isolated wgsl compute shader and can only output PassBuffers.
+ * It can only be instantiated in the `WorldGraph` which will serve as the composition
+ * of all the passes.
+ */
 export class PassGraph extends Graph {
 	public override get nodeTypes(): NodeType<any, any>[] {
 		return [

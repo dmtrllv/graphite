@@ -1,5 +1,8 @@
 import type { NodeType } from "./nodes/node";
 
+/**
+ * A `Group` is like a scope with optional boundary nodes.
+ */
 export class Group {
 	public readonly id: number;
 	public readonly nodes: number[];

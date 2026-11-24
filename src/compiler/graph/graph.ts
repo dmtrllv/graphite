@@ -7,6 +7,9 @@ import type { MatchingNodeInputPortNames } from "./graph-manager";
 import { Group, type GroupType } from "./group";
 import { getGroupType } from "./group-types";
 
+/**
+ * The base class for all graphs
+ */
 export abstract class Graph {
 	public readonly id: number;
 
