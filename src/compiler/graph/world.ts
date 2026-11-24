@@ -2,13 +2,15 @@ import { ValueType, type PassBufferType } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES } from "./nodes";
 import { PassNode } from "./nodes/pass";
+import { PassBufferSampler } from "./nodes/pass-sampler";
 import type { PassOutputs } from "./pass";
 
 export class WorldGraph extends Graph {
 	public override get nodeTypes() {
 		return [
 			...DEFAULT_NODES,
-			PassNode
+			PassNode,
+			PassBufferSampler,
 		];
 	}
 

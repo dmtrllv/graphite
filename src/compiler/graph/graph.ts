@@ -190,7 +190,7 @@ export abstract class Graph {
 	}
 
 	public tryConnect<Source extends NodeType<any, any>, Target extends NodeType<any, any>>(source: InstanceType<Source>, outputPort: string | number | symbol, target: InstanceType<Target>, inputPort: string | number | symbol): Result<Edge, GraphError> {
-		if (source.graphId === this.id)
+		if (source.graphId !== this.id)
 			return Err(GraphError.InvalidNode(this, source));
 
 		if (target.graphId !== this.id)
@@ -208,7 +208,7 @@ export abstract class Graph {
 	}
 
 	public canConnect<Source extends NodeType<any, any>, Target extends NodeType<any, any>>(source: InstanceType<Source>, target: InstanceType<Target>): boolean {
-		if (source.graphId === this.id)
+		if (source.graphId !== this.id)
 			return false;
 
 		if (target.graphId !== this.id)

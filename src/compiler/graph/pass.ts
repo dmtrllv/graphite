@@ -1,6 +1,7 @@
 import type { PassBufferType, Type } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES, GraphInputNode, type NodeType } from "./nodes";
+import { PassBufferSampler } from "./nodes/pass-sampler";
 
 /**
  * A `PassGraph` is an isolated wgsl compute shader and can only output PassBuffers.
@@ -12,6 +13,7 @@ export class PassGraph extends Graph {
 		return [
 			...DEFAULT_NODES,
 			GraphInputNode,
+			PassBufferSampler,
 		];
 	}
 

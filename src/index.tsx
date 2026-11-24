@@ -1,50 +1,89 @@
-import { Compiler } from "./compiler";
-import { BinaryOp, BinaryOpNode, GraphManager, SubGraph, SubGraphNode, UnaryOp, UnaryOpNode, ValueNode, SimulationGroup } from "./compiler/graph";
+import { BinaryOp, BinaryOpNode, GraphManager, SimulationGroup, SubGraph, SubGraphNode, UnaryOp, UnaryOpNode, ValueNode } from "./compiler/graph";
+import { PassGraph } from "./compiler/graph/pass";
+import { PassNode } from "./compiler/graph/nodes/pass";
+import { ValueType, Vec3 } from "./compiler/types";
 
 const manager = new GraphManager();
+const world = manager.worldGraph;
 
-const subGraph = manager.createGraph(SubGraph, "Test");
+const subGraph = manager.createGraph(SubGraph, "Reusable");
+const nestedSubGraph = manager.createGraph(SubGraph, "Nested");
 
-const subGraph2 = manager.tryCreateGraph(SubGraph, "Test");
-if (subGraph2.isErr()) {
-	console.error(subGraph2.error.toString());
-}
+manager.addNode(nestedSubGraph, ValueNode, { value: 42 });
+manager.addNode(subGraph, SubGraphNode, { graph: nestedSubGraph.id });
 
-const a = manager.addNode(subGraph, ValueNode, { value: 0 });
-const b = manager.addNode(subGraph, ValueNode, { value: 1 });
-
+const a = manager.addNode(subGraph, ValueNode, { value: 10 });
+const b = manager.addNode(subGraph, ValueNode, { value: 5 });
 const add = manager.addNode(subGraph, BinaryOpNode, { op: BinaryOp.add });
+const negate = manager.addNode(subGraph, UnaryOpNode, { op: UnaryOp.negate });
 
 subGraph.connect(a, "value", add, "a");
 subGraph.connect(b, "value", add, "b");
-
-const negate = manager.addNode(subGraph, UnaryOpNode, { op: UnaryOp.negate });
-
 subGraph.connect(add, "value", negate, "a");
 
-// Create nested groups.
 const groupA = subGraph.addGroup(SimulationGroup, "Simulation");
 const groupB = subGraph.addGroup(SimulationGroup, "Nested Simulation", groupA);
 
-// Transfer nodes into groups.
+subGraph.transferNode(negate, groupB);
+subGraph.transferNode(add, groupB);
 subGraph.transferNode(a, groupA);
 subGraph.transferNode(b, groupA);
-subGraph.transferNode(add, groupB);
-subGraph.transferNode(negate, groupB);
 
-// Add a subgraph node to the world graph.
-manager.worldGraph.addNode(SubGraphNode, { graph: subGraph.id });
+const heightPass = manager.createGraph(PassGraph, "Height");
+const normalPass = manager.createGraph(PassGraph, "Normals");
+
+heightPass.setPassInput("seed", ValueType);
+heightPass.setPassOutput("height", ValueType);
+
+normalPass.setPassInput("height", ValueType);
+normalPass.setPassOutput("normal", Vec3);
+
+const heightA = manager.addNode(heightPass, ValueNode, { value: 1 });
+const heightB = manager.addNode(heightPass, ValueNode, { value: 2 });
+const heightAdd = manager.addNode(heightPass, BinaryOpNode, { op: BinaryOp.add });
+
+heightPass.connect(heightA, "value", heightAdd, "a");
+heightPass.connect(heightB, "value", heightAdd, "b");
+
+const normalValue = manager.addNode(normalPass, ValueNode, { value: 1 });
+const normalNegate = manager.addNode(normalPass, UnaryOpNode, { op: UnaryOp.negate });
+
+normalPass.connect(normalValue, "value", normalNegate, "a");
+
+const heightNode = manager.addNode(world, PassNode, { graphId: heightPass.id });
+const normalNode = manager.addNode(world, PassNode, { graphId: normalPass.id });
+
+world.connect(heightNode, "height", normalNode, "height");
+
+manager.addNode(world, SubGraphNode, { graph: subGraph.id });
+
+world.setOutput("normal", Vec3);
 
 const serialized = manager.serialize();
+const restoredManager = new GraphManager(serialized);
+const serializedAgain = restoredManager.serialize();
 
-const testManager = new GraphManager(serialized);
-const serialized2 = testManager.serialize();
+const restoredHeightPass = restoredManager.getGraph(heightPass.id, PassGraph);
+const restoredWorld = restoredManager.worldGraph;
 
-const s1 = JSON.stringify(serialized, null, 4);
-const s2 = JSON.stringify(serialized2, null, 4);
+const structureRoundTrip = JSON.stringify(serialized) === JSON.stringify(serializedAgain);
 
-console.log("Serialization round-trip:", s1 === s2);
+const passIORoundTrip =
+	JSON.stringify(heightPass.inputs) === JSON.stringify(restoredHeightPass.inputs) &&
+	JSON.stringify(heightPass.outputs) === JSON.stringify(restoredHeightPass.outputs);
 
-const result = await Compiler.compile(manager);
+const worldIORoundTrip = JSON.stringify(world.outputs) === JSON.stringify(restoredWorld.outputs);
 
-console.log(result.source);
+console.log("Graph structure round-trip:", structureRoundTrip);
+console.log("Pass IO round-trip:", passIORoundTrip);
+console.log("World IO round-trip:", worldIORoundTrip);
+
+console.log("Graphs:", manager.getGraphs(SubGraph).length, manager.getGraphs(PassGraph).length);
+console.log("World nodes:", world.nodes);
+console.log("World edges:", world.edges);
+console.log("Subgraph groups:", subGraph.groups);
+console.log("Simulation group A:", groupA.nodes);
+console.log("Simulation group B:", groupB.nodes);
+console.log("Height pass IO:", heightPass.inputs, heightPass.outputs);
+console.log("Normal pass IO:", normalPass.inputs, normalPass.outputs);
+console.log("World outputs:", world.outputs);

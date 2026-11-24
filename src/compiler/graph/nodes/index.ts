@@ -5,3 +5,5 @@ export * from "./nodes";
 export * from "./graph";
 export * from "./subgraph";
 export * from "./simulation";
+export * from "./pass-sampler";
+export * from "./texture-sampler";

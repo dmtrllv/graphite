@@ -7,3 +7,4 @@ export * from "./nodes";
 export * from "./graphs";
 export * from "./group";
 export * from "./simulation";
+export * from "./pass";
