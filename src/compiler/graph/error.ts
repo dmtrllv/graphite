@@ -8,6 +8,7 @@ export const GraphError = createTaggedEnum({
 	InvalidNodeType: (graph: Graph, node: NodeType<any, any>) => `Invalid node type ${node.name} at graph ${graph.name}`,
 	EdgeCycle: () => `Edge creates a cycle`,
 	DuplicateGraphName: (name: string) => `Duplicate graph name ${name}`,
+	Error: (err: Error) => err.name,
 });
 
 export type GraphError = TaggedEnumType<typeof GraphError>;

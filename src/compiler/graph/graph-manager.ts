@@ -29,7 +29,7 @@ export class GraphManager {
 	public getGraph(id: number, type?: GraphType<any>): Graph {
 		const graph = assert.notNull(this.graphs.get(id));
 		if (type)
-			assert(() => !(graph instanceof type), `Graph with id ${id} is not an instance of ${type.name}!`);
+			assert(() => graph instanceof type, `Graph with id ${id} is not an instance of ${type.name}!`);
 		return graph;
 	}
 

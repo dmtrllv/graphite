@@ -148,9 +148,11 @@ export abstract class Graph {
 	}
 
 	public tryAddNode<T extends Node<Props>, Props extends {}>(type: NodeType<T, Props>, props: Props): Result<T, GraphError> {
-		if (!this.nodeTypes.includes(type))
-			return Err(GraphError.InvalidNodeType(this, type));
-		return Ok(this._nodes.allocWithId(type, this.id, props));
+		return Result.try(() => {
+			if (!this.nodeTypes.includes(type))
+				return Err(GraphError.InvalidNodeType(this, type));
+			return Ok(this._nodes.allocWithId(type, this.id, props));
+		}, GraphError.Error);
 	}
 
 	private removeNodeAt(index: number) {
@@ -167,10 +169,11 @@ export abstract class Graph {
 
 	public removeNode(node: GraphNodeType<this>) {
 		const group = this.getNodeGroup(node.id);
-		
+
 		if (group && this.isGroupIONode(group, node))
 			return;
 
+		group?.removeNode(node.id);
 		this.removeNodeAt(node.id);
 	}
 
@@ -191,7 +194,7 @@ export abstract class Graph {
 		if (source.graphId === this.id)
 			return Err(GraphError.InvalidNode(this, source));
 
-		if (target.graphId === this.id)
+		if (target.graphId !== this.id)
 			return Err(GraphError.InvalidNode(this, target));
 
 		if (this.createsCycle(source, target))
@@ -209,7 +212,7 @@ export abstract class Graph {
 		if (source.graphId === this.id)
 			return false;
 
-		if (target.graphId === this.id)
+		if (target.graphId !== this.id)
 			return false;
 
 		if (this.createsCycle(source, target))
