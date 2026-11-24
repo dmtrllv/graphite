@@ -229,6 +229,7 @@ export abstract class Graph {
 			name: this.name,
 			nodes: this.nodes,
 			edges: this.edges,
+			groups: this.groups,
 		};
 	}
 
@@ -265,9 +266,10 @@ export type SerializedGraph = {
 	readonly name: string;
 	readonly nodes: Node[];
 	readonly edges: Edge[];
+	readonly groups: Group[];
 }
 
-export type GraphType<T extends Graph> = new (id: number, name: string, nodes?: Node[], edges?: Edge[]) => T;
+export type GraphType<T extends Graph> = new (id: number, name: string, nodes?: Node[], edges?: Edge[], groups?: Group[]) => T;
 
 export type GraphInputName<T extends Graph> = keyof T["inputs"];
 export type GraphOutputName<T extends Graph> = keyof T["outputs"];

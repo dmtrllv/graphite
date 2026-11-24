@@ -4,7 +4,7 @@ export class Group {
 	public readonly id: number;
 	public readonly nodes: number[];
 	public readonly parent: number | null;
-	
+
 	public name: string;
 
 	public get type() {
@@ -33,8 +33,18 @@ export class Group {
 
 	public removeNode(id: any) {
 		const index = this.nodes.indexOf(id);
-		if(index > -1)
+		if (index > -1)
 			this.nodes.splice(index, 1);
+	}
+
+	public toJSON() {
+		return {
+			type: this.type,
+			id: this.id,
+			name: this.name,
+			nodes: this.nodes,
+			parent: this.parent,
+		};
 	}
 }
 

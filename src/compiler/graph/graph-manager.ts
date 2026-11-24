@@ -15,7 +15,7 @@ export class GraphManager {
 	public constructor(graphs?: SerializedGraphs) {
 		this.graphs = new Allocator(Graph);
 		if (graphs?.length)
-			graphs.forEach(g => this.graphs.allocAt(g.id, getGraphType(g.type), g.id, g.name, g.nodes, g.edges));
+			graphs.forEach(g => this.graphs.allocAt(g.id, getGraphType(g.type), g.id, g.name, g.nodes, g.edges, g.groups));
 		else
 			this.graphs.allocWithId(WorldGraph, "World");
 	}
