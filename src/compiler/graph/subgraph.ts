@@ -1,3 +1,6 @@
+import type { CompiledData } from "../compiler";
+import type { CompilationContext } from "../context";
+import type { Type } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES, GraphInputNode } from "./nodes";
 
@@ -12,4 +15,13 @@ export class SubGraph extends Graph<{}> {
 			GraphInputNode
 		];
 	}
+
+	public override compile(_ctx: CompilationContext): CompiledSubGraph {
+		throw new Error("Method not implemented.");
+	}
 }
+
+export type CompiledSubGraph = CompiledData<{
+	readonly inputs: Record<string, Type>;
+	readonly outputs: Record<string, Type>;
+}>;

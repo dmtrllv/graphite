@@ -1,5 +1,6 @@
+import type { CompilationContext } from "../../context";
 import type { GraphManager } from "../graph-manager";
-import { Node, type NodePorts } from "./node";
+import { Node, type CompiledNode, type NodePorts } from "./node";
 
 export class GroupInputNode<P extends {}> extends Node<GroupNodeProps<P>> {
 	public override getInputs(manager: GraphManager) {
@@ -16,6 +17,10 @@ export class GroupInputNode<P extends {}> extends Node<GroupNodeProps<P>> {
 
 	public override getOutputs(manager: GraphManager): NodePorts {
 		return this.getInputs(manager);
+	}
+
+	public override compile(_ctx: CompilationContext): CompiledNode {
+		throw new Error("Method not implemented.");
 	}
 }
 
@@ -34,6 +39,10 @@ export class GroupOutputNode<P extends {}> extends Node<GroupNodeProps<P>> {
 
 	public override getOutputs(manager: GraphManager): NodePorts {
 		return this.getInputs(manager);
+	}
+
+	public override compile(_ctx: CompilationContext): CompiledNode {
+		throw new Error("Method not implemented.");
 	}
 }
 

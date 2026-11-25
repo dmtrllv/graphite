@@ -1,3 +1,5 @@
+import type { CompiledData } from "../../compiler";
+import type { CompilationContext } from "../../context";
 import { type Type } from "../../types";
 import type { GraphManager } from "../graph-manager";
 
@@ -9,6 +11,8 @@ export abstract class Node<T extends {} = any> {
 	public get type() {
 		return this.constructor.name;
 	}
+	
+	public abstract compile(ctx: CompilationContext): CompiledNode;
 
 	public getInputs(_graph: GraphManager): NodePorts {
 		return {};
@@ -38,11 +42,6 @@ export abstract class Node<T extends {} = any> {
 	}
 }
 
-export type CompiledNode = {
-	readonly outputs: Record<string, string>;
-	readonly statements: string[];
-};
-
 export type NodePorts = Record<string, Type>;
 
 export type NodeType<T extends Node<Props>, Props extends {}> = new (id: number, graphId: number, props: Props) => T;
@@ -54,3 +53,7 @@ export const isNodeType = <T extends Node<any>>(type: any, NodeClass: NodeType<T
 export type NodeProps<T> = T extends Node<infer Props> ? Props : never;
 export type NodeInputName<T extends Node> = keyof ReturnType<T["getInputs"]>;
 export type NodeOutputName<T extends Node> = keyof ReturnType<T["getOutputs"]>;
+
+export type CompiledNode = CompiledData<{
+
+}>;

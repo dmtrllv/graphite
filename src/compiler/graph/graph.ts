@@ -5,6 +5,8 @@ import { getNodeType, GraphOutputNode, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
 import { Group, type GroupInputProps, type GroupOutputProps, type GroupType } from "./group";
 import { getGroupType } from "./group-types";
+import type { CompilationContext } from "../context";
+import type { CompiledData } from "../compiler";
 
 /**
  * The base class for all graphs
@@ -60,6 +62,8 @@ export abstract class Graph<Props extends {}> {
 		if (!this._nodes.get(0))
 			this._nodes.allocWithId(GraphOutputNode, this.id, { graphId: id });
 	}
+
+	public abstract compile(ctx: CompilationContext): CompiledData; 
 
 	public getNode(id: number): Node | undefined;
 	public getNode<T extends Node>(id: number, type: NodeType<T, any>): T;

@@ -1,7 +1,6 @@
 import { Compilation } from "./compilation";
 import { CompilationContext } from "./context";
 import { type GraphManager } from "./graph";
-import type { PassBufferType, Type } from "./types";
 
 export class Compiler {
 	public readonly manager: GraphManager;
@@ -28,17 +27,6 @@ export class Compiler {
 	}
 };
 
-export type CompiledPass = {
-	readonly inputs: Record<string, Type>;
-	readonly outputs: Record<string, PassBufferType>;
-	readonly dependencies: CompiledPass[];
+export type CompiledData<T extends {} = {}> = T & {
 	readonly source: string;
-};
-
-export type CompiledNode = {
-
-};
-
-export type CompiledGroup = {
-	readonly outputs: Record<string, CompiledNode>;
 };

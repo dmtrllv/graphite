@@ -1,5 +1,7 @@
+import type { CompiledData } from "../compiler";
+import type { CompilationContext } from "../context";
 import { GroupInputNode, GroupOutputNode } from "./nodes/group";
-import type { NodeType } from "./nodes/node";
+import type { CompiledNode, NodeType } from "./nodes/node";
 
 /**
  * A `Group` is like a scope with 1 input and output boundary node.
@@ -10,6 +12,10 @@ export class Group {
 	public readonly parent: number | null;
 
 	public name: string;
+
+	public async compile(_ctx: CompilationContext): Promise<CompiledGroup> {
+		throw new Error("todo");
+	}
 
 	public get type() {
 		return this.constructor.name;
@@ -55,3 +61,8 @@ export class Group {
 export type GroupType<T extends Group> = new (id: number, name: string, nodes?: number[], parent?: number | null) => T;
 export type GroupInputProps<T extends Group> = InstanceType<T["inputNodeType"]> extends GroupInputNode<infer P> ? Omit<P, "groupId"> : never;
 export type GroupOutputProps<T extends Group> = InstanceType<T["outputNodeType"]> extends GroupOutputNode<infer P> ? Omit<P, "groupId"> : never;
+
+export type CompiledGroup = CompiledData<{
+	readonly inputs: Record<string, CompiledNode>;
+	readonly outputs: Record<string, CompiledNode>;
+}>;

@@ -1,3 +1,5 @@
+import type { CompiledData } from "../compiler";
+import type { CompilationContext } from "../context";
 import type { PassBufferType, Type } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES, GraphInputNode, type NodeType } from "./nodes";
@@ -42,12 +44,22 @@ export class PassGraph extends Graph<PassProps> {
 		if (this.props.outputs[name])
 			delete this.props.outputs[name];
 	}
+
+	public override compile(_ctx: CompilationContext): CompiledPass {
+		throw new Error("Method not implemented.");
+	}
 }
 
 export type PassInputs = Record<string, Type>;
 export type PassOutputs = Record<string, PassBufferType>;
 
-export type PassProps =  {
+export type PassProps = {
 	readonly inputs: PassInputs;
 	readonly outputs: PassOutputs;
 };
+
+export type CompiledPass = CompiledData<{
+	readonly inputs: Record<string, Type>;
+	readonly outputs: Record<string, PassBufferType>;
+	readonly dependencies: CompiledPass[];
+}>;
