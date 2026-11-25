@@ -1,10 +1,10 @@
-import { ValueType, type PassBufferType, type Type } from "../types";
+import { ValueType, type Type } from "../types";
 import { DEFAULT_NODES } from "./nodes";
 import { PassNode } from "./nodes/pass";
 import { PassBufferSampler } from "./nodes/pass-sampler";
-import { PassGraph, type PassOutputs } from "./pass";
+import { PassGraph } from "./pass";
 
-export class WorldGraph extends PassGraph {
+export class WorldGraph extends PassGraph<WorldGraphProps> {
 	public override get nodeTypes() {
 		return [
 			...DEFAULT_NODES,
@@ -20,20 +20,16 @@ export class WorldGraph extends PassGraph {
 		};
 	}
 
-	public setOutput(name: string, type: PassBufferType) {
-		this.props.outputs[name] = type;
+	public override setPassInput(_name: string, _type: Type) {
+		console.warn("WorldGraph does not has an input");
 	}
 
-	public removeOutput(name: string) {
-		if (this.props.outputs[name])
-			delete this.props.outputs[name];
+	public override removePassInput(_name: string) {
+		console.warn("WorldGraph does not has an input");
 	}
-
-	public override setPassInput(_name: string, _type: Type) {}
-
-	public override removePassInput(_name: string) {}
 }
 
 export type WorldGraphProps = {
-	readonly outputs: PassOutputs;
+	readonly chunkSize: number;
+	readonly worldSize: number;
 };

@@ -11,7 +11,7 @@ import { PassBufferSampler } from "./nodes/pass-sampler";
  * It can only be instantiated in the `WorldGraph` which will serve as the composition
  * of all the passes.
  */
-export class PassGraph extends Graph<PassProps> {
+export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 	public override get nodeTypes(): NodeType<any, any>[] {
 		return [
 			...DEFAULT_NODES,
@@ -53,7 +53,7 @@ export class PassGraph extends Graph<PassProps> {
 	public override async compile(ctx: CompilationContext): Promise<CompiledPass> {
 		const visited = new Set<number>();
 		const nodes: Node[] = [];
-		const dependencies = new Map<PassGraph, Promise<CompiledPass>>();
+		const dependencies = new Map<PassGraph<any>, Promise<CompiledPass>>();
 		const bufferInputs = new Map<string, CompiledPassBufferBinding>();
 		const bufferBindings = new Map<string, number>();
 
@@ -77,7 +77,7 @@ export class PassGraph extends Graph<PassProps> {
 			if (!(node instanceof PassBufferSampler))
 				return;
 
-			const graph = ctx.manager.getGraph(node.props.graphId) as PassGraph;
+			const graph = ctx.manager.getGraph(node.props.graphId) as PassGraph<any>;
 
 			if (!dependencies.has(graph))
 				dependencies.set(graph, ctx.resolvePass(graph));
@@ -124,25 +124,56 @@ export class PassGraph extends Graph<PassProps> {
 
 		const outputs: Record<string, CompiledPassBuffer> = {};
 
-		for (const [bufferKey, type] of Object.entries(this.outputs)) {
+		for (const [index, [bufferKey, type]] of Object.entries(this.outputs).entries()) {
+			const binding = bufferInputs.size + index;
+
 			outputs[bufferKey] = {
 				ref: {
 					name: "pass-buffer-ref",
 					graphId: this.id,
 					bufferKey
 				},
-				type
+				type,
+				binding
 			};
 		}
 
+		const world = ctx.manager.worldGraph;
+
+		const configuration = [
+			`const WORLD_SIZE: u32 = ${world.props.worldSize}u;`,
+			`const CHUNK_SIZE: u32 = ${world.props.chunkSize}u;`,
+		];
+
 		const bufferInputsValues = [...bufferInputs.values()];
 
-		const declarations = bufferInputsValues.map(({ binding, type }) =>
+		const bufferDeclarations = bufferInputsValues.map(({ binding, type }) =>
 			`@group(0) @binding(${binding})\nvar<storage, read> pass_buffer_${binding}: array<${getWGSLType(type)}>;`
 		);
 
+		const outputDeclarations = Object.entries(this.outputs).map(([bufferKey, type], index) => (
+			`@group(0) @binding(${bufferInputs.size + index})\nvar<storage, read_write> pass_output_${bufferKey}: array<${getWGSLType(type)}>;`
+		));
+
+		const chunkBinding = bufferInputs.size + Object.keys(this.outputs).length;
+
+		const chunkDeclaration = `struct ChunkUniforms {\n\tchunk_origin: vec2<f32>\n};\n@group(0) @binding(${chunkBinding})\nvar<uniform> chunk: ChunkUniforms;`;
+
 		return {
-			source: [...declarations, ...source].join("\n"),
+			source: [
+				...configuration,
+				...bufferDeclarations,
+				...outputDeclarations,
+				chunkDeclaration,
+				`@compute @workgroup_size(8, 8, 1)
+fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
+	if (invocation_id.x >= CHUNK_SIZE || invocation_id.y >= CHUNK_SIZE)
+		return;
+
+	let world_position = vec2<f32>(invocation_id.xy) + chunk.chunk_origin;
+	${source.join("\n")}
+}`
+			].join("\n"),
 			inputs: this.inputs,
 			outputs,
 			bufferInputs: bufferInputsValues,
@@ -155,7 +186,7 @@ export type PassInputType = PrimitiveType | Texture | PassBufferRef;
 export type PassInputs = Record<string, PassInputType>;
 export type PassOutputs = Record<string, PassBufferType>;
 
-export type PassProps = {
+export type PassProps<P extends {} = {}> = P & {
 	readonly inputs: PassInputs;
 	readonly outputs: PassOutputs;
 };
@@ -163,6 +194,7 @@ export type PassProps = {
 export type CompiledPassBuffer = {
 	readonly ref: PassBufferRef;
 	readonly type: PassBufferType;
+	readonly binding: number;
 };
 
 export type CompiledPassBufferBinding = {
