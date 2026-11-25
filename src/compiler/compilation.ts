@@ -1,5 +1,5 @@
 import type { CompilationContext } from "./context";
-import type { CompiledGroup, CompiledNode, CompiledPass, CompiledSubGraph, Group, Node, PassGraph, SubGraph } from "./graph";
+import type { CompiledGroup, CompiledNode, CompiledPass, CompiledSubGraph, Group, Node, PassGraph, SubGraph, WorldGraph } from "./graph";
 
 export class Compilation {
 	public readonly nodes = new Map<Node, Promise<CompiledNode>>();

@@ -1,7 +1,8 @@
 import { BinaryOp, BinaryOpNode, GraphInputNode, GraphManager, PassBufferSampler, PassNode, ValueNode, Vector3Node } from "./compiler/graph";
 import { PassGraph } from "./compiler/graph/pass";
 import { createPassBufferRef, Vec3, ValueType } from "./compiler/types";
-import { Compiler } from "./compiler";
+import { Runtime } from "./compiler";
+import { isAborted } from "./utils";
 
 const manager = new GraphManager();
 const world = manager.worldGraph;
@@ -54,7 +55,13 @@ manager.connect(world, worldHeightSampler, "value", world.outputNode, "elevation
 manager.connect(world, normalNode, "normal", normalSampler, "buffer");
 manager.connect(world, normalSampler, "value", world.outputNode, "normal");
 
-const compiler = new Compiler(manager);
-const compilation = await compiler.compile();
+const runtime = await Runtime.init(manager);
 
-(await compilation.resolveJson()).passes.forEach(p => console.log(p.source));
+const chunk = await runtime.resolveChunk(0, 0);
+
+if (!isAborted(chunk)) {
+	const buffers = await Promise.all(Object.values(chunk.buffers).map(b => runtime.readBuffer(b)));
+	buffers.forEach(buffer => {
+		console.log(new Float32Array(buffer));
+	});
+}

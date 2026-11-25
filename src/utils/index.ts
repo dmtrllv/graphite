@@ -3,3 +3,5 @@ export * from "./assert";
 export * from "./enum";
 export * from "./allocator";
 export * from "./result";
+export * from "./abortable";
+export * from "./math";

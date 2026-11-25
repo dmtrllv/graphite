@@ -54,7 +54,7 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 		const visited = new Set<number>();
 		const nodes: Node[] = [];
 		const dependencies = new Map<PassGraph<any>, Promise<CompiledPass>>();
-		const bufferInputs = new Map<string, CompiledPassBufferBinding>();
+		const bufferInputs = new Map<string, CompiledPassBuffer>();
 		const bufferBindings = new Map<string, number>();
 
 		const addBufferInput = async (ref: PassBufferRef) => {
@@ -203,9 +203,11 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 
 		const chunkBinding = bufferInputs.size + Object.keys(this.outputs).length;
 
+		// this must later be dynamic
 		const chunkDeclaration = `struct ChunkUniforms {\n\tchunk_origin: vec2<f32>\n};\n@group(0) @binding(${chunkBinding})\nvar<uniform> chunk: ChunkUniforms;`;
 
 		return {
+			name: this.name,
 			source: [
 				...configuration,
 				...bufferDeclarations,
@@ -225,7 +227,11 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 			inputs: this.inputs,
 			outputs,
 			bufferInputs: bufferInputsValues,
-			dependencies: await Promise.all(dependencies.values())
+			dependencies: await Promise.all(dependencies.values()),
+			uniform: {
+				binding: chunkBinding,
+				size: 8,
+			}
 		};
 	}
 }
@@ -245,15 +251,16 @@ export type CompiledPassBuffer = {
 	readonly binding: number;
 };
 
-export type CompiledPassBufferBinding = {
-	readonly ref: PassBufferRef;
-	readonly type: PassBufferType;
-	readonly binding: number;
-};
-
 export type CompiledPass = CompiledData<{
+	readonly name: string;
 	readonly inputs: PassInputs;
 	readonly outputs: Record<string, CompiledPassBuffer>;
-	readonly bufferInputs: CompiledPassBufferBinding[];
+	readonly bufferInputs: CompiledPassBuffer[];
 	readonly dependencies: CompiledPass[];
+	readonly uniform: CompiledPassUniform;
 }>;
+
+export type CompiledPassUniform = {
+	readonly binding: number;
+	readonly size: number;
+};
