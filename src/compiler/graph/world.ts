@@ -1,11 +1,10 @@
-import { ValueType, type PassBufferType } from "../types";
-import { Graph } from "./graph";
+import { ValueType, type PassBufferType, type Type } from "../types";
 import { DEFAULT_NODES } from "./nodes";
 import { PassNode } from "./nodes/pass";
 import { PassBufferSampler } from "./nodes/pass-sampler";
-import type { PassOutputs } from "./pass";
+import { PassGraph, type PassOutputs } from "./pass";
 
-export class WorldGraph extends Graph<WorldGraphProps> {
+export class WorldGraph extends PassGraph {
 	public override get nodeTypes() {
 		return [
 			...DEFAULT_NODES,
@@ -29,8 +28,12 @@ export class WorldGraph extends Graph<WorldGraphProps> {
 		if (this.props.outputs[name])
 			delete this.props.outputs[name];
 	}
+
+	public override setPassInput(_name: string, _type: Type) {}
+
+	public override removePassInput(_name: string) {}
 }
 
-export type WorldGraphProps = { 
+export type WorldGraphProps = {
 	readonly outputs: PassOutputs;
 };

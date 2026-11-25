@@ -4,7 +4,6 @@ import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
 import { isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
 import { GraphError } from "./error";
-import { Group } from "./group";
 import { GroupInputNode, GroupOutputNode } from "./nodes";
 
 export class GraphManager {
@@ -19,7 +18,7 @@ export class GraphManager {
 		if (graphs?.length)
 			graphs.forEach(g => this.graphs.allocAt(g.id, getGraphType(g.type), g.id, g.name, g.props, g.nodes, g.edges, g.groups));
 		else
-			this.graphs.allocWithId(WorldGraph, "World", { outputs: {} });
+			this.graphs.allocWithId(WorldGraph, "World", { inputs: {}, outputs: {} });
 	}
 
 	public serialize(): SerializedGraphs {
