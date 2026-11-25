@@ -21,3 +21,11 @@ export type PassBufferRef = {
 	readonly graphId: number;
 	readonly bufferKey: string;
 };
+
+export const createPassBufferRef = (graphId: number, bufferKey: string): PassBufferRef => {
+	return {
+		name: "pass-buffer-ref",
+		graphId,
+		bufferKey
+	};
+};

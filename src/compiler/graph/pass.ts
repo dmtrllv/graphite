@@ -1,7 +1,7 @@
 import { assert } from "../../utils";
 import type { CompiledData } from "../compiler";
 import type { CompilationContext } from "../context";
-import type { PassBufferRef, PassBufferType, PrimitiveType, Texture, Type } from "../types";
+import { getWGSLType, type PassBufferRef, type PassBufferType, type PrimitiveType, type Texture } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES, GraphInputNode, Node, type NodeType } from "./nodes";
 import { PassBufferSampler } from "./nodes/pass-sampler";
@@ -36,7 +36,7 @@ export class PassGraph extends Graph<PassProps> {
 		if (!this.props.inputs[name])
 			return;
 
-		assert(() => !this.nodes.some((node: any) => node instanceof GraphInputNode && node.props.inputName === name),`Cannot remove pass input "${name}" because it is referenced by a GraphInputNode!`);
+		assert(() => !this.nodes.some((node: any) => node instanceof GraphInputNode && node.props.inputName === name), `Cannot remove pass input "${name}" because it is referenced by a GraphInputNode!`);
 
 		delete this.props.inputs[name];
 	}
@@ -52,8 +52,10 @@ export class PassGraph extends Graph<PassProps> {
 
 	public override async compile(ctx: CompilationContext): Promise<CompiledPass> {
 		const visited = new Set<number>();
-		const source: string[] = [];
+		const nodes: Node[] = [];
 		const dependencies = new Map<PassGraph, Promise<CompiledPass>>();
+		const bufferInputs = new Map<string, CompiledPassBufferBinding>();
+		const bufferBindings = new Map<string, number>();
 
 		const visit = async (node: Node): Promise<void> => {
 			if (visited.has(node.id))
@@ -70,25 +72,80 @@ export class PassGraph extends Graph<PassProps> {
 				await visit(dependency);
 			}
 
-			const compiled = await ctx.resolveNode(node);
+			nodes.push(node);
 
-			if (compiled.source)
-				source.push(compiled.source);
+			if (!(node instanceof PassBufferSampler))
+				return;
 
-			if (node instanceof PassBufferSampler) {
-				const graph = ctx.manager.getGraph(node.props.graphId) as PassGraph;
+			const graph = ctx.manager.getGraph(node.props.graphId) as PassGraph;
 
-				if (!dependencies.has(graph))
-					dependencies.set(graph, ctx.resolvePass(graph));
-			}
+			if (!dependencies.has(graph))
+				dependencies.set(graph, ctx.resolvePass(graph));
+
+			const ref: PassBufferRef = {
+				name: "pass-buffer-ref",
+				graphId: node.props.graphId,
+				bufferKey: node.props.bufferKey
+			};
+
+			const key = `${ref.graphId}:${ref.bufferKey}`;
+
+			if (bufferInputs.has(key))
+				return;
+
+			const compiled = await dependencies.get(graph)!;
+			const output = compiled.outputs[ref.bufferKey];
+
+			if (!output)
+				throw new Error(`Missing pass buffer "${ref.bufferKey}" in graph ${ref.graphId}!`);
+
+			const binding = bufferInputs.size;
+
+			bufferInputs.set(key, {
+				ref,
+				type: output.type,
+				binding
+			});
+
+			bufferBindings.set(key, binding);
 		};
 
 		await visit(this.outputNode);
 
+		const passCtx = ctx.withPassBufferBindings(bufferBindings);
+		const source: string[] = [];
+
+		for (const node of nodes) {
+			const compiled = await passCtx.resolveNode(node);
+
+			if (compiled.source)
+				source.push(compiled.source);
+		}
+
+		const outputs: Record<string, CompiledPassBuffer> = {};
+
+		for (const [bufferKey, type] of Object.entries(this.outputs)) {
+			outputs[bufferKey] = {
+				ref: {
+					name: "pass-buffer-ref",
+					graphId: this.id,
+					bufferKey
+				},
+				type
+			};
+		}
+
+		const bufferInputsValues = [...bufferInputs.values()];
+
+		const declarations = bufferInputsValues.map(({ binding, type }) =>
+			`@group(0) @binding(${binding})\nvar<storage, read> pass_buffer_${binding}: array<${getWGSLType(type)}>;`
+		);
+
 		return {
-			source: source.join("\n"),
+			source: [...declarations, ...source].join("\n"),
 			inputs: this.inputs,
-			outputs: this.outputs,
+			outputs,
+			bufferInputs: bufferInputsValues,
 			dependencies: await Promise.all(dependencies.values())
 		};
 	}
@@ -103,8 +160,20 @@ export type PassProps = {
 	readonly outputs: PassOutputs;
 };
 
+export type CompiledPassBuffer = {
+	readonly ref: PassBufferRef;
+	readonly type: PassBufferType;
+};
+
+export type CompiledPassBufferBinding = {
+	readonly ref: PassBufferRef;
+	readonly type: PassBufferType;
+	readonly binding: number;
+};
+
 export type CompiledPass = CompiledData<{
-	readonly inputs: Record<string, Type>;
-	readonly outputs: Record<string, PassBufferType>;
+	readonly inputs: PassInputs;
+	readonly outputs: Record<string, CompiledPassBuffer>;
+	readonly bufferInputs: CompiledPassBufferBinding[];
 	readonly dependencies: CompiledPass[];
 }>;

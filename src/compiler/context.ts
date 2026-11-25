@@ -1,13 +1,30 @@
 import type { Compilation } from "./compilation";
 import type { PassGraph, Group, SubGraph, Node, GraphManager } from "./graph";
+import type { PassBufferRef } from "./types";
 
 export class CompilationContext {
 	protected readonly compilation: Compilation;
 	public readonly manager: GraphManager;
+	private readonly passBufferBindings: Map<string, number>;
 
-	public constructor(compilation: Compilation, manager: GraphManager) {
+	public constructor(compilation: Compilation, manager: GraphManager, passBufferBindings = new Map<string, number>()) {
 		this.compilation = compilation;
 		this.manager = manager;
+		this.passBufferBindings = passBufferBindings;
+	}
+
+	public withPassBufferBindings(bindings: Map<string, number>) {
+		return new CompilationContext(this.compilation, this.manager, bindings);
+	}
+
+	public getPassBufferBinding(ref: PassBufferRef): number {
+		const key = `${ref.graphId}:${ref.bufferKey}`;
+		const binding = this.passBufferBindings.get(key);
+
+		if (binding === undefined)
+			throw new Error(`Missing binding for pass buffer "${ref.bufferKey}" in graph ${ref.graphId}!`);
+
+		return binding;
 	}
 
 	public resolvePass(graph: PassGraph) {

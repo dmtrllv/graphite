@@ -5,6 +5,6 @@ export const getWGSLType = (type: Type): string => {
 		case "value": return "f32";
 		case "vector": return `vec${type.size}<f32>`;
 		case "matrix": return `mat${type.columns}x${type.rows}<f32>`;
-		default: throw new Error('??')
+		default: throw new Error(`Unsupported WGSL type: ${type.name}!`);
 	}
 };
