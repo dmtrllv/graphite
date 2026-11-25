@@ -19,7 +19,7 @@ export class Compiler {
 
 	private async compileWorldGraph(): Promise<Compilation> {
 		const compilation = new Compilation();
-		const ctx = new CompilationContext(compilation);
+		const ctx = new CompilationContext(compilation, this.manager);
 
 		await compilation.resolvePass(ctx, this.manager.worldGraph);
 

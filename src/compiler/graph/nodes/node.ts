@@ -12,7 +12,7 @@ export abstract class Node<T extends {} = any> {
 		return this.constructor.name;
 	}
 
-	public abstract compile(ctx: CompilationContext): CompiledNode;
+	public abstract compile(ctx: CompilationContext): CompiledNode | Promise<CompiledNode>;
 
 	public getInputs(_graph: GraphManager): NodePorts {
 		return {};

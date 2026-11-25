@@ -63,7 +63,7 @@ export abstract class Graph<Props extends {}> {
 			this._nodes.allocWithId(GraphOutputNode, this.id, { graphId: id });
 	}
 
-	public abstract compile(ctx: CompilationContext): CompiledData; 
+	public abstract compile(ctx: CompilationContext): CompiledData | Promise<CompiledData>; 
 
 	public getNode(id: number): Node | undefined;
 	public getNode<T extends Node>(id: number, type: NodeType<T, any>): T;
