@@ -213,8 +213,9 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 				chunkDeclaration,
 				`@compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
-	if (invocation_id.x >= CHUNK_SIZE || invocation_id.y >= CHUNK_SIZE)
+	if (invocation_id.x >= CHUNK_SIZE || invocation_id.y >= CHUNK_SIZE) {
 		return;
+	}
 
 	let world_position = vec2<f32>(invocation_id.xy) + chunk.chunk_origin;
 	${source.join("\n")}
