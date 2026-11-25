@@ -63,6 +63,5 @@ export type GroupInputProps<T extends Group> = InstanceType<T["inputNodeType"]> 
 export type GroupOutputProps<T extends Group> = InstanceType<T["outputNodeType"]> extends GroupOutputNode<infer P> ? Omit<P, "groupId"> : never;
 
 export type CompiledGroup = CompiledData<{
-	readonly inputs: Record<string, CompiledNode>;
-	readonly outputs: Record<string, CompiledNode>;
+	readonly outputs: Record<string, string>;
 }>;

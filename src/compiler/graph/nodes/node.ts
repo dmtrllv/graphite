@@ -11,7 +11,7 @@ export abstract class Node<T extends {} = any> {
 	public get type() {
 		return this.constructor.name;
 	}
-	
+
 	public abstract compile(ctx: CompilationContext): CompiledNode;
 
 	public getInputs(_graph: GraphManager): NodePorts {
@@ -27,7 +27,7 @@ export abstract class Node<T extends {} = any> {
 		this.graphId = graphId;
 		this.props = this.deserializeProps(props);
 	}
-	
+
 	protected deserializeProps(props: T) {
 		return props;
 	}
@@ -55,5 +55,5 @@ export type NodeInputName<T extends Node> = keyof ReturnType<T["getInputs"]>;
 export type NodeOutputName<T extends Node> = keyof ReturnType<T["getOutputs"]>;
 
 export type CompiledNode = CompiledData<{
-
+	readonly outputs: Record<string, string>;
 }>;

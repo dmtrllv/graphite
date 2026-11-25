@@ -13,15 +13,15 @@ export class Compiler {
 
 	public async compile(): Promise<Compilation> {
 		if (!this._compiledWorldGraph)
-			this._compiledWorldGraph = new Promise(async res => res(await this.compileWorldGraph()));
+			this._compiledWorldGraph = this.compileWorldGraph();
 		return this._compiledWorldGraph;
 	}
 
 	private async compileWorldGraph(): Promise<Compilation> {
 		const compilation = new Compilation();
-		const ctx = new CompilationContext();
+		const ctx = new CompilationContext(compilation);
 
-		compilation.resolvePass(ctx, this.manager.worldGraph);
+		await compilation.resolvePass(ctx, this.manager.worldGraph);
 
 		return compilation;
 	}
