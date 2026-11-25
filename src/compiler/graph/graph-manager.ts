@@ -2,7 +2,7 @@ import { Allocator, assert, Err, Ok, Result } from "@utils";
 import { Edge, Graph, type GraphNodeType, type GraphProps, type GraphType, type SerializedGraph } from "./graph";
 import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
-import { isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
+import { GraphInputNode, isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
 import { GraphError } from "./error";
 import { GroupInputNode, GroupOutputNode } from "./nodes";
 
@@ -19,6 +19,10 @@ export class GraphManager {
 			graphs.forEach(g => this.graphs.allocAt(g.id, getGraphType(g.type), g.id, g.name, g.props, g.nodes, g.edges, g.groups));
 		else
 			this.graphs.allocWithId(WorldGraph, "World", { inputs: {}, outputs: {} });
+		for (const graph of this.graphs.all())
+			for (const node of graph.nodes)
+				if (node instanceof GraphInputNode)
+					this.validateGraphInput(graph, node.props.inputName);
 	}
 
 	public serialize(): SerializedGraphs {
@@ -52,6 +56,9 @@ export class GraphManager {
 	public addNode<T extends Graph<any>, U extends GraphNodeType<T>, P extends NodeProps<U>>(idOrGraph: number | T, type: NodeType<U, P>, props: P): U {
 		const graph = typeof idOrGraph === "number" ? this.getGraph(idOrGraph) : idOrGraph;
 
+		if (isNodeType(type, GraphInputNode))
+			this.validateGraphInput(graph, (props as any).inputName);
+
 		if (isNodeType(type, SubGraphNode)) {
 			const subGraph = this.getGraph((props as any).graph);
 			assert(() => subGraph !== graph && !this.hasDependency(subGraph, graph), "Recursive subgraphs are not allowed!");
@@ -63,6 +70,9 @@ export class GraphManager {
 	public tryAddNode<T extends Node<P>, P extends {}>(idOrGraph: number | Graph<any>, type: NodeType<T, P>, props: P): Result<T, GraphError> {
 		return Result.try(() => {
 			const graph = typeof idOrGraph === "number" ? this.getGraph(idOrGraph) : idOrGraph;
+
+			if (isNodeType(type, GraphInputNode))
+				this.validateGraphInput(graph, (props as any).inputName);
 
 			if (isNodeType(type, SubGraphNode)) {
 				const subGraph = this.getGraph((props as any).graph);
@@ -195,6 +205,10 @@ export class GraphManager {
 			return true;
 
 		return false;
+	}
+
+	private validateGraphInput(graph: Graph<any>, inputName: string): void {
+		assert(() => Object.prototype.hasOwnProperty.call(graph.inputs, inputName), `Graph input "${inputName}" is not declared by graph "${graph.name}"!`);
 	}
 }
 

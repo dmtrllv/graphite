@@ -1,7 +1,7 @@
 import type { CompiledData } from "../compiler";
 import type { CompilationContext } from "../context";
 import { GroupInputNode, GroupOutputNode } from "./nodes/group";
-import type { CompiledNode, NodeType } from "./nodes/node";
+import type { NodeType } from "./nodes/node";
 
 /**
  * A `Group` is like a scope with 1 input and output boundary node.

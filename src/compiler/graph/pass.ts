@@ -1,6 +1,7 @@
+import { assert } from "../../utils";
 import type { CompiledData } from "../compiler";
 import type { CompilationContext } from "../context";
-import type { PassBufferType, Type } from "../types";
+import type { PassBufferRef, PassBufferType, PrimitiveType, Texture, Type } from "../types";
 import { Graph } from "./graph";
 import { DEFAULT_NODES, GraphInputNode, Node, type NodeType } from "./nodes";
 import { PassBufferSampler } from "./nodes/pass-sampler";
@@ -27,13 +28,17 @@ export class PassGraph extends Graph<PassProps> {
 		return this.props.outputs;
 	}
 
-	public setPassInput(name: string, type: Type) {
+	public setPassInput(name: string, type: PassInputType) {
 		this.props.inputs[name] = type;
 	}
 
 	public removePassInput(name: string) {
-		if (this.props.inputs[name])
-			delete this.props.inputs[name];
+		if (!this.props.inputs[name])
+			return;
+
+		assert(() => !this.nodes.some((node: any) => node instanceof GraphInputNode && node.props.inputName === name),`Cannot remove pass input "${name}" because it is referenced by a GraphInputNode!`);
+
+		delete this.props.inputs[name];
 	}
 
 	public setPassOutput(name: string, type: PassBufferType) {
@@ -89,7 +94,8 @@ export class PassGraph extends Graph<PassProps> {
 	}
 }
 
-export type PassInputs = Record<string, Type>;
+export type PassInputType = PrimitiveType | Texture | PassBufferRef;
+export type PassInputs = Record<string, PassInputType>;
 export type PassOutputs = Record<string, PassBufferType>;
 
 export type PassProps = {

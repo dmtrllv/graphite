@@ -2,7 +2,9 @@ import type { CompilationContext } from "../../context";
 import type { GraphManager } from "../graph-manager";
 import { Node, type CompiledNode, type NodePorts } from "./node";
 
-export class GraphInputNode extends Node<{ graphId: number; inputName: string; }> {
+export type GraphInputProps = { graphId: number; inputName: string; };
+
+export class GraphInputNode extends Node<GraphInputProps> {
 	public override getOutputs(manager: GraphManager) {
 		const graph = manager.getGraph(this.graphId);
 		return {

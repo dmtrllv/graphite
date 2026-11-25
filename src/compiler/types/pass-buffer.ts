@@ -15,3 +15,9 @@ export const createPassBuffer = (type: PassBufferType): PassBuffer => {
 		type
 	};
 };
+
+export type PassBufferRef = {
+	readonly name: "pass-buffer-ref";
+	readonly graphId: number;
+	readonly bufferKey: string;
+};
