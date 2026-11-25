@@ -4,6 +4,7 @@ export * from "./pass";
 export * from "./nodes";
 export * from "./graph";
 export * from "./value";
+export * from "./group";
 export * from "./subgraph";
 export * from "./simulation";
 export * from "./pass-sampler";

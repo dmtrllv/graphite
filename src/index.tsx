@@ -2,6 +2,7 @@ import { BinaryOp, BinaryOpNode, GraphManager, SimulationGroup, SubGraph, SubGra
 import { PassGraph } from "./compiler/graph/pass";
 import { PassNode } from "./compiler/graph/nodes/pass";
 import { ValueType, Vec3 } from "./compiler/types";
+import { Compiler } from "./compiler";
 
 const manager = new GraphManager();
 const world = manager.worldGraph;
@@ -60,31 +61,6 @@ manager.addNode(world, SubGraphNode, { graph: subGraph.id });
 
 world.setOutput("normal", Vec3);
 
-const serialized = manager.serialize();
-const restoredManager = new GraphManager(serialized);
-const serializedAgain = restoredManager.serialize();
+const compiler = new Compiler(manager);
 
-const restoredHeightPass = restoredManager.getGraph(heightPass.id, PassGraph);
-const restoredWorld = restoredManager.worldGraph;
-
-const structureRoundTrip = JSON.stringify(serialized) === JSON.stringify(serializedAgain);
-
-const passIORoundTrip =
-	JSON.stringify(heightPass.inputs) === JSON.stringify(restoredHeightPass.inputs) &&
-	JSON.stringify(heightPass.outputs) === JSON.stringify(restoredHeightPass.outputs);
-
-const worldIORoundTrip = JSON.stringify(world.outputs) === JSON.stringify(restoredWorld.outputs);
-
-console.log("Graph structure round-trip:", structureRoundTrip);
-console.log("Pass IO round-trip:", passIORoundTrip);
-console.log("World IO round-trip:", worldIORoundTrip);
-
-console.log("Graphs:", manager.getGraphs(SubGraph).length, manager.getGraphs(PassGraph).length);
-console.log("World nodes:", world.nodes);
-console.log("World edges:", world.edges);
-console.log("Subgraph groups:", subGraph.groups);
-console.log("Simulation group A:", groupA.nodes);
-console.log("Simulation group B:", groupB.nodes);
-console.log("Height pass IO:", heightPass.inputs, heightPass.outputs);
-console.log("Normal pass IO:", normalPass.inputs, normalPass.outputs);
-console.log("World outputs:", world.outputs);
+console.log(JSON.stringify(await compiler.compile(), null, 4));

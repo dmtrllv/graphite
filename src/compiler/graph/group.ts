@@ -1,7 +1,8 @@
+import { GroupInputNode, GroupOutputNode } from "./nodes/group";
 import type { NodeType } from "./nodes/node";
 
 /**
- * A `Group` is like a scope with optional boundary nodes.
+ * A `Group` is like a scope with 1 input and output boundary node.
  */
 export class Group {
 	public readonly id: number;
@@ -14,12 +15,12 @@ export class Group {
 		return this.constructor.name;
 	}
 
-	public get inputNodeType(): NodeType<any, any> | undefined {
-		return undefined;
+	public get inputNodeType(): NodeType<GroupInputNode, any> {
+		return GroupInputNode;
 	}
 
-	public get outputNodeType(): NodeType<any, any> | undefined {
-		return undefined;
+	public get outputNodeType(): NodeType<GroupOutputNode, any> {
+		return GroupOutputNode;
 	}
 
 	public constructor(id: number, name: string, nodes: number[] = [], parent: number | null = null) {
