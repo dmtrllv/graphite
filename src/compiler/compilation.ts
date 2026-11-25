@@ -30,4 +30,13 @@ export class Compilation {
 			this.subGraphs.set(subGraph, Promise.resolve().then(() => subGraph.compile(ctx)));
 		return this.subGraphs.get(subGraph)!;
 	}
+
+	public async resolveJson() {
+		return {
+			nodes: await Promise.all(Array.from(this.nodes.values())),
+			groups: await Promise.all(Array.from(this.groups.values())),
+			passes: await Promise.all(Array.from(this.passes.values())),
+			subGraphs: await Promise.all(Array.from(this.subGraphs.values())),
+		};
+	}
 }
