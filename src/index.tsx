@@ -33,6 +33,9 @@ manager.connect(world, heightNode, "height", normalNode, "height");
 
 world.setPassOutput("normal", Vec3);
 
+manager.connect(world, heightNode, "height", world.outputNode, "elevation");
+manager.connect(world, normalNode, "normal", world.outputNode, "normal");
+
 const compiler = new Compiler(manager);
 const compilation = await compiler.compile();
 

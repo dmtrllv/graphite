@@ -24,15 +24,7 @@ export class GraphInputNode extends Node<GraphInputProps> {
 
 export class GraphOutputNode extends Node<{ graphId: number }> {
 	public override getInputs(manager: GraphManager) {
-		const graph = manager.getGraph(this.graphId);
-		const ports: NodePorts = {};
-
-		for (const edge of graph.edges.filter(edge => edge.target === this.id)) {
-			const source = graph.getNode(edge.source)!;
-			ports[edge.inputPort] = source.getOutputs(manager)[edge.outputPort]!;
-		}
-
-		return ports;
+		return manager.getGraph(this.graphId).outputs;
 	}
 
 	public override async compile(ctx: CompilationContext): Promise<CompiledNode> {

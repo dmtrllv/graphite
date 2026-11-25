@@ -30,10 +30,10 @@ export abstract class Graph<Props extends {}> {
 		return this._groups.all();
 	}
 
-	public get outputNode() {
+	public get outputNode(): GraphOutputNode {
 		const node = assert.notNull(this.getNode(0));
 		assert(() => node instanceof GraphOutputNode, `First node is not a ${GraphOutputNode.name}!`);
-		return node;
+		return node as GraphOutputNode;
 	}
 
 	public get inputs(): GraphIO {

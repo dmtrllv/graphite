@@ -2,7 +2,7 @@ import { Allocator, assert, Err, Ok, Result } from "@utils";
 import { Edge, Graph, type GraphNodeType, type GraphProps, type GraphType, type SerializedGraph } from "./graph";
 import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
-import { GraphInputNode, isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
+import { GraphInputNode, GraphOutputNode, isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
 import { GraphError } from "./error";
 import { GroupInputNode, GroupOutputNode } from "./nodes";
 
@@ -100,7 +100,7 @@ export class GraphManager {
 		return false;
 	}
 
-	public connect<T extends Graph<any>, Source extends GraphNodeType<T>, K extends NodeOutputName<Source>, Target extends GraphNodeType<T>>(graph: T, source: Source, outputPort: K, target: Target, inputPort: MatchingNodeInputPortNames<Target, Source, K>): Edge {
+	public connect<T extends Graph<any>, Source extends GraphNodeType<T>, Target extends GraphNodeType<T> | GraphOutputNode>(graph: T, source: Source, outputPort: NodeOutputName<Source>, target: Target, inputPort: string): Edge {
 		assert(() => source.graphId === graph.id, "Source node belongs to another graph!");
 		assert(() => target.graphId === graph.id, "Target node belongs to another graph!");
 		assert(() => !this.createsCycle(graph, source, target), "Edge create a cycle!");
@@ -116,7 +116,9 @@ export class GraphManager {
 		});
 	}
 
-	public tryConnect<T extends Graph<any>, Source extends NodeType<any, any>, Target extends NodeType<any, any>>(graph: T, source: InstanceType<Source>, outputPort: string | number | symbol, target: InstanceType<Target>, inputPort: string | number | symbol): Result<Edge, GraphError> {
+	public tryConnect<T extends Graph<any>, Source extends NodeType<any, any>, Target extends NodeType<any, any>>(graph: T, source: InstanceType<Source>, outputPort: string | number | symbol, targetNode: InstanceType<Target> | GraphOutputNode, inputPort: string | number | symbol): Result<Edge, GraphError> {
+		const target = targetNode as Node;
+
 		if (source.graphId !== graph.id)
 			return Err(GraphError.InvalidNode(graph, source));
 
@@ -143,7 +145,7 @@ export class GraphManager {
 		}));
 	}
 
-	private createsCycle<T extends Graph<any>, Source extends NodeType<any, any>, Target extends NodeType<any, any>>(graph: T, source: InstanceType<Source>, target: InstanceType<Target>): boolean {
+	private createsCycle<T extends Graph<any>>(graph: T, source: Node, target: Node): boolean {
 		if (source.id === target.id)
 			return true;
 
@@ -169,7 +171,9 @@ export class GraphManager {
 		return false;
 	}
 
-	public canConnect<T extends Graph<any>, Source extends NodeType<any, any>, Target extends NodeType<any, any>>(graph: T, source: InstanceType<Source>, outputPort: string | number | symbol, target: InstanceType<Target>, inputPort: string | number | symbol): boolean {
+	public canConnect<T extends Graph<any>, Source extends NodeType<any, any>, Target extends NodeType<any, any>>(graph: T, source: InstanceType<Source>, outputPort: string | number | symbol, targetNode: InstanceType<Target> | GraphOutputNode, inputPort: string | number | symbol): boolean {
+		const target = targetNode as Node;
+
 		if (source.graphId !== graph.id)
 			return false;
 
