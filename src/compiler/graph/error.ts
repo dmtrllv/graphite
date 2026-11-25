@@ -9,6 +9,7 @@ export const GraphError = createTaggedEnum({
 	EdgeCycle: () => `Edge creates a cycle`,
 	DuplicateGraphName: (name: string) => `Duplicate graph name ${name}`,
 	MissingPort: (node: Node, type: "input" | "output", port: string) => `Missing ${type} port ${port} on ${node.type}`,
+	InvalidGroupBoundary: () => `Edge crosses a group boundary without using its boundary nodes`,
 	Error: (err: Error) => err.name,
 });
 

@@ -4,6 +4,8 @@ import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
 import { isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
 import { GraphError } from "./error";
+import { Group } from "./group";
+import { GroupInputNode, GroupOutputNode } from "./nodes";
 
 export class GraphManager {
 	private readonly graphs: Allocator<Graph<any>>;
@@ -95,6 +97,7 @@ export class GraphManager {
 		assert(() => !this.createsCycle(graph, source, target), "Edge create a cycle!");
 		assert(() => outputPort in source.getOutputs(this), `Missing output port ${outputPort.toString()}!`);
 		assert(() => inputPort in target.getInputs(this), `Missing input port ${outputPort.toString()}!`);
+		assert(() => this.canCrossGroupBoundary(graph, source, target), "Edge crosses a group boundary!");
 
 		return graph.addEdge({
 			source: source.id,
@@ -114,11 +117,14 @@ export class GraphManager {
 		if (this.createsCycle(graph, source, target))
 			return Err(GraphError.EdgeCycle());
 
-		if(outputPort in source.getOutputs(this))
+		if (!(outputPort in source.getOutputs(this)))
 			return Err(GraphError.MissingPort(source, "output", outputPort.toString()));
 
-		if(inputPort in target.getInputs(this))
+		if (!(inputPort in target.getInputs(this)))
 			return Err(GraphError.MissingPort(target, "input", inputPort.toString()));
+
+		if (!this.canCrossGroupBoundary(graph, source, target))
+			return Err(GraphError.InvalidGroupBoundary());
 
 		return Ok(graph.addEdge({
 			source: source.id,
@@ -164,13 +170,32 @@ export class GraphManager {
 		if (this.createsCycle(graph, source, target))
 			return false;
 
-		if(outputPort in source.getOutputs(this))
+		if (!(outputPort in source.getOutputs(this)))
 			return false;
 
-		if(inputPort in target.getInputs(this))
+		if (!(inputPort in target.getInputs(this)))
+			return false;
+
+		if (!this.canCrossGroupBoundary(graph, source, target))
 			return false;
 
 		return true;
+	}
+
+	private canCrossGroupBoundary(graph: Graph<any>, source: Node, target: Node): boolean {
+		const sourceGroup = graph.groups.find(group => group.nodes.includes(source.id)) ?? null;
+		const targetGroup = graph.groups.find(group => group.nodes.includes(target.id)) ?? null;
+
+		if (sourceGroup === targetGroup)
+			return true;
+
+		if (targetGroup && target instanceof GroupInputNode && target.props.groupId === targetGroup.id && targetGroup.parent === (sourceGroup?.id ?? null))
+			return true;
+
+		if (sourceGroup && source instanceof GroupOutputNode && source.props.groupId === sourceGroup.id && sourceGroup.parent === (targetGroup?.id ?? null))
+			return true;
+
+		return false;
 	}
 }
 

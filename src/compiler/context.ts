@@ -14,7 +14,7 @@ export class CompileContext {
 
 	public async resolvePass(graph: PassGraph) {
 		if (!this.passes.has(graph))
-			this.passes.set(graph, new Promise(async res => res(await this.compilePass(graph))))!;
+			this.passes.set(graph, Promise.resolve().then(() => this.compilePass(graph)));
 		return this.passes.get(graph)!;
 	}
 
@@ -24,7 +24,7 @@ export class CompileContext {
 
 	public async resolveNode(node: Node) {
 		if (!this.nodes.has(node))
-			this.nodes.set(node, new Promise(async res => res(await this.compileNode(node))))!;
+			this.nodes.set(node, Promise.resolve().then(() => this.compileNode(node)));
 		return this.nodes.get(node)!;
 	}
 
@@ -34,7 +34,7 @@ export class CompileContext {
 
 	public async resolveGroup(group: Group) {
 		if (!this.groups.has(group))
-			this.groups.set(group, new Promise(async res => res(await this.compileGroup(group))))!;
+			this.groups.set(group, Promise.resolve().then(() => this.compileGroup(group)));
 		return this.groups.get(group)!;
 	}
 
