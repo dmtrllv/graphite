@@ -3,10 +3,21 @@ import type { GraphManager } from "../graph-manager";
 import { Node, type CompiledNode, type NodePorts } from "./node";
 
 export class GraphInputNode extends Node<{ graphId: number; inputName: string; }> {
-	public override compile(_ctx: CompilationContext): CompiledNode {
-		throw new Error("Method not implemented.");
+	public override getOutputs(manager: GraphManager) {
+		const graph = manager.getGraph(this.graphId);
+		return {
+			value: graph.inputs[this.props.inputName]!
+		};
 	}
 
+	public override compile(_ctx: CompilationContext): CompiledNode {
+		return {
+			source: "",
+			outputs: {
+				value: this.props.inputName
+			}
+		};
+	}
 }
 
 export class GraphOutputNode extends Node<{ graphId: number }> {
