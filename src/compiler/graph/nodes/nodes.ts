@@ -7,6 +7,7 @@ import { SimulationInputNode, SimulationOutputNode } from "./simulation";
 import { SubGraphNode } from "./subgraph";
 import { ValueNode } from "./value";
 import { TextureSampler } from "./texture-sampler";
+import { GroupInputNode, GroupOutputNode } from "./group";
 
 export const DEFAULT_NODES = [
 	...MathNodes,
@@ -19,6 +20,8 @@ export const DEFAULT_NODES = [
 export const ALL_NODES = [
 	...DEFAULT_NODES,
 	GraphOutputNode,
+	GroupInputNode,
+	GroupOutputNode,
 	SimulationInputNode,
 	SimulationOutputNode,
 	PassNode,

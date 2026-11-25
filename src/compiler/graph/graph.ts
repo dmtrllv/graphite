@@ -3,7 +3,7 @@ import { Node, type NodeType } from "./nodes/node";
 import { type Type } from "../types";
 import { getNodeType, GraphOutputNode, type NodeProps } from "./nodes";
 import { GraphError } from "./error";
-import { Group, type GroupType } from "./group";
+import { Group, type GroupInputProps, type GroupOutputProps, type GroupType } from "./group";
 import { getGroupType } from "./group-types";
 
 /**
@@ -87,14 +87,11 @@ export abstract class Graph<Props extends {}> {
 		return (group.inputNodeType && (node instanceof group.inputNodeType)) || (group.outputNodeType && (node instanceof group.outputNodeType)) || false;
 	}
 
-	public addGroup<T extends Group>(type: GroupType<T>, name: string, parent?: Group): T {
+	public addGroup<T extends Group>(type: GroupType<T>, name: string, inputProps: GroupInputProps<T>, outputProps: GroupOutputProps<T>, parent?: Group): T {
 		const group = this._groups.allocWithId(type, name, [], parent?.id);
 
-		if (group.inputNodeType)
-			group.addNode(this._nodes.allocWithId(group.inputNodeType, this.id, {}).id);
-
-		if (group.outputNodeType)
-			group.addNode(this._nodes.allocWithId(group.outputNodeType, this.id, {}).id);
+		group.addNode(this._nodes.allocWithId(group.inputNodeType, this.id, { groupId: group.id, ...inputProps }).id);
+		group.addNode(this._nodes.allocWithId(group.outputNodeType, this.id, { groupId: group.id, ...outputProps }).id);
 
 		return group;
 	}

@@ -1,7 +1,7 @@
 import type { GraphManager } from "../graph-manager";
 import { Node, type NodePorts } from "./node";
 
-export class GroupInputNode<P extends {} = {}> extends Node<GroupNodeProps<P>> {
+export class GroupInputNode<P extends {}> extends Node<GroupNodeProps<P>> {
 	public override getInputs(manager: GraphManager) {
 		const graph = manager.getGraph(this.graphId);
 		const ports: NodePorts = {};
@@ -19,7 +19,7 @@ export class GroupInputNode<P extends {} = {}> extends Node<GroupNodeProps<P>> {
 	}
 }
 
-export class GroupOutputNode<P extends {} = {}> extends Node<GroupNodeProps<P>> {
+export class GroupOutputNode<P extends {}> extends Node<GroupNodeProps<P>> {
 	public override getInputs(manager: GraphManager): NodePorts {
 		const graph = manager.getGraph(this.graphId);
 		const ports: NodePorts = {};
@@ -37,4 +37,4 @@ export class GroupOutputNode<P extends {} = {}> extends Node<GroupNodeProps<P>> 
 	}
 }
 
-export type GroupNodeProps<P extends {} = {}> = { groupId: number } & P;
+export type GroupNodeProps<P extends {}> = { readonly groupId: number } & P;

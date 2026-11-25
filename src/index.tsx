@@ -22,8 +22,8 @@ manager.connect(subGraph, a, "value", add, "a");
 manager.connect(subGraph, b, "value", add, "b");
 manager.connect(subGraph, add, "value", negate, "a");
 
-const groupA = subGraph.addGroup(SimulationGroup, "Simulation");
-const groupB = subGraph.addGroup(SimulationGroup, "Nested Simulation", groupA);
+const groupA = subGraph.addGroup(SimulationGroup, "Simulation", { iterationCount: 1000 }, {  });
+const groupB = subGraph.addGroup(SimulationGroup, "Nested Simulation", { iterationCount: 1000 }, {}, groupA);
 
 subGraph.transferNode(negate, groupB);
 subGraph.transferNode(add, groupB);

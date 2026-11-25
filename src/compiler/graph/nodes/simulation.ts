@@ -1,5 +1,5 @@
 import { GroupInputNode, GroupOutputNode } from "./group";
 
-export class SimulationInputNode extends GroupInputNode<{ iterationCount?: number }> {}
+export class SimulationInputNode extends GroupInputNode<{ iterationCount: number }> {}
 
-export class SimulationOutputNode extends GroupOutputNode<{ iterationCount?: number }> {}
+export class SimulationOutputNode extends GroupOutputNode<{}> {}

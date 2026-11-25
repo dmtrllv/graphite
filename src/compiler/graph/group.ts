@@ -15,11 +15,11 @@ export class Group {
 		return this.constructor.name;
 	}
 
-	public get inputNodeType(): NodeType<GroupInputNode, any> {
+	public get inputNodeType(): NodeType<GroupInputNode<any>, any> {
 		return GroupInputNode;
 	}
 
-	public get outputNodeType(): NodeType<GroupOutputNode, any> {
+	public get outputNodeType(): NodeType<GroupOutputNode<any>, any> {
 		return GroupOutputNode;
 	}
 
@@ -53,3 +53,5 @@ export class Group {
 }
 
 export type GroupType<T extends Group> = new (id: number, name: string, nodes?: number[], parent?: number | null) => T;
+export type GroupInputProps<T extends Group> = InstanceType<T["inputNodeType"]> extends GroupInputNode<infer P> ? Omit<P, "groupId"> : never;
+export type GroupOutputProps<T extends Group> = InstanceType<T["outputNodeType"]> extends GroupOutputNode<infer P> ? Omit<P, "groupId"> : never;
