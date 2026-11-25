@@ -57,6 +57,34 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 		const bufferInputs = new Map<string, CompiledPassBufferBinding>();
 		const bufferBindings = new Map<string, number>();
 
+		const addBufferInput = async (ref: PassBufferRef) => {
+			const key = `${ref.graphId}:${ref.bufferKey}`;
+
+			if (bufferInputs.has(key))
+				return;
+
+			const graph = ctx.manager.getGraph(ref.graphId) as PassGraph<any>;
+
+			if (!dependencies.has(graph))
+				dependencies.set(graph, ctx.resolvePass(graph));
+
+			const compiled = await dependencies.get(graph)!;
+			const output = compiled.outputs[ref.bufferKey];
+
+			if (!output)
+				throw new Error(`Missing pass buffer "${ref.bufferKey}" in graph ${ref.graphId}!`);
+
+			const binding = bufferInputs.size;
+
+			bufferInputs.set(key, {
+				ref,
+				type: output.type,
+				binding
+			});
+
+			bufferBindings.set(key, binding);
+		};
+
 		const visit = async (node: Node): Promise<void> => {
 			if (visited.has(node.id))
 				return;
@@ -73,6 +101,17 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 			}
 
 			nodes.push(node);
+
+			if (node instanceof GraphInputNode) {
+				const input = this.inputs[node.props.inputName];
+
+				if (input && typeof input === "object" && input.name === "pass-buffer-ref") {
+					const ref = ctx.manager.resolvePassInput(this.id, node.props.inputName);
+					await addBufferInput(ref);
+				}
+
+				return;
+			}
 
 			if (!(node instanceof PassBufferSampler))
 				return;
@@ -92,31 +131,7 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 			if (!ref || typeof ref === "string" || ref.name !== "pass-buffer-ref")
 				throw new Error(`Invalid pass buffer reference on node ${node.id}!`);
 
-			const graph = ctx.manager.getGraph(ref.graphId) as PassGraph<any>;
-
-			if (!dependencies.has(graph))
-				dependencies.set(graph, ctx.resolvePass(graph));
-
-			const key = `${ref.graphId}:${ref.bufferKey}`;
-
-			if (bufferInputs.has(key))
-				return;
-
-			const compiled = await dependencies.get(graph)!;
-			const output = compiled.outputs[ref.bufferKey];
-
-			if (!output)
-				throw new Error(`Missing pass buffer "${ref.bufferKey}" in graph ${ref.graphId}!`);
-
-			const binding = bufferInputs.size;
-
-			bufferInputs.set(key, {
-				ref,
-				type: output.type,
-				binding
-			});
-
-			bufferBindings.set(key, binding);
+			await addBufferInput(ref);
 		};
 
 		await visit(this.outputNode);

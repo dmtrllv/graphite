@@ -9,3 +9,4 @@ export * from "./subgraph";
 export * from "./simulation";
 export * from "./pass-sampler";
 export * from "./texture-sampler";
+export * from "./vector";

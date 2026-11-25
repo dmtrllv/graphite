@@ -1,6 +1,6 @@
-import { BinaryOp, BinaryOpNode, GraphManager, PassBufferSampler, PassNode, UnaryOp, UnaryOpNode, ValueNode } from "./compiler/graph";
+import { BinaryOp, BinaryOpNode, GraphInputNode, GraphManager, PassBufferSampler, PassNode, ValueNode, Vector3Node } from "./compiler/graph";
 import { PassGraph } from "./compiler/graph/pass";
-import { Vec3, ValueType } from "./compiler/types";
+import { createPassBufferRef, Vec3, ValueType } from "./compiler/types";
 import { Compiler } from "./compiler";
 
 const manager = new GraphManager();
@@ -20,28 +20,41 @@ manager.connect(heightPass, heightB, "value", heightAdd, "b");
 manager.connect(heightPass, heightAdd, "value", heightPass.outputNode, "height");
 
 const normalPass = manager.createGraph(PassGraph, "Normals", { inputs: {}, outputs: {} });
+normalPass.setPassInput("height", createPassBufferRef(heightPass.id, "height"));
 normalPass.setPassOutput("normal", Vec3);
 
-const normalValue = manager.addNode(normalPass, ValueNode, { value: 1 });
-const normalNegate = manager.addNode(normalPass, UnaryOpNode, { op: UnaryOp.negate });
+const heightInput = manager.addNode(normalPass, GraphInputNode, {
+	graphId: normalPass.id,
+	inputName: "height"
+});
+const heightSampler = manager.addNode(normalPass, PassBufferSampler, {});
 
-manager.connect(normalPass, normalValue, "value", normalNegate, "a");
-manager.connect(normalPass, normalNegate, "value", normalPass.outputNode, "normal");
+manager.connect(normalPass, heightInput, "value", heightSampler, "buffer");
+
+const normalY = manager.addNode(normalPass, ValueNode, { value: -1 });
+const normalZ = manager.addNode(normalPass, ValueNode, { value: -1 });
+const normalVector = manager.addNode(normalPass, Vector3Node, {});
+
+manager.connect(normalPass, heightSampler, "value", normalVector, "x");
+manager.connect(normalPass, normalY, "value", normalVector, "y");
+manager.connect(normalPass, normalZ, "value", normalVector, "z");
+manager.connect(normalPass, normalVector, "value", normalPass.outputNode, "normal");
 
 const heightNode = manager.addNode(world, PassNode, { graphId: heightPass.id });
 const normalNode = manager.addNode(world, PassNode, { graphId: normalPass.id });
 
-const heightSampler = manager.addNode(world, PassBufferSampler, {});
+manager.connect(world, heightNode, "height", normalNode, "height");
+
+const worldHeightSampler = manager.addNode(world, PassBufferSampler, {});
 const normalSampler = manager.addNode(world, PassBufferSampler, {});
 
-manager.connect(world, heightNode, "height", heightSampler, "buffer");
-manager.connect(world, heightSampler, "value", world.outputNode, "elevation");
+manager.connect(world, heightNode, "height", worldHeightSampler, "buffer");
+manager.connect(world, worldHeightSampler, "value", world.outputNode, "elevation");
 
 manager.connect(world, normalNode, "normal", normalSampler, "buffer");
 manager.connect(world, normalSampler, "value", world.outputNode, "normal");
 
-
 const compiler = new Compiler(manager);
 const compilation = await compiler.compile();
 
-console.log(JSON.stringify((await compilation.resolveJson()).passes, null, 4));
+(await compilation.resolveJson()).passes.forEach(p => console.log(p.source));

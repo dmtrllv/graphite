@@ -2,9 +2,10 @@ import { Allocator, assert, Err, Ok, Result } from "@utils";
 import { Edge, Graph, type GraphNodeType, type GraphProps, type GraphType, type SerializedGraph } from "./graph";
 import { WorldGraph } from "./world";
 import { getGraphType } from "./graphs";
-import { GraphInputNode, GraphOutputNode, isNodeType, isSubGraphNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
+import { GraphInputNode, GraphOutputNode, isNodeType, isSubGraphNode, PassNode, SubGraphNode, type Node, type NodeInputName, type NodeOutputName, type NodeProps, type NodeType } from "./nodes";
 import { GraphError } from "./error";
 import { GroupInputNode, GroupOutputNode } from "./nodes";
+import type { PassBufferRef } from "../types";
 
 export class GraphManager {
 	private readonly graphs: Allocator<Graph<any>>;
@@ -213,6 +214,31 @@ export class GraphManager {
 
 	private validateGraphInput(graph: Graph<any>, inputName: string): void {
 		assert(() => Object.prototype.hasOwnProperty.call(graph.inputs, inputName), `Graph input "${inputName}" is not declared by graph "${graph.name}"!`);
+	}
+
+	public resolvePassInput(graphId: number, inputName: string): PassBufferRef {
+		const world = this.worldGraph;
+		const passNode = world.nodes.find(node => node instanceof PassNode && node.props.graphId === graphId);
+
+		if (!passNode)
+			throw new Error(`Missing PassNode for graph ${graphId}!`);
+
+		const edge = world.edges.find(edge => edge.target === passNode.id && edge.inputPort === inputName);
+
+		if (!edge)
+			throw new Error(`Missing connection for pass input "${inputName}" in graph ${graphId}!`);
+
+		const source = world.getNode(edge.source);
+
+		if (!source)
+			throw new Error(`Missing source node ${edge.source}!`);
+
+		const ref = source.getOutputs(this)[edge.outputPort];
+
+		if (!ref || typeof ref === "string" || ref.name !== "pass-buffer-ref")
+			throw new Error(`Invalid pass buffer connection for input "${inputName}"!`);
+
+		return ref;
 	}
 }
 

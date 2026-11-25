@@ -1,6 +1,7 @@
 import type { CompilationContext } from "../../context";
 import type { GraphManager } from "../graph-manager";
-import { Node, type CompiledNode, type NodePorts } from "./node";
+import { type PassBufferRef } from "../../types";
+import { Node, type CompiledNode } from "./node";
 
 export type GraphInputProps = { graphId: number; inputName: string; };
 
@@ -12,11 +13,14 @@ export class GraphInputNode extends Node<GraphInputProps> {
 		};
 	}
 
-	public override compile(_ctx: CompilationContext): CompiledNode {
+	public override compile(ctx: CompilationContext): CompiledNode {
+		const graph = ctx.manager.getGraph(this.graphId);
+		const input = graph.inputs[this.props.inputName];
+
 		return {
 			source: "",
 			outputs: {
-				value: this.props.inputName
+				value: input && typeof input === "object" && input.name === "pass-buffer-ref" ? ctx.manager.resolvePassInput(this.graphId, this.props.inputName) : this.props.inputName
 			}
 		};
 	}
@@ -24,7 +28,7 @@ export class GraphInputNode extends Node<GraphInputProps> {
 
 export class GraphOutputNode extends Node<{ graphId: number }> {
 	public override getInputs(manager: GraphManager) {
-		return manager.getGraph(this.graphId).outputs;
+		return manager.getGraph(this.props.graphId).outputs;
 	}
 
 	public override async compile(ctx: CompilationContext): Promise<CompiledNode> {
