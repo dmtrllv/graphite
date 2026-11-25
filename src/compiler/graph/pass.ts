@@ -77,16 +77,25 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 			if (!(node instanceof PassBufferSampler))
 				return;
 
-			const graph = ctx.manager.getGraph(node.props.graphId) as PassGraph<any>;
+			const refEdge = this.edges.find(edge => edge.target === node.id && edge.inputPort === "buffer");
+
+			if (!refEdge)
+				throw new Error(`Missing pass buffer connection on node ${node.id}!`);
+
+			const source = this.getNode(refEdge.source);
+
+			if (!source)
+				throw new Error(`Missing source node ${refEdge.source}!`);
+
+			const ref = source.getOutputs(ctx.manager)[refEdge.outputPort];
+
+			if (!ref || typeof ref === "string" || ref.name !== "pass-buffer-ref")
+				throw new Error(`Invalid pass buffer reference on node ${node.id}!`);
+
+			const graph = ctx.manager.getGraph(ref.graphId) as PassGraph<any>;
 
 			if (!dependencies.has(graph))
 				dependencies.set(graph, ctx.resolvePass(graph));
-
-			const ref: PassBufferRef = {
-				name: "pass-buffer-ref",
-				graphId: node.props.graphId,
-				bufferKey: node.props.bufferKey
-			};
 
 			const key = `${ref.graphId}:${ref.bufferKey}`;
 
@@ -113,13 +122,25 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 		await visit(this.outputNode);
 
 		const passCtx = ctx.withPassBufferBindings(bufferBindings);
+
 		const source: string[] = [];
+
+		let graphOutputs: Record<string, string> = {};
 
 		for (const node of nodes) {
 			const compiled = await passCtx.resolveNode(node);
 
 			if (compiled.source)
 				source.push(compiled.source);
+
+			if (node === this.outputNode) {
+				for (const [name, output] of Object.entries(compiled.outputs)) {
+					if (typeof output !== "string")
+						throw new Error(`Pass output "${name}" in graph ${this.id} must be a value expression!`);
+
+					graphOutputs[name] = output;
+				}
+			}
 		}
 
 		const outputs: Record<string, CompiledPassBuffer> = {};
@@ -137,6 +158,16 @@ export class PassGraph<P extends {} = any> extends Graph<PassProps<P>> {
 				binding
 			};
 		}
+
+		const outputIndex = "invocation_id.y * CHUNK_SIZE + invocation_id.x";
+		const outputWrites = Object.entries(outputs).map(([name]) => {
+			const expression = graphOutputs[name];
+
+			if (expression === undefined)
+				throw new Error(`Missing expression for pass output "${name}" in graph ${this.id}!`);
+
+			return `pass_output_${name}[${outputIndex}] = ${expression};`;
+		});
 
 		const world = ctx.manager.worldGraph;
 
@@ -172,6 +203,7 @@ fn main(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
 	let world_position = vec2<f32>(invocation_id.xy) + chunk.chunk_origin;
 	${source.join("\n")}
+	${outputWrites.join("\n")}
 }`
 			].join("\n"),
 			inputs: this.inputs,

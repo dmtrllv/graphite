@@ -18,7 +18,7 @@ export class GraphManager {
 		if (graphs?.length)
 			graphs.forEach(g => this.graphs.allocAt(g.id, getGraphType(g.type), g.id, g.name, g.props, g.nodes, g.edges, g.groups));
 		else
-			this.graphs.allocWithId(WorldGraph, "World", { inputs: {}, outputs: {} });
+			this.graphs.allocWithId(WorldGraph, "World", { inputs: {}, outputs: {}, chunkSize: 16, worldSize: 512 });
 		for (const graph of this.graphs.all())
 			for (const node of graph.nodes)
 				if (node instanceof GraphInputNode)

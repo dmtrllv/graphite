@@ -61,6 +61,9 @@ export class CompilationContext {
 		if (expression === undefined)
 			throw new Error(`Missing compiled output ${edge.outputPort} on node ${source.id}!`);
 
+		if (typeof expression !== "string")
+			throw new Error(`Output ${edge.outputPort} on node ${source.id} is not a value expression!`);
+
 		return {
 			expression,
 			source: compiled.source
@@ -78,6 +81,30 @@ export class CompilationContext {
 		}
 
 		return inputs;
+	}
+
+	public async resolvePassBufferInput(node: Node, inputPort: string): Promise<PassBufferRef | undefined> {
+		const graph = this.manager.getGraph(node.graphId);
+		const edge = graph.edges.find(edge => edge.target === node.id && edge.inputPort === inputPort);
+
+		if (!edge)
+			return undefined;
+
+		const source = graph.getNode(edge.source);
+
+		if (!source)
+			throw new Error(`Missing source node ${edge.source}!`);
+
+		const compiled = await this.resolveNode(source);
+		const output = compiled.outputs[edge.outputPort];
+
+		if (output === undefined)
+			throw new Error(`Missing compiled output ${edge.outputPort} on node ${source.id}!`);
+
+		if (typeof output === "string")
+			throw new Error(`Output ${edge.outputPort} on node ${source.id} is not a pass buffer reference!`);
+
+		return output;
 	}
 }
 

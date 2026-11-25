@@ -1,6 +1,6 @@
 import type { CompiledData } from "../../compiler";
 import type { CompilationContext } from "../../context";
-import { type Type } from "../../types";
+import { type PassBufferRef, type Type } from "../../types";
 import type { GraphManager } from "../graph-manager";
 
 export abstract class Node<T extends {} = any> {
@@ -55,5 +55,5 @@ export type NodeInputName<T extends Node> = keyof ReturnType<T["getInputs"]>;
 export type NodeOutputName<T extends Node> = keyof ReturnType<T["getOutputs"]>;
 
 export type CompiledNode = CompiledData<{
-	readonly outputs: Record<string, string>;
+	readonly outputs: Record<string, string | PassBufferRef>;
 }>;
