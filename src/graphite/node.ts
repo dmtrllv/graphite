@@ -1,6 +1,8 @@
+import { assert } from "../utils";
 import type { Graph, GraphIOTypes } from "./graph";
 import type { GraphManager } from "./manager";
 import { InputPort, OutputPort } from "./port";
+import type { Type } from "./types";
 
 export abstract class Node<State extends {} = {}> {
 	public readonly id: number;
@@ -9,10 +11,12 @@ export abstract class Node<State extends {} = {}> {
 	protected readonly manager: GraphManager;
 	public readonly graph: Graph;
 
+	public get type(): string { return this.constructor.name; }
+
 	public get inputTypes(): GraphIOTypes { return {}; }
 	public get outputTypes(): GraphIOTypes { return {}; }
 
-	public get defaultState(): Partial<State> { return {}; } 
+	public get defaultState(): Partial<State> { return {}; }
 
 	public readonly outputs = new Proxy({}, {
 		get: (_, p) => new OutputPort(this.manager, this, p.toString()),
@@ -27,6 +31,22 @@ export abstract class Node<State extends {} = {}> {
 			return false;
 		},
 	}) as NodeInputPorts<this>;
+
+	public getInput<T extends Type>(name: string, type: T): InputPort<any, any, T> {
+		if (!(name in this.inputTypes))
+			throw new Error(`${this.type} has no input port "${name}"!`);
+		const t = this.inputTypes[name];
+		assert(t === type, `${this.type} input port "${name} is not a ${type.name}"!`);
+		return this.inputs[name] as any;
+	}
+
+	public getOutput<T extends Type>(name: string, type: T): OutputPort<any, any, T> {
+		if (!(name in this.outputTypes))
+			throw new Error(`${this.type} has no output port "${name}"!`);
+		const t = this.outputTypes[name];
+		assert(t === type, `${this.type} output port "${name} is not a ${type.name}"!`);
+		return this.inputs[name] as any;
+	}
 
 	public constructor(id: number, manager: GraphManager, graph: Graph, state: State) {
 		this.id = id;
@@ -46,4 +66,4 @@ export type NodeInputPorts<T extends Node> = {
 
 export type InferNodeState<T extends Node<any>> = T extends Node<infer S> ? S : never;
 
-export type NodeType<T extends Node> = new (id: number, manager: GraphManager, graph: Graph, state: any) => T;
+export type NodeType<T extends Node<S>, S extends {}> = new (id: number, manager: GraphManager, graph: Graph, state: any) => T;

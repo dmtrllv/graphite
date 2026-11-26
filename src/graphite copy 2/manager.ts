@@ -19,11 +19,11 @@ export class GraphManager {
 	}
 
 	private allocGraph<T extends Graph<P>, P extends {}>(type: GraphType<T, P>, props: GraphProps<P>) {
-		const graph = this.graphs.allocWithId(type, this, props);
+		const graph = this.graphs.alloc(type, this, props);
 		const nodes = new Allocator(Node);
 		this.nodeAllocators.set(graph, nodes);
 		this.edgeAllocators.set(graph, new Allocator(Edge));
-		nodes.allocWithId(GraphOutputNode, this, graph, { graph });
+		nodes.alloc(GraphOutputNode, this, graph, { graph });
 		return graph;
 	}
 
@@ -42,7 +42,7 @@ export class GraphManager {
 	public addNode<G extends Graph, T extends Node<T, P>, P extends {}>(graph: G, type: NodeType<T, P>, props: NodeInitProps<T, P>): T {
 		assert(graph.nodeTypes.includes(type) || (type === GraphInputNode as NodeType<any, any>));
 		const nodes = assert.notNull(this.nodeAllocators.get(graph));
-		return nodes.allocWithId(type, this, graph, props)!;
+		return nodes.alloc(type, this, graph, props)!;
 	}
 
 	public removeNode(node: Node<any>) {
@@ -66,7 +66,7 @@ export class GraphManager {
 		assert(outputPort.node !== inputPort.node);
 		assert(outputPort.node.graph === inputPort.node.graph);
 		const edges = assert.notNull(this.edgeAllocators.get(outputPort.node.graph));
-		return edges.allocWithId(Edge, this, outputPort, inputPort) as Edge<T, Source, Target>;
+		return edges.alloc(Edge, this, outputPort, inputPort) as Edge<T, Source, Target>;
 	}
 
 	public disconnect(edge: Edge) {

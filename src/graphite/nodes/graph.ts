@@ -15,8 +15,16 @@ type MapGraphInputType<T extends Graph, K extends GraphInputKey<T>> = {
 
 export class GraphOutputNode<T extends Graph> extends Node<{ graph: T }> {
 	public override get inputTypes(): T["outputs"] {
-		return {
-			value: null
-		} as any
+		return this.graph.outputs;
+	}
+}
+
+export class GraphNode<T extends Graph> extends Node<{ graph: T }> {
+	public override get inputTypes(): T["inputs"] {
+		return this.state.graph.inputs;
+	}
+
+	public override get outputTypes(): T["outputs"] {
+		return this.state.graph.outputs;
 	}
 }

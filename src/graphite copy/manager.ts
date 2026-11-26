@@ -37,7 +37,7 @@ export class GraphManager {
 		if (graphs?.length)
 			graphs.forEach(g => this._graphs.allocAt(g.id, getGraphType(g.type), g.id, g.name, g.props, g.nodes, g.edges, g.groups));
 		else
-			this._graphs.allocWithId(WorldGraph, "World", { inputs: {}, outputs: {}, chunkSize: 16, worldSize: 512 });
+			this._graphs.alloc(WorldGraph, "World", { inputs: {}, outputs: {}, chunkSize: 16, worldSize: 512 });
 		for (const graph of this._graphs.all())
 			for (const node of graph.nodes)
 				if (node instanceof GraphInputNode)
@@ -90,7 +90,7 @@ export class GraphManager {
 
 	public createGraph<T extends Graph<P>, P extends {}>(type: GraphType<T>, name: string, props: P): T {
 		assert(() => !this._graphs.all().find(g => g.name === name), `Graph with name ${name} already exists`);
-		const graph = this._graphs.allocWithId(type, name, props);
+		const graph = this._graphs.alloc(type, name, props);
 		this.emit("graph-added", { graph });
 		return graph;
 	}
@@ -115,7 +115,7 @@ export class GraphManager {
 	public tryCreateGraph<T extends Graph<P>, P extends {}>(type: GraphType<T>, name: string, props: P): Result<T, GraphError> {
 		if (this._graphs.all().find(g => g.name === name))
 			return Err(GraphError.DuplicateGraphName(name));
-		const graph = this._graphs.allocWithId(type, name, props);
+		const graph = this._graphs.alloc(type, name, props);
 
 		this.emit("graph-added", { graph });
 		return Ok(graph);

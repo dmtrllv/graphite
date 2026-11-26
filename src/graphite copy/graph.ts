@@ -56,10 +56,10 @@ export abstract class Graph<Props extends {} = any, Nodes extends readonly NodeT
 		this._edges = new Allocator(Edge);
 		this._groups = new Allocator(Group);
 		nodes.forEach(node => this._nodes.allocAt(node.id, getNodeType(node.type), node.id, this.id, node.props as any));
-		edges.forEach(edge => this._edges.allocWithId(Edge, edge));
+		edges.forEach(edge => this._edges.alloc(Edge, edge));
 		groups.forEach(group => this._groups.allocAt(group.id, getGroupType(group.type), group.id, group.name, group.nodes, group.parent));
 		if (!this._nodes.get(0))
-			this._nodes.allocWithId(GraphOutputNode, this.id, { graphId: id });
+			this._nodes.alloc(GraphOutputNode, this.id, { graphId: id });
 	}
 
 	public abstract compile(ctx: CompilationContext): CompiledData | Promise<CompiledData>;
@@ -75,7 +75,7 @@ export abstract class Graph<Props extends {} = any, Nodes extends readonly NodeT
 
 	public addNode<T extends GraphNodeType<this>>(type: NodeType<T>, props: InferNodeProps<T>): T {
 		assert(() => this.nodeTypes.includes(type), `invalid node type ${type.name} for graph ${this.name}`);
-		return this._nodes.allocWithId(type, this.id, props);
+		return this._nodes.alloc(type, this.id, props);
 	}
 
 	public removeNode(node: GraphNodeType<this>) {
@@ -87,7 +87,7 @@ export abstract class Graph<Props extends {} = any, Nodes extends readonly NodeT
 	}
 
 	public addEdge(props: EdgeProps): any {
-		return this._edges.allocWithId(Edge, props)
+		return this._edges.alloc(Edge, props)
 	}
 
 	public removeEdge(edge: Edge) {
@@ -95,9 +95,9 @@ export abstract class Graph<Props extends {} = any, Nodes extends readonly NodeT
 	}
 
 	public addGroup<T extends Group>(type: GroupType<T>, name: string, inputProps: GroupInputProps<T>, outputProps: GroupOutputProps<T>, parent?: Group): T {
-		const group = this._groups.allocWithId(type, name, [], parent?.id);
-		group.addNode(this._nodes.allocWithId(group.inputNodeType, this.id, { groupId: group.id, ...inputProps }).id);
-		group.addNode(this._nodes.allocWithId(group.outputNodeType, this.id, { groupId: group.id, ...outputProps }).id);
+		const group = this._groups.alloc(type, name, [], parent?.id);
+		group.addNode(this._nodes.alloc(group.inputNodeType, this.id, { groupId: group.id, ...inputProps }).id);
+		group.addNode(this._nodes.alloc(group.outputNodeType, this.id, { groupId: group.id, ...outputProps }).id);
 		return group;
 	}
 

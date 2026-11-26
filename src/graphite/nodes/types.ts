@@ -1,9 +1,7 @@
-//import { BinOpNode } from "./math";
-//import { SubGraphNode } from "./subgraph";
-//import { ValueNode } from "./value";
+import { ValueNode } from "./value";
+import { BinOpNode } from "./math";
 
 export const DEFAULT_NODE_TYPES = [
-	//ValueNode,
-	//BinOpNode,
-	//SubGraphNode,
+	ValueNode,
+	BinOpNode,
 ] as const;

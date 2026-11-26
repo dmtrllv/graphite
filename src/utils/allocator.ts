@@ -16,7 +16,7 @@ export class Allocator<T extends {}> {
 		return this.items.length;
 	}
 
-	public allocWithId<U extends new (id: number, ...args: any[]) => T>(type: U, ...args: ArgsWithoutID<U>): InstanceType<U> {
+	public alloc<U extends new (id: number, ...args: Args) => T, Args extends any[]>(type: U, ...args: Args): InstanceType<U> {
 		assert(type === this.type || type.prototype instanceof this.type, `type ${type.name} does not extend ${this.type.name}!`);
 		const id = this.nextId();
 		const item = new type(id, ...args) as InstanceType<U>;
@@ -24,13 +24,13 @@ export class Allocator<T extends {}> {
 		return item;
 	}
 
-	public alloc<U extends new (...args: any[]) => T>(type: U, ...args: ConstructorParameters<U>): [number, InstanceType<U>] {
-		assert(type === this.type || type.prototype instanceof this.type, `type ${type.name} does not extend ${this.type.name}!`);
-		const id = this.nextId();
-		const item = new type(...args) as InstanceType<U>;
-		this.items[id] = item;
-		return [id, item];
-	}
+	//public alloc<U extends new (...args: any[]) => T>(type: U, ...args: ConstructorParameters<U>): [number, InstanceType<U>] {
+	//	assert(type === this.type || type.prototype instanceof this.type, `type ${type.name} does not extend ${this.type.name}!`);
+	//	const id = this.nextId();
+	//	const item = new type(...args) as InstanceType<U>;
+	//	this.items[id] = item;
+	//	return [id, item];
+	//}
 
 	public allocAt<U extends new (...args: any[]) => T>(id: number, type: U, ...args: ConstructorParameters<U>): [number, InstanceType<U>] {
 		assert(type === this.type || type.prototype instanceof this.type, `type ${type.name} does not extend ${this.type.name}!`);
@@ -77,7 +77,3 @@ export class Allocator<T extends {}> {
 }
 
 type ObjectConstructor<T extends object, Args extends any[] = any[]> = (new (...args: Args) => T) | (abstract new (...args: Args) => T)
-
-export type WithoutIDParams<T> = T extends new (id: number, ...args: infer Args) => any ? Args : never;
-
-type ArgsWithoutID<T> = T extends new (id: number, ...args: infer Args) => any ? Args : [];

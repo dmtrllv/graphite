@@ -1,6 +1,6 @@
 import type { GraphManager } from "./manager";
 import type { InferNodeState, Node, NodeType } from "./node";
-import { GraphInputNode, GraphOutputNode } from "./nodes/graph";
+import { GraphInputNode, GraphNode, GraphOutputNode } from "./nodes/graph";
 import type { Type } from "./types";
 
 export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends GraphIOTypes = GraphIOTypes, State extends {} = {}> {
@@ -35,10 +35,12 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 		};
 	}
 
+	// @ts-expect-error
 	private setInput<K extends keyof I>(key: K, type: I[K]) {
 		this.inputs[key] = type;
 	}
 
+	// @ts-expect-error
 	private setOutput<K extends keyof O>(key: K, type: O[K]) {
 		this.outputs[key] = type;
 	}
@@ -47,12 +49,16 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 	//	return this.manager.addNode(this, GraphInputNode, { graph: this, key: key.toString() }) as GraphInputNode<This, K>;
 	//}
 
-	public addInputNode<This extends Graph, K extends GraphInputKey<This>>(key: K) {
-		return this.manager.addNode(this, GraphInputNode, { key, graph: this }) as GraphInputNode<This, K>;
+	public addInputNode<This extends Graph, K extends GraphInputKey<This>>(key: K): GraphInputNode<This, K> {
+		return this.manager.addNode(this, GraphInputNode, { key, graph: this } as any) as GraphInputNode<This, K>;
 	}
 
-	public addNode<T extends Node>(type: NodeType<T>, state: InferNodeState<T>): T {
-		return this.manager.addNode(this, type, state);
+	public addNode<T extends Node<any>>(type: NodeType<T, any>, state: InferNodeState<T>): T {
+		return this.manager.addNode(this, type as any, state);
+	}
+
+	public addGraphNode<T extends Graph>(graph: T): GraphNode<T> {
+		return this.manager.addNode(this, GraphNode, { graph })
 	}
 }
 
