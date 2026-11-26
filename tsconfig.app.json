@@ -17,11 +17,11 @@
 			"@reactive": [
 				"./src/reactive/index.ts"
 			],
-			"@editor": [
-				"./src/editor/index.ts"
+			"@graphite": [
+				"./src/graphite/index.ts"
 			],
-			"@editor/*": [
-				"./src/editor/*"
+			"@graphite/*": [
+				"./src/graphite/*"
 			],
 			"@utils": [
 				"./src/utils/index.ts"

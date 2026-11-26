@@ -20,6 +20,12 @@ export class Result<T, E> {
 	public isErr(): this is ErrResult<E> {
 		return "error" in this;
 	}
+
+	public inspect(callback: (value: T) => void): this {
+		if(this.isOk())
+			callback(this.data);
+		return this;
+	}
 }
 
 export const Ok = <T, E>(data: T): Result<T, E> => new Result({ data });

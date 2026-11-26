@@ -1,0 +1,49 @@
+import type { Graph, GraphIOTypes } from "./graph";
+import type { GraphManager } from "./manager";
+import { InputPort, OutputPort } from "./port";
+
+export abstract class Node<State extends {} = {}> {
+	public readonly id: number;
+	public readonly state: State;
+
+	protected readonly manager: GraphManager;
+	public readonly graph: Graph;
+
+	public get inputTypes(): GraphIOTypes { return {}; }
+	public get outputTypes(): GraphIOTypes { return {}; }
+
+	public get defaultState(): Partial<State> { return {}; } 
+
+	public readonly outputs = new Proxy({}, {
+		get: (_, p) => new OutputPort(this.manager, this, p.toString()),
+		set() {
+			return false;
+		},
+	}) as NodeOutputPorts<this>;
+
+	public readonly inputs = new Proxy({}, {
+		get: (_, p) => new InputPort(this.manager, this, p.toString()),
+		set() {
+			return false;
+		},
+	}) as NodeInputPorts<this>;
+
+	public constructor(id: number, manager: GraphManager, graph: Graph, state: State) {
+		this.id = id;
+		this.graph = graph;
+		this.manager = manager;
+		this.state = state;
+	}
+}
+
+export type NodeOutputPorts<T extends Node> = {
+	[K in keyof T["outputTypes"]]: OutputPort<T, K, T["outputTypes"][K]>;
+}
+
+export type NodeInputPorts<T extends Node> = {
+	[K in keyof T["inputTypes"]]: InputPort<T, K, T["inputTypes"][K]>;
+}
+
+export type InferNodeState<T extends Node<any>> = T extends Node<infer S> ? S : never;
+
+export type NodeType<T extends Node> = new (id: number, manager: GraphManager, graph: Graph, state: any) => T;

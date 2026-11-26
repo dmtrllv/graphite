@@ -1,10 +1,16 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
-export const useResizeObserver = (onResize: () => void, r?: React.RefObject<HTMLElement | null>) => {
-	const ref = r || useRef<HTMLElement>(null);
-
+export const useResizeObserver = (ref: React.RefObject<HTMLElement | null>, onResize: () => void) => {
 	useEffect(() => {
-		const resizeObserver = new ResizeObserver(() => onResize());
+		let initial = true;
+
+		const resizeObserver = new ResizeObserver(() => {
+			if(initial) {
+				initial = false;
+				return;
+			}
+			onResize()
+		});
 
 		if (ref.current)
 			resizeObserver.observe(ref.current)
@@ -14,7 +20,7 @@ export const useResizeObserver = (onResize: () => void, r?: React.RefObject<HTML
 			if (ref.current)
 				resizeObserver.unobserve(ref.current);
 		}
-	}, []);
+	}, [ref, onResize]);
 
 	return ref;
 }
