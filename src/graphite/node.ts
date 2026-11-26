@@ -45,7 +45,7 @@ export abstract class Node<State extends {} = {}> {
 			throw new Error(`${this.type} has no output port "${name}"!`);
 		const t = this.outputTypes[name];
 		assert(t === type, `${this.type} output port "${name} is not a ${type.name}"!`);
-		return this.inputs[name] as any;
+		return this.outputs[name] as any;
 	}
 
 	public constructor(id: number, manager: GraphManager, graph: Graph, state: State) {

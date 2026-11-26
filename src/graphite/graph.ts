@@ -33,21 +33,14 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 			...this.requiredOutputTypes,
 			...(state.outputs || {} as O)
 		};
-	}
 
-	// @ts-expect-error
-	private setInput<K extends keyof I>(key: K, type: I[K]) {
-		this.inputs[key] = type;
+		Object.assign(this, {
+			setInput: <K extends keyof this["inputs"]>(key: K, type: this["inputs"][K]) => this.inputs[key] = type,
+			setOutput: <K extends keyof this["outputs"]>(key: K, type: this["outputs"][K]) => this.outputs[key] = type,
+			removeInput: <K extends keyof this["inputs"]>(key: K) => delete this.inputs[key],
+			removeOutput: <K extends keyof this["outputs"]>(key: K) => delete this.outputs[key],
+		});
 	}
-
-	// @ts-expect-error
-	private setOutput<K extends keyof O>(key: K, type: O[K]) {
-		this.outputs[key] = type;
-	}
-
-	//public addInputNode<This extends Graph<I, any, any>, K extends GraphInputKey<This>>(this: This, key: K): GraphInputNode<This, K> {
-	//	return this.manager.addNode(this, GraphInputNode, { graph: this, key: key.toString() }) as GraphInputNode<This, K>;
-	//}
 
 	public addInputNode<This extends Graph, K extends GraphInputKey<This>>(key: K): GraphInputNode<This, K> {
 		return this.manager.addNode(this, GraphInputNode, { key, graph: this } as any) as GraphInputNode<This, K>;
@@ -82,9 +75,11 @@ export type GraphInputTypes<T extends Graph> = T extends Graph<infer I, any, any
 
 export type GraphType<T extends Graph<I, O, State>, I extends GraphIOTypes, O extends GraphIOTypes, State extends {} = any> = new (id: number, manager: GraphManager, state: GraphState<State>) => T;
 
-interface DynamicInterface {
-	setInput(key: string, type: Type): void;
-	setOutput(key: string, type: Type): void;
+export type DynamicGraph<T> = T & {
+	readonly setInput: (key: string, type: Type) => void;
+	readonly setOutput: (key: string, type: Type) => void;
+	readonly removeInput: (key: string) => void;
+	readonly removeOutput: (key: string) => void;
 }
 
-export type DynamicGraph<T extends Graph> = Omit<T, keyof DynamicInterface> & DynamicInterface;
+//export type DynamicGraph<T extends Graph> = Omit<T, keyof DynamicInterface> & DynamicInterface;

@@ -49,17 +49,17 @@ const createMullAddDynamic = () => {
 	return graph;
 }
 
-const mulAddGraph = createMullAdd();
+//const mulAddGraph = createMullAdd();
 const mulAddGraphDynamic = createMullAddDynamic();
 
-const mulAdd = app.world.addGraphNode(mulAddGraph);
+const mulAdd = app.world.addGraphNode(mulAddGraphDynamic);
 
 const a = app.world.addNode(ValueNode, { value: 3 });
 const b = app.world.addNode(ValueNode, { value: 11 });
 const c = app.world.addNode(ValueNode, { value: 29 });
 
-a.outputs.value.connect(mulAdd.inputs.a);
-b.outputs.value.connect(mulAdd.inputs.b);
-c.outputs.value.connect(mulAdd.inputs.c);
+a.outputs.value.connect(mulAdd.getInput("a", ValueType));
+b.outputs.value.connect(mulAdd.getInput("b", ValueType));
+c.outputs.value.connect(mulAdd.getInput("c", ValueType));
 
-mulAdd.outputs.result.connect(app.world.outputNode.inputs.elevation);
+mulAdd.getOutput("result", ValueType).connect(app.world.outputNode.inputs.elevation);

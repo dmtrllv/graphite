@@ -22,13 +22,13 @@ export class App {
 
 	public createSubGraph(name: string): DynamicGraph<SubGraph>;
 	public createSubGraph<I extends GraphIOTypes, O extends GraphIOTypes>(name: string, io: GraphIOState<I, O>): SubGraph<I, O>;
-	public createSubGraph(name: string, io: GraphIOState<GraphIOTypes, GraphIOTypes> = {}): SubGraph | DynamicGraph<SubGraph> {
+	public createSubGraph(name: string, io: GraphIOState<GraphIOTypes, GraphIOTypes> = {}): SubGraph {
 		return this.manager.addGraph(SubGraph, { name, ...io });
 	}
 
 	public createPass(name: string): DynamicGraph<Pass>;
 	public createPass<I extends PassIOTypes, O extends PassIOTypes>(name: string, io: GraphIOState<I, O>): Pass<I, O>;
-	public createPass(name: string, io: GraphIOState<PassIOTypes, PassIOTypes> = {}): Pass | DynamicGraph<Pass> {
+	public createPass(name: string, io: GraphIOState<PassIOTypes, PassIOTypes> = {}): Pass {
 		return this.manager.addGraph(Pass, { name, ...io });
 	}
 }

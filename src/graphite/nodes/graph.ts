@@ -15,6 +15,7 @@ type MapGraphInputType<T extends Graph, K extends GraphInputKey<T>> = {
 
 export class GraphOutputNode<T extends Graph> extends Node<{ graph: T }> {
 	public override get inputTypes(): T["outputs"] {
+		console.log(this.graph, this.graph.outputs);
 		return this.graph.outputs;
 	}
 }
