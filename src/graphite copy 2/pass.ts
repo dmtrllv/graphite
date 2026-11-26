@@ -17,13 +17,11 @@ export class Pass<I extends PassInputs = PassInputs, O extends PassOutputs = Pas
 
 	public setInputType(name: string, type: Type): never {
 		this.props.inputs[name as keyof I] = type as any;
-		console.log("set io", name, type);
 		return void (0) as never;
 	}
 
 	public setOutputType(name: string, type: PassBufferType): never {
 		this.props.outputs[name as keyof O] = type as any;
-		console.log("set io", name, type);
 		return void (0) as never;
 	}
 

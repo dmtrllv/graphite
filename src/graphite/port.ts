@@ -1,3 +1,4 @@
+import type { Edge } from "./edge";
 import type { GraphManager } from "./manager";
 import type { Node } from "./node";
 
@@ -8,8 +9,12 @@ export class InputPort<T extends Node, K extends keyof T["inputTypes"], U extend
 
 	public get type(): U {
 		if (!(this.key in this.node.inputTypes))
-			throw new Error(`${this} is not a valid input port!`)
+			throw new Error(`${this} is not a valid input port!`);
 		return this.node.inputTypes[this.key] as any;
+	}
+
+	public get edge(): Edge<U> | null {
+		return this.manager.getNodeInputEdge(this.node, this.key.toString()) as Edge<U>;
 	}
 
 	public constructor(manager: GraphManager, node: Node, key: K) {
@@ -32,6 +37,10 @@ export class OutputPort<T extends Node, K extends keyof T["outputTypes"], U exte
 		if (!(this.key in this.node.outputTypes))
 			throw new Error(`${this} is not a valid output port!`)
 		return this.node.outputTypes[this.key] as any;
+	}
+
+	public get edgse(): Edge<U>[] {
+		return this.manager.getNodeOutputEdges(this.node, this.key.toString()) as Edge<U>[];
 	}
 
 	public constructor(manager: GraphManager, node: Node, key: K) {

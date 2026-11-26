@@ -2,6 +2,7 @@ import type { DynamicGraph, GraphIOState, GraphIOTypes } from "./graph";
 import { GraphManager } from "./manager";
 import { Pass, type PassIOTypes } from "./pass";
 import { SubGraph } from "./subgraph";
+import type { World } from "./world";
 
 export class App {
 	public static readonly init = async () => {
@@ -12,7 +13,7 @@ export class App {
 
 	private readonly manager: GraphManager;
 
-	public get world() {
+	public get world(): Omit<World, "remove"> {
 		return this.manager.worldGraph;
 	}
 

@@ -54,6 +54,10 @@ export abstract class Node<State extends {} = {}> {
 		this.manager = manager;
 		this.state = state;
 	}
+
+	public remove() {
+		this.manager.removeNode(this);
+	}
 }
 
 export type NodeOutputPorts<T extends Node> = {

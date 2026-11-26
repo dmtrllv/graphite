@@ -7,6 +7,10 @@ export class World extends Graph<{}, WorldOutputTypes, {}> {
 			elevation: ValueType
 		};
 	}
+
+	public override remove(): void {
+		throw new Error(`Cannot remove the world graph!`);
+	}
 }
 
 type WorldOutputTypes = {

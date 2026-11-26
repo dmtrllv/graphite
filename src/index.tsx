@@ -50,9 +50,9 @@ const createMullAddDynamic = () => {
 }
 
 //const mulAddGraph = createMullAdd();
-const mulAddGraphDynamic = createMullAddDynamic();
+const mulAddGraph = createMullAddDynamic();
 
-const mulAdd = app.world.addGraphNode(mulAddGraphDynamic);
+const mulAdd = app.world.addGraphNode(mulAddGraph);
 
 const a = app.world.addNode(ValueNode, { value: 3 });
 const b = app.world.addNode(ValueNode, { value: 11 });

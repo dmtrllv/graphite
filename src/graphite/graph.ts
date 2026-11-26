@@ -15,7 +15,7 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 	public readonly inputs: I;
 	public readonly outputs: O;
 
-	public get outputNode(): GraphOutputNode<this> {
+	public get outputNode(): Omit<GraphOutputNode<this>, "remove"> {
 		return this.manager.getGraphOutputNode(this);
 	}
 
@@ -52,6 +52,10 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 
 	public addGraphNode<T extends Graph>(graph: T): GraphNode<T> {
 		return this.manager.addNode(this, GraphNode, { graph })
+	}
+
+	public remove() {
+		this.manager.removeGraph(this);
 	}
 }
 
