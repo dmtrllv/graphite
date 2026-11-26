@@ -17,7 +17,7 @@ const createMullAdd = () => {
 	});
 
 	const mul = graph.addNode(BinOpNode, { a: 0, b: 0, op: BinOp.mul });
-	const add = graph.addNode(BinOpNode, { a: 0, b: 0, op: BinOp.add });
+	const add = graph.addNode(BinOpNode, { op: BinOp.add });
 
 	mul.outputs.value.connect(add.inputs.a);
 
@@ -36,8 +36,8 @@ const createMullAddDynamic = () => {
 	graph.setInput("c", ValueType);
 	graph.setOutput("result", ValueType);
 
-	const mul = graph.addNode(BinOpNode, { a: 0, b: 0, op: BinOp.mul });
-	const add = graph.addNode(BinOpNode, { a: 0, b: 0, op: BinOp.add });
+	const mul = graph.addNode(BinOpNode, { op: BinOp.mul });
+	const add = graph.addNode(BinOpNode, { op: BinOp.add });
 
 	mul.outputs.value.connect(add.inputs.a);
 	const x = graph.outputNode.getInput("result", ValueType);
@@ -49,8 +49,8 @@ const createMullAddDynamic = () => {
 	return graph;
 }
 
-//const mulAddGraph = createMullAdd();
-const mulAddGraph = createMullAddDynamic();
+const mulAddGraph = createMullAdd();
+//const mulAddGraph = createMullAddDynamic();
 
 const mulAdd = app.world.addGraphNode(mulAddGraph);
 

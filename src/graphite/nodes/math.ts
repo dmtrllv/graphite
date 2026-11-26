@@ -29,7 +29,7 @@ export class BinOpNode extends Node<BinOpNodeProps> {
 		return {
 			a: 0,
 			b: 0,
-		}
+		};
 	}
 }
 

@@ -7,4 +7,10 @@ export class ValueNode extends Node<{ value: number }> {
 			value: ValueType
 		};
 	}
+	
+	public override get defaultState() {
+		return {
+			value: 0
+		};
+	}
 }

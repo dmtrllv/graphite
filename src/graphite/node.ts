@@ -1,4 +1,5 @@
 import { assert } from "../utils";
+import type { RequiredKeys } from "../utils/types";
 import type { Graph, GraphIOTypes } from "./graph";
 import type { GraphManager } from "./manager";
 import { InputPort, OutputPort } from "./port";
@@ -58,16 +59,22 @@ export abstract class Node<State extends {} = {}> {
 	public remove() {
 		this.manager.removeNode(this);
 	}
+
+	public toJSON() {
+		return {}
+	}
 }
 
 export type NodeOutputPorts<T extends Node> = {
 	[K in keyof T["outputTypes"]]: OutputPort<T, K, T["outputTypes"][K]>;
-}
+};
 
 export type NodeInputPorts<T extends Node> = {
 	[K in keyof T["inputTypes"]]: InputPort<T, K, T["inputTypes"][K]>;
-}
+};
 
-export type InferNodeState<T extends Node<any>> = T extends Node<infer S> ? S : never;
+export type NodeConstructorState<T extends Node<any>> =
+	& Partial<Pick<T["defaultState"], RequiredKeys<T["defaultState"]>>>
+	& Pick<T["state"], Exclude<keyof T["state"], RequiredKeys<T["defaultState"]>>>;
 
 export type NodeType<T extends Node<S>, S extends {}> = new (id: number, manager: GraphManager, graph: Graph, state: any) => T;

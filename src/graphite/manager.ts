@@ -92,4 +92,16 @@ export class GraphManager {
 		this.nodes.delete(graph);
 		this.graphs.free(graph.id);
 	}
+	
+	public getNodes(graph: Graph) {
+		return this.nodes.get(graph)?.all() ?? [];
+	}
+
+	public getEdges(graph: Graph) {
+		return this.edges.get(graph)?.all() ?? [];
+	}
+	
+	public getGraphs() {
+		return this.graphs.all();
+	}
 }

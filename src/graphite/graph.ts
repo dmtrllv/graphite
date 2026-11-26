@@ -1,5 +1,5 @@
 import type { GraphManager } from "./manager";
-import type { InferNodeState, Node, NodeType } from "./node";
+import type { Node, NodeConstructorState, NodeType } from "./node";
 import { GraphInputNode, GraphNode, GraphOutputNode } from "./nodes/graph";
 import type { Type } from "./types";
 
@@ -23,19 +23,20 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 		return this.state.name;
 	}
 
-	public constructor(id: number, manager: GraphManager, state: GraphState<State> & GraphIOState<I, O>) {
+	public constructor(id: number, manager: GraphManager, { inputs = {} as I, outputs = {} as O, ...state }: GraphState<State> & GraphIOState<I, O>) {
 		this.id = id;
 		this.manager = manager;
-		this.state = state;
+		
+		this.state = state as GraphState<State>;
 
 		this.inputs = {
 			...this.requiredInputTypes,
-			...(state.inputs || {} as I)
+			...inputs,
 		};
 
 		this.outputs = {
 			...this.requiredOutputTypes,
-			...(state.outputs || {} as O)
+			...outputs,
 		};
 
 		Object.assign(this, {
@@ -50,7 +51,7 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 		return this.manager.addNode(this, GraphInputNode, { key, graph: this } as any) as GraphInputNode<This, K>;
 	}
 
-	public addNode<T extends Node<any>>(type: NodeType<T, any>, state: InferNodeState<T>): T {
+	public addNode<T extends Node<any>>(type: NodeType<T, any>, state: NodeConstructorState<T>): T {
 		return this.manager.addNode(this, type as any, state);
 	}
 
@@ -60,6 +61,19 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 
 	public remove() {
 		this.manager.removeGraph(this);
+	}
+
+	public toJSON() {
+		return {
+			id: this.id,
+			state: {
+				...this.state,
+				inputs: this.inputs,
+				outputs: this.outputs,
+			},
+			nodes: this.manager.getNodes(this),
+			edges: this.manager.getEdges(this),
+		};
 	}
 }
 

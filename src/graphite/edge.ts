@@ -18,4 +18,14 @@ export class Edge<T extends Type = Type> {
 	public disconnect() {
 		this.manager.disconnect(this);
 	}
+
+	public toJSON() {
+		return {
+			id: this.id,
+			source: this.source.node.id,
+			output: this.source.key,
+			target: this.target.node.id,
+			input: this.target.key,
+		};
+	}
 }
