@@ -39,7 +39,7 @@ export class OutputPort<T extends Node, K extends keyof T["outputTypes"], U exte
 		return this.node.outputTypes[this.key] as any;
 	}
 
-	public get edgse(): Edge<U>[] {
+	public get edges(): Edge<U>[] {
 		return this.manager.getNodeOutputEdges(this.node, this.key.toString()) as Edge<U>[];
 	}
 

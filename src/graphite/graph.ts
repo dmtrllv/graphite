@@ -19,6 +19,10 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 		return this.manager.getGraphOutputNode(this);
 	}
 
+	public get name(): string {
+		return this.state.name;
+	}
+
 	public constructor(id: number, manager: GraphManager, state: GraphState<State> & GraphIOState<I, O>) {
 		this.id = id;
 		this.manager = manager;

@@ -63,3 +63,5 @@ b.outputs.value.connect(mulAdd.getInput("b", ValueType));
 c.outputs.value.connect(mulAdd.getInput("c", ValueType));
 
 mulAdd.getOutput("result", ValueType).connect(app.world.outputNode.inputs.elevation);
+
+mulAddGraph.remove();

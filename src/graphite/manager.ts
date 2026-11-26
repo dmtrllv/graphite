@@ -3,9 +3,9 @@ import { Allocator, assert } from "../utils";
 import { Edge } from "./edge";
 import { Graph, type GraphIOTypes, type GraphState, type GraphType } from "./graph";
 import { Node, type NodeType } from "./node";
-import { GraphOutputNode } from "./nodes/graph";
+import { GraphNode, GraphOutputNode } from "./nodes/graph";
 import type { OutputPort, InputPort } from "./port";
-import type { SubGraph } from "./subgraph";
+import { SubGraph } from "./subgraph";
 import type { Type } from "./types";
 import { World } from "./world";
 
@@ -44,11 +44,16 @@ export class GraphManager {
 	}
 
 	public removeNode(node: Node) {
+		console.log(`remove node ${node.type}`);
+
 		const nodes = assert.notNull(this.nodes.get(node.graph));
 		for (const input in node.inputs) {
 			const edge = node.inputs[input]?.edge;
 			if (edge)
 				this.disconnect(edge);
+		}
+		for (const output in node.outputs) {
+			node.outputs[output]!.edges.forEach(this.disconnect);
 		}
 		return nodes.free(node.id);
 	}
@@ -60,6 +65,7 @@ export class GraphManager {
 	}
 
 	public disconnect(edge: Edge) {
+		console.log(`disconnect ${edge.source} -> ${edge.target}`);
 		const edges = assert.notNull(this.edges.get(edge.source.node.graph));
 		edges.free(edge.id);
 	}
@@ -71,8 +77,17 @@ export class GraphManager {
 	public getNodeOutputEdges<T extends Node<{}>, K extends keyof T["outputTypes"]>(node: T, key: K): Edge<T["outputTypes"][K]>[] {
 		return this.edges.get(node.graph)?.all().filter(e => e.target.node.id === node.id && key === e.target.key) as Edge<T["outputTypes"][K]>[] || [];
 	}
-	
+
 	public removeGraph(graph: Graph) {
+		console.log(`remove graph ${graph.state.name}`);
+
+		this.nodes.values().forEach(nodes => {
+			nodes.all().forEach(n => {
+				if (n instanceof GraphNode && n.state.graph === graph)
+					this.removeNode(n);
+			});
+		});
+
 		this.edges.delete(graph);
 		this.nodes.delete(graph);
 		this.graphs.free(graph.id);

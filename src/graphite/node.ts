@@ -20,16 +20,16 @@ export abstract class Node<State extends {} = {}> {
 
 	public readonly outputs = new Proxy({}, {
 		get: (_, p) => new OutputPort(this.manager, this, p.toString()),
-		set() {
-			return false;
-		},
+		set: () => false,
+		ownKeys: () => Array.from(Object.keys(this.outputTypes)),
+		getOwnPropertyDescriptor: (_, key) => ({ enumerable: true, configurable: true, value: this.outputs[key.toString()] })
 	}) as NodeOutputPorts<this>;
 
 	public readonly inputs = new Proxy({}, {
 		get: (_, p) => new InputPort(this.manager, this, p.toString()),
-		set() {
-			return false;
-		},
+		set: () => false,
+		ownKeys: () => Array.from(Object.keys(this.inputTypes)),
+		getOwnPropertyDescriptor: (_, key) => ({ enumerable: true, configurable: true, value: this.inputs[key.toString()] })
 	}) as NodeInputPorts<this>;
 
 	public getInput<T extends Type>(name: string, type: T): InputPort<any, any, T> {
