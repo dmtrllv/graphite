@@ -1,23 +1,39 @@
-import type { DynamicGraph, GraphIOState, GraphIOTypes } from "./graph";
+import type { DynamicGraph, GraphIOState, GraphIOTypes, SerializedGraph } from "./graph";
 import { GraphManager } from "./manager";
 import { Pass, type PassIOTypes } from "./pass";
 import { SubGraph } from "./subgraph";
 import type { World } from "./world";
 
-export class App {
-	public static readonly init = async () => {
-		const app = new App();
+export class Graphite {
+	public static deserialize(data: SerializedApp) {
+		const app = new Graphite(data.name);
+
+		if(!data.graphs.length)
+			return app;
+
+		app.manager.deserializeGraphs(data.graphs);
+		
+		app.world
+		
+		return app;
+	}
+
+	public static readonly init = async (name: string) => {
+		const app = new Graphite(name);
 
 		return app;
 	}
 
 	private readonly manager: GraphManager;
+	
+	public readonly name: string;
 
-	public get world(): Omit<World, "remove"> {
+	public get world(): World {
 		return this.manager.worldGraph;
 	}
 
-	private constructor() {
+	private constructor(name: string) {
+		this.name = name;
 		this.manager = new GraphManager();
 	}
 
@@ -32,4 +48,16 @@ export class App {
 	public createPass(name: string, io: GraphIOState<PassIOTypes, PassIOTypes> = {}): Pass {
 		return this.manager.addGraph(Pass, { name, ...io });
 	}
+
+	public toJSON(): SerializedApp {
+		return {
+			name: this.name,
+			graphs: this.manager.getGraphs().map(g => g.toJSON())
+		};
+	}
+}
+
+export type SerializedApp = {
+	readonly name: string;
+	readonly graphs: SerializedGraph[];
 }

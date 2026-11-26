@@ -2,6 +2,8 @@ import { createEnum, type EnumType } from "../../utils";
 import { Node } from "../node";
 import { ValueType } from "../types";
 
+export const MathCategory = Node.createCategory("Math");
+
 export const BinOp = createEnum(
 	"add",
 	"sub",
@@ -11,6 +13,7 @@ export const BinOp = createEnum(
 
 export type BinOp = EnumType<typeof BinOp>;
 
+@Node.register(MathCategory, "Binary")
 export class BinOpNode extends Node<BinOpNodeProps> {
 	public override get inputTypes() {
 		return {

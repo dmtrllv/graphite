@@ -1,10 +1,18 @@
-
 import react from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
+
+const fullReloadPlugin = (): Plugin => ({
+	name: "full-reload",
+	handleHotUpdate({ server }) {
+		server.ws.send({ type: "full-reload" });
+		return [];
+	},
+});
 
 export default defineConfig({
 	plugins: [
+		fullReloadPlugin(),
 		react({
 			include: "**/*.{tsx,jsx}",
 		}),

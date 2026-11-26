@@ -1,3 +1,18 @@
+import { useEffect, useState } from "react";
+import { Graphite } from "../graphite";
+import { Editor } from "./editor";
+
 export const App = () => {
-	return null;
+	const [app, setApp] = useState<Graphite | null>(null)
+	
+	useEffect(() => {
+		Graphite.init("Test").then((app) => setApp(app));
+	}, []);
+
+	if(!app)
+		return <h1>Loading</h1>;
+	
+	return (
+		<Editor app={app} />
+	);
 };

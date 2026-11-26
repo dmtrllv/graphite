@@ -1,6 +1,6 @@
 import { assert } from "./assert";
 
-export class Allocator<T extends {}> {
+export class Allocator<T extends { readonly id: number }> {
 	private readonly items: (T | undefined)[] = [];
 	private readonly freeList: number[] = [];
 
@@ -32,7 +32,7 @@ export class Allocator<T extends {}> {
 	//	return [id, item];
 	//}
 
-	public allocAt<U extends new (...args: any[]) => T>(id: number, type: U, ...args: ConstructorParameters<U>): [number, InstanceType<U>] {
+	public allocAt<U extends new (id: number, ...args: Args) => T, Args extends any[]>(id: number, type: U, ...args: Args): InstanceType<U> {
 		assert(type === this.type || type.prototype instanceof this.type, `type ${type.name} does not extend ${this.type.name}!`);
 		const freeIndex = this.freeList.indexOf(id);
 		
@@ -42,9 +42,9 @@ export class Allocator<T extends {}> {
 		for(let i = this.items.length; i < id; i++)
 			this.freeList.push(i);
 
-		const item = new type(...args) as InstanceType<U>;
+		const item = new type(id, ...args) as InstanceType<U>;
 		this.items[id] = item;
-		return [id, item];
+		return item;
 	}
 
 	public get(id: number): T | undefined {

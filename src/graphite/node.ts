@@ -5,14 +5,71 @@ import type { GraphManager } from "./manager";
 import { InputPort, OutputPort } from "./port";
 import type { Type } from "./types";
 
+const NODE_CATEGORY = Symbol("NODE_CATEGORY");
+
+export type NodeCategory<T extends string = string> = T & {
+	readonly [NODE_CATEGORY]: T;
+};
+
+const TYPE_ID = Symbol("TYPE_ID");
+
 export abstract class Node<State extends {} = {}> {
+	private static readonly categoryRegistry = new Map<string, NodeCategory>();
+
+	private static readonly typeRegistry = new Map<string, Map<string, NodeType<any, any>>>();
+
+	public static get types(): ReadonlyMap<NodeCategory, ReadonlyMap<string, NodeType<any, any>>> {
+		const map = new Map<NodeCategory, Map<string, NodeType<any, any>>>();
+		for (const [category, types] of this.typeRegistry)
+			map.set(this.categoryRegistry.get(category)!, types);
+		return map;
+	}
+
+	public static createCategory = <T extends string>(name: T): NodeCategory<T> => {
+		if (!this.categoryRegistry.has(name)) {
+			this.categoryRegistry.set(name, Object.assign(name, {
+				[NODE_CATEGORY]: name,
+			}));
+		}
+		return this.categoryRegistry.get(name)! as NodeCategory<T>;
+	};
+
+	public static readonly register = <T extends typeof Node<any>>(category: NodeCategory, name: string) => (target: T, _ctx: ClassDecoratorContext) => {
+		category = category.toString() as NodeCategory;
+		if (!Node.typeRegistry.has(category))
+			Node.typeRegistry.set(category, new Map());
+		const types = Node.typeRegistry.get(category)!;
+		const found = types.get(name);
+		if (found)
+			throw new Error(`Duplicate name ${category}.${name} for node ${found.name} and ${target.name}!`);
+		types.set(name, target as any);
+		Object.assign(target, { [TYPE_ID]: `${category}.${name}` });
+	}
+
+	public static get typeId(): string {
+		return TYPE_ID in this ? this[TYPE_ID] as string : `${this.name}`;
+	}
+
+	public static readonly resolveType = (typeId: string): NodeType<any, any> | null => {
+		const [a, b] = typeId.split(".");
+		if (a && b)
+			return Node.typeRegistry.get(a)?.get(b) as ResolvedNodeType<any, any> ?? null;
+		return null;
+	}
+
+	protected static deserializer: NodeDeserializer<any> = (_, state) => state;
+
+	public static readonly deserialize = <T extends NodeType<any, any>>(type: T, manager: GraphManager, data: ReturnType<InstanceType<T>["toJSON"]>["state"]): NodeConstructorState<InstanceType<T>> => (type as any).deserializer(manager, data);
+
 	public readonly id: number;
 	public readonly state: State;
 
 	protected readonly manager: GraphManager;
 	public readonly graph: Graph;
 
-	public get type(): string { return this.constructor.name; }
+	public get type(): string {
+		return (this.constructor as typeof Node).typeId;
+	}
 
 	public get inputTypes(): GraphIOTypes { return {}; }
 	public get outputTypes(): GraphIOTypes { return {}; }
@@ -60,10 +117,22 @@ export abstract class Node<State extends {} = {}> {
 		this.manager.removeNode(this);
 	}
 
-	public toJSON() {
-		return {}
+	public toJSON(): SerializedNode {
+		return {
+			id: this.id,
+			type: this.type,
+			state: this.state,
+		}
 	}
 }
+
+export type NodeDeserializer<T extends Node> = (manager: GraphManager, state: ReturnType<T["toJSON"]>["state"]) => T["state"];
+
+export type SerializedNode = {
+	readonly id: number;
+	readonly type: string;
+	readonly state: object;
+};
 
 export type NodeOutputPorts<T extends Node> = {
 	[K in keyof T["outputTypes"]]: OutputPort<T, K, T["outputTypes"][K]>;
@@ -77,4 +146,10 @@ export type NodeConstructorState<T extends Node<any>> =
 	& Partial<Pick<T["defaultState"], RequiredKeys<T["defaultState"]>>>
 	& Pick<T["state"], Exclude<keyof T["state"], RequiredKeys<T["defaultState"]>>>;
 
-export type NodeType<T extends Node<S>, S extends {}> = new (id: number, manager: GraphManager, graph: Graph, state: any) => T;
+export type NodeType<T extends Node<S>, S extends {}> = {
+	new(id: number, manager: GraphManager, graph: Graph, state: any): T;
+}
+
+export type ResolvedNodeType<T extends Node<S>, S extends {}> = NodeType<T, S> & {
+	readonly deserialize: (manager: GraphManager, data: ReturnType<T["toJSON"]>["state"]) => NodeConstructorState<T>
+};

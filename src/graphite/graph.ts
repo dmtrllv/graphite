@@ -1,13 +1,20 @@
+import type { SerializedEdge } from "./edge";
 import type { GraphManager } from "./manager";
-import type { Node, NodeConstructorState, NodeType } from "./node";
+import type { Node, NodeConstructorState, NodeType, SerializedNode } from "./node";
 import { GraphInputNode, GraphNode, GraphOutputNode } from "./nodes/graph";
 import type { Type } from "./types";
 
 export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends GraphIOTypes = GraphIOTypes, State extends {} = {}> {
+	public static deserialize<T extends typeof Graph<I, O, any>, I extends GraphIOTypes, O extends GraphIOTypes>(this: T, state: ReturnType<InstanceType<T>["toJSON"]>): InstanceType<T>["state"] & GraphIOState<I, O> {
+		return state;
+	}
+
 	public readonly id: number;
 	public readonly state: GraphState<State>;
 
 	protected readonly manager: GraphManager;
+
+	public get type() { return this.constructor.name; }
 
 	public get requiredInputTypes(): Partial<I> { return {}; }
 	public get requiredOutputTypes(): Partial<O> { return {}; }
@@ -23,10 +30,14 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 		return this.state.name;
 	}
 
+	public get nodes(): Array<Node> {
+		return this.manager.getNodes(this);
+	}
+
 	public constructor(id: number, manager: GraphManager, { inputs = {} as I, outputs = {} as O, ...state }: GraphState<State> & GraphIOState<I, O>) {
 		this.id = id;
 		this.manager = manager;
-		
+
 		this.state = state as GraphState<State>;
 
 		this.inputs = {
@@ -56,26 +67,38 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 	}
 
 	public addGraphNode<T extends Graph>(graph: T): GraphNode<T> {
-		return this.manager.addNode(this, GraphNode, { graph })
+		return this.manager.addNode(this, GraphNode, { graph }) as GraphNode<T>;
 	}
 
 	public remove() {
 		this.manager.removeGraph(this);
 	}
 
-	public toJSON() {
+	public toJSON(): SerializedGraph {
 		return {
 			id: this.id,
+			type: this.type,
 			state: {
 				...this.state,
 				inputs: this.inputs,
 				outputs: this.outputs,
 			},
-			nodes: this.manager.getNodes(this),
-			edges: this.manager.getEdges(this),
+			nodes: this.nodes.map(n => n.toJSON()),
+			edges: this.manager.getEdges(this).map(e => e.toJSON()),
 		};
 	}
 }
+
+export type SerializedGraph = {
+	readonly id: number;
+	readonly type: string;
+	readonly state: {
+		readonly inputs: GraphIOTypes;
+		readonly outputs: GraphIOTypes;
+	};
+	readonly nodes: readonly SerializedNode[];
+	readonly edges: readonly SerializedEdge[];
+};
 
 export type GraphState<T extends {} = {}> = T & {
 	readonly name: string;
@@ -95,7 +118,10 @@ export type GraphOutputKey<T extends Graph> = T extends Graph<any, infer O, any>
 
 export type GraphInputTypes<T extends Graph> = T extends Graph<infer I, any, any> ? I : GraphIOTypes;
 
-export type GraphType<T extends Graph<I, O, State>, I extends GraphIOTypes, O extends GraphIOTypes, State extends {} = any> = new (id: number, manager: GraphManager, state: GraphState<State>) => T;
+export interface GraphType<T extends Graph<I, O, State>, I extends GraphIOTypes, O extends GraphIOTypes, State extends {} = any> {
+	new(id: number, manager: GraphManager, state: GraphState<State>): T;
+	deserialize<T extends typeof Graph<I, O, any>, I extends GraphIOTypes, O extends GraphIOTypes>(this: T, state: ReturnType<InstanceType<T>["toJSON"]>): InstanceType<T>["state"] & GraphIOState<I, O>;
+}
 
 export type DynamicGraph<T> = T & {
 	readonly setInput: (key: string, type: Type) => void;
@@ -103,5 +129,3 @@ export type DynamicGraph<T> = T & {
 	readonly removeInput: (key: string) => void;
 	readonly removeOutput: (key: string) => void;
 }
-
-//export type DynamicGraph<T extends Graph> = Omit<T, keyof DynamicInterface> & DynamicInterface;
