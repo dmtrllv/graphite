@@ -27,10 +27,10 @@ export const mapChildren: MapChildrenFn = (obj: any, mapper: any) => {
 }
 
 interface MapChildrenFn {
-	<K extends string | number, V>(map: Map<K, V>, mapper: (value: V, key: K, index: number) => JSX.Element): JSX.Element[];
-	<V>(set: Set<V>, mapper: (value: V, index: number) => JSX.Element): JSX.Element[];
-	<V>(arr: Array<V>, mapper: (value: V, index: number) => JSX.Element): JSX.Element[];
-	<T extends object>(object: T, mapper: <K extends keyof T>(value: T[K], key: K, index: number) => JSX.Element): JSX.Element[];
+	<K extends string | number, V>(map: Map<K, V>, mapper: (value: V, key: K, index: number) => (JSX.Element | null)): (JSX.Element | null)[];
+	<V>(set: Set<V>, mapper: (value: V, index: number) => (JSX.Element | null)): (JSX.Element | null)[];
+	<V>(arr: Array<V>, mapper: (value: V, index: number) => (JSX.Element | null)): (JSX.Element | null)[];
+	<T extends object>(object: T, mapper: <K extends keyof T>(value: T[K], key: K, index: number) => (JSX.Element | null)): (JSX.Element | null)[];
 }
 
 export const stopPropagation = (e: React.UIEvent) => {
@@ -41,8 +41,8 @@ export const stopDefault = (e: React.UIEvent) => {
 	e.preventDefault();
 };
 
-export const className = (className: string, props: Record<string, string | number | boolean>, ...additional: (string | null | undefined)[]) => {
-	const names = [className, ...additional.filter(a => !!a)];
+export const cn = (className: string, props: Record<string, string | number | boolean | undefined | null>, ...additional: (string | null | undefined)[]) => {
+	const names = [className, ...additional.filter(a => !!a?.trim())];
 	for(const k in props) {
 		const value = props[k];
 		if(value === true) {

@@ -3,7 +3,7 @@ import { ValueType } from "../types";
 
 export const ValueCategory = Node.createCategory("Value");
 
-@Node.register(ValueCategory, "value")
+@Node.register(ValueCategory, "f32")
 export class ValueNode extends Node<{ value: number }> {
 	public override get outputTypes() { 
 		return {

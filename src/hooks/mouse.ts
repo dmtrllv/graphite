@@ -1,4 +1,4 @@
-import { useObservable } from "../reactive/hook";
+import { useState } from "react";
 import { useEvent } from "./event";
 
 type Vec2 = {
@@ -8,47 +8,61 @@ type Vec2 = {
 
 const cloneVec2 = ({ x, y }: Vec2) => {
 	return { x, y };
-}
+};
 
-export const useMouseMove = (startPosition: Vec2, onMove: (newPosition: Vec2, offset: Vec2) => void, scale: number, inverseY: boolean = false, button: 0 | 1 | 2 = 0) => {
-	const moveState = useObservable(() => ({
+type MouseState = {
+	isDown: boolean;
+	downPosition: {
+		x: number;
+		y: number;
+	};
+	startOffset: {
+		x: number;
+		y: number;
+	};
+};
+
+export const useMouseMove = (startPosition: Vec2, onMove: (newPosition: Vec2, offset: Vec2) => void, scale: number = 1, inverseY: boolean = false, button: 0 | 1 | 2 = 0) => {
+	const [state, setState] = useState<MouseState>({
 		isDown: false,
 		downPosition: { x: 0, y: 0 },
 		startOffset: cloneVec2(startPosition),
-	}));
+	});
+
+	const update = (state: Partial<MouseState>) => setState(s => ({ ...s, ...state }));
 
 	const onMouseDown = (e: React.MouseEvent) => {
 		if (e.button !== button)
 			return;
 		e.stopPropagation();
-		moveState.isDown = true;
-		moveState.startOffset = cloneVec2(startPosition);
-		moveState.downPosition = { x: e.clientX, y: e.clientY };
+		update({
+			isDown: true,
+			startOffset: cloneVec2(startPosition),
+			downPosition: { x: e.clientX, y: e.clientY },
+		});
 	};
 
 	useEvent("mousemove", (e) => {
-		if (!moveState.isDown)
+		if (!state.isDown)
 			return;
 
 		let delta;
 		if (inverseY)
-			delta = { x: e.clientX - moveState.downPosition.x, y: moveState.downPosition.y - e.clientY };
+			delta = { x: e.clientX - state.downPosition.x, y: state.downPosition.y - e.clientY };
 		else
-			delta = { x: e.clientX - moveState.downPosition.x, y: e.clientY - moveState.downPosition.y };
+			delta = { x: e.clientX - state.downPosition.x, y: e.clientY - state.downPosition.y };
 		delta.x *= scale;
 		delta.y *= scale;
 		const d = cloneVec2(delta);
-		onMove({ x: delta.x + moveState.startOffset.x, y: delta.y + moveState.startOffset.y }, d);
+		onMove({ x: delta.x + state.startOffset.x, y: delta.y + state.startOffset.y }, d);
 	}, undefined, [scale]);
 
 	useEvent("mouseup", e => {
-		if (moveState.isDown) {
+		if (state.isDown) {
 			e.stopPropagation();
-			moveState.isDown = false
+			state.isDown = false
 		};
 	});
 
-	return {
-		onMouseDown
-	};
+	return onMouseDown;
 };

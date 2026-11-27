@@ -34,6 +34,10 @@ export class BinOpNode extends Node<BinOpNodeProps> {
 			b: 0,
 		};
 	}
+	
+	public override get name(): string {
+		return `Math`;
+	}
 }
 
 export type BinOpNodeProps = {

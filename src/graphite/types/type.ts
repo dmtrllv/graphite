@@ -14,3 +14,9 @@ export type PrimitiveType =
 	| ValueType
 	| VectorType
 	| MatrixType;
+
+export type ToJsType<T extends Type> =
+	T extends ValueType ? number :
+	T extends VectorType ? number :
+	T extends MatrixType ? number :
+	never;

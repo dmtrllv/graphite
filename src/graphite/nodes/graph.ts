@@ -1,9 +1,10 @@
+import type { PrimitiveType, ToJsType } from "@graphite/types";
 import type { Graph, GraphInputKey } from "../graph";
 import { Node, type NodeDeserializer } from "../node";
 
 export const GraphNodeCategory = Node.createCategory("Graph Nodes");
 
-@Node.register(GraphNodeCategory, "input")
+@Node.register(GraphNodeCategory, "Graph Input")
 export class GraphInputNode<T extends Graph, K extends GraphInputKey<T>> extends Node<{ graph: T, key: K }> {
 	protected static override deserializer: NodeDeserializer<GraphInputNode<Graph, any>> = (manager, { graph, key }) => ({
 		graph: manager.getGraph(graph),
@@ -16,6 +17,10 @@ export class GraphInputNode<T extends Graph, K extends GraphInputKey<T>> extends
 		} as any
 	}
 
+	public override get name(): string {
+		return `${this.state.graph.name} ${super.name} ${this.state.key}`;
+	}
+
 	public override toJSON() {
 		return {
 			id: this.id,
@@ -24,6 +29,7 @@ export class GraphInputNode<T extends Graph, K extends GraphInputKey<T>> extends
 				graph: this.state.graph.id,
 				key: this.state.key
 			},
+			position: this.position,
 		}
 	}
 }
@@ -32,7 +38,7 @@ type MapGraphInputType<T extends Graph, K extends GraphInputKey<T>> = {
 	readonly value: T["inputs"][K];
 }
 
-@Node.register(GraphNodeCategory, "output")
+@Node.register(GraphNodeCategory, "Graph Outputs")
 export class GraphOutputNode<T extends Graph> extends Node<{ graph: T }> {
 	protected static override deserializer: NodeDeserializer<GraphOutputNode<Graph>> = (manager, { graph }) => ({
 		graph: manager.getGraph(graph),
@@ -46,6 +52,10 @@ export class GraphOutputNode<T extends Graph> extends Node<{ graph: T }> {
 		throw new Error(`Cannot remove the graph output node!`);
 	}
 
+	public override get name(): string {
+		return `${this.state.graph.name} ${super.name}`;
+	}
+
 	public override toJSON() {
 		return {
 			id: this.id,
@@ -53,13 +63,15 @@ export class GraphOutputNode<T extends Graph> extends Node<{ graph: T }> {
 			state: {
 				graph: this.state.graph.id,
 			},
+			position: this.position,
 		}
 	}
 }
 
-@Node.register(GraphNodeCategory, "node")
-export class GraphNode<T extends Graph> extends Node<{ graph: T }> {
-	protected static override deserializer: NodeDeserializer<GraphNode<Graph>> = (manager, { graph }) => ({
+@Node.register(GraphNodeCategory, "Graph node")
+export class GraphNode<T extends Graph> extends Node<{ graph: T, inputs: GraphNodeValues<T> }> {
+	protected static override deserializer: NodeDeserializer<GraphNode<Graph>> = (manager, { graph, inputs }) => ({
+		inputs,
 		graph: manager.getGraph(graph),
 	});
 
@@ -71,13 +83,27 @@ export class GraphNode<T extends Graph> extends Node<{ graph: T }> {
 		return this.state.graph.outputs;
 	}
 
+	public override get name(): string {
+		return this.state.graph.name;
+	}
+
 	public override toJSON() {
 		return {
 			id: this.id,
 			type: this.type,
 			state: {
+				...this.state,
 				graph: this.state.graph.id,
 			},
+			position: this.position,
 		}
 	}
 }
+
+export type GraphNodeValues<T extends Graph<any>> = {
+	[K in PrimitiveKeys<T["inputs"]>]: ToJsType<T["inputs"][K]>
+};
+
+type PrimitiveKeys<T> = {
+	[K in keyof T]: T[K] extends PrimitiveType ? K : never;
+}[keyof T];

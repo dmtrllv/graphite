@@ -3,7 +3,7 @@ import { Allocator, assert } from "../utils";
 import { Edge } from "./edge";
 import { Graph, type GraphIOTypes, type GraphState, type GraphType, type SerializedGraph } from "./graph";
 import { parseGraphType } from "./graph-types";
-import { Node, type NodeType } from "./node";
+import { Node, type NodePosition, type NodeType } from "./node";
 import { GraphNode, GraphOutputNode } from "./nodes/graph";
 import { InputPort, OutputPort } from "./port";
 import { SubGraph } from "./subgraph";
@@ -26,7 +26,7 @@ export class GraphManager {
 		const nodes = new Allocator(Node);
 		this.nodes.set(graph, nodes);
 		this.edges.set(graph, new Allocator(Edge));
-		nodes.alloc(GraphOutputNode, this, graph, { graph });
+		nodes.alloc(GraphOutputNode, this, graph, { graph }, [0, 0] as NodePosition);
 		return graph;
 	}
 
@@ -36,17 +36,19 @@ export class GraphManager {
 	}
 
 	public getGraphOutputNode<T extends Graph>(graph: T): GraphOutputNode<T> {
-		return assert.notNull(this.nodes.get(graph)).get(0) as GraphOutputNode<T>;
+		return assert.notNull(this.nodes.get(graph)?.get(0)) as any;
 	}
 
-	public addNode<T extends Node<S>, S extends {}>(graph: Graph, type: NodeType<T, any>, state: S): T {
+	public addNode<T extends Node<S>, S extends {}>(graph: Graph, type: NodeType<T, any>, state: S, position?: NodePosition): T {
 		const nodes = assert.notNull(this.nodes.get(graph));
-		return nodes.alloc(type as any, this, graph, state);
+		return nodes.alloc(type as any, this, graph, state, position);
 	}
 
-	public removeNode(node: Node) {
+	public removeNode(node: Node): boolean {
 		const nodes = assert.notNull(this.nodes.get(node.graph));
 		const edges = assert.notNull(this.edges.get(node.graph));
+		
+		node.dispose();
 
 		for (const edge of edges.all().slice()) {
 			if (edge.source.node === node || edge.target.node === node)
@@ -75,6 +77,8 @@ export class GraphManager {
 	}
 
 	public removeGraph(graph: Graph) {
+		graph.dispose();
+
 		for (const nodes of this.nodes.values()) {
 			for (const node of nodes.all().slice()) {
 				if (node instanceof GraphNode && node.state.graph === graph)
@@ -87,6 +91,7 @@ export class GraphManager {
 
 		this.edges.delete(graph);
 		this.nodes.delete(graph);
+		
 		this.graphs.free(graph.id);
 	}
 
@@ -117,10 +122,10 @@ export class GraphManager {
 		all.forEach((serializedGraph) => {
 			const graph = assert.notNull(this.graphs.get(serializedGraph.id));
 			const nodes = assert.notNull(this.nodes.get(graph));
-			serializedGraph.nodes.forEach(({ id, type, state }) => {
+			serializedGraph.nodes.forEach(({ id, type, state, position }) => {
 				const NodeType = assert.notNull(Node.resolveType(type), `Could not resolve node type ${type}!`);
 				const deserialized = Node.deserialize(NodeType, this, state);
-				nodes.allocAt(id, NodeType, this, graph, deserialized);
+				nodes.allocAt(id, NodeType, this, graph, deserialized, position);
 			});
 			const edges = assert.notNull(this.edges.get(graph));
 			serializedGraph.edges.forEach(({ source, output, target, input }) => {

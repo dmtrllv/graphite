@@ -1,10 +1,11 @@
+import { EventEmitter } from "@utils";
 import type { SerializedEdge } from "./edge";
 import type { GraphManager } from "./manager";
-import type { Node, NodeConstructorState, NodeType, SerializedNode } from "./node";
-import { GraphInputNode, GraphNode, GraphOutputNode } from "./nodes/graph";
+import type { Node, NodeConstructorState, NodePosition, NodeType, SerializedNode } from "./node";
+import { GraphInputNode, GraphNode, GraphOutputNode, type GraphNodeValues } from "./nodes/graph";
 import type { Type } from "./types";
 
-export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends GraphIOTypes = GraphIOTypes, State extends {} = {}> {
+export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends GraphIOTypes = GraphIOTypes, State extends {} = {}> extends EventEmitter<GraphEvents> {
 	public static deserialize<T extends typeof Graph<I, O, any>, I extends GraphIOTypes, O extends GraphIOTypes>(this: T, state: ReturnType<InstanceType<T>["toJSON"]>): InstanceType<T>["state"] & GraphIOState<I, O> {
 		return state;
 	}
@@ -14,12 +15,15 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 
 	protected readonly manager: GraphManager;
 
+	public readonly getRevision = () => this.emitCount;
+
 	public get type() { return this.constructor.name; }
 
 	public get requiredInputTypes(): Partial<I> { return {}; }
 	public get requiredOutputTypes(): Partial<O> { return {}; }
 
 	public readonly inputs: I;
+
 	public readonly outputs: O;
 
 	public get outputNode(): Omit<GraphOutputNode<this>, "remove"> {
@@ -30,11 +34,17 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 		return this.state.name;
 	}
 
+	public set name(name: string) {
+		Object.assign(this.state, { name });
+		this.emit("name-changed", { graph: this, name });
+	}
+
 	public get nodes(): Array<Node> {
 		return this.manager.getNodes(this);
 	}
 
 	public constructor(id: number, manager: GraphManager, { inputs = {} as I, outputs = {} as O, ...state }: GraphState<State> & GraphIOState<I, O>) {
+		super();
 		this.id = id;
 		this.manager = manager;
 
@@ -58,20 +68,29 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 		});
 	}
 
-	public addInputNode<This extends Graph, K extends GraphInputKey<This>>(key: K): GraphInputNode<This, K> {
-		return this.manager.addNode(this, GraphInputNode, { key, graph: this } as any) as GraphInputNode<This, K>;
+	public addInputNode<This extends Graph, K extends GraphInputKey<This>>(key: K, position?: NodePosition): GraphInputNode<This, K> {
+		return this.manager.addNode(this, GraphInputNode, { key, graph: this } as any, position) as GraphInputNode<This, K>;
 	}
 
-	public addNode<T extends Node<any>>(type: NodeType<T, any>, state: NodeConstructorState<T>): T {
-		return this.manager.addNode(this, type as any, state);
+	public addNode<T extends Node<any>>(type: NodeType<T, any>, state: NodeConstructorState<T>, position?: NodePosition): T {
+		const node = this.manager.addNode(this, type as any, state, position);
+		this.emit("node-added", { graph: this, node });
+		return node as T;
 	}
 
-	public addGraphNode<T extends Graph>(graph: T): GraphNode<T> {
-		return this.manager.addNode(this, GraphNode, { graph }) as GraphNode<T>;
+	public addGraphNode<T extends Graph>(graph: T, inputs: GraphNodeValues<T>, position?: NodePosition): GraphNode<T> {
+		return this.manager.addNode(this, GraphNode, { graph, inputs }, position) as GraphNode<T>;
 	}
 
 	public remove() {
 		this.manager.removeGraph(this);
+	}
+
+	public removeNode(node: Node) {
+		const removed = this.manager.removeNode(node);
+		if(removed)
+			this.emit("node-removed", { graph: this, node });
+		return removed;
 	}
 
 	public toJSON(): SerializedGraph {
@@ -86,6 +105,11 @@ export abstract class Graph<I extends GraphIOTypes = GraphIOTypes, O extends Gra
 			nodes: this.nodes.map(n => n.toJSON()),
 			edges: this.manager.getEdges(this).map(e => e.toJSON()),
 		};
+	}
+
+	public update(state: Partial<State>) {
+		Object.assign(this.state, state);
+		this.emit("state-changed", { graph: this });
 	}
 }
 
@@ -129,3 +153,10 @@ export type DynamicGraph<T> = T & {
 	readonly removeInput: (key: string) => void;
 	readonly removeOutput: (key: string) => void;
 }
+
+export type GraphEvents = {
+	"state-changed": { graph: Graph; };
+	"name-changed": { graph: Graph; name: string; };
+	"node-added": { graph: Graph; node: Node; };
+	"node-removed": { graph: Graph; node: Node; };
+};

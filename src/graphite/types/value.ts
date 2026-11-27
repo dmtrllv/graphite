@@ -1,7 +1,7 @@
 export type ValueType = {
-	readonly name: "value";
+	readonly name: "f32";
 };
 
 export const ValueType: ValueType = {
-	name: "value"
+	name: "f32"
 };

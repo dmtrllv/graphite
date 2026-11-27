@@ -55,9 +55,13 @@ export class Graphite {
 			graphs: this.manager.getGraphs().map(g => g.toJSON())
 		};
 	}
+
+	public getGraph(name: string) {
+		return this.manager.getGraphs().find(g => g.name === name);
+	}
 }
 
 export type SerializedApp = {
 	readonly name: string;
 	readonly graphs: SerializedGraph[];
-}
+};

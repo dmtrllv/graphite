@@ -1,0 +1,15 @@
+.number-input {
+	opacity: 0.65;
+	transition: opacity 150ms;
+	&.active {
+		opacity: 1;
+
+	}
+
+	label {
+		display: block;
+		font-size: 12px;
+		text-transform: capitalize;
+		margin-bottom: 5px;
+	}
+}

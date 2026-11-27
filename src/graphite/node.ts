@@ -1,4 +1,4 @@
-import { assert } from "../utils";
+import { assert, EventEmitter } from "../utils";
 import type { RequiredKeys } from "../utils/types";
 import type { Graph, GraphIOTypes } from "./graph";
 import type { GraphManager } from "./manager";
@@ -13,7 +13,7 @@ export type NodeCategory<T extends string = string> = T & {
 
 const TYPE_ID = Symbol("TYPE_ID");
 
-export abstract class Node<State extends {} = {}> {
+export abstract class Node<State extends {} = {}> extends EventEmitter<NodeEvents> {
 	private static readonly categoryRegistry = new Map<string, NodeCategory>();
 
 	private static readonly typeRegistry = new Map<string, Map<string, NodeType<any, any>>>();
@@ -53,7 +53,7 @@ export abstract class Node<State extends {} = {}> {
 	public static readonly resolveType = (typeId: string): NodeType<any, any> | null => {
 		const [a, b] = typeId.split(".");
 		if (a && b)
-			return Node.typeRegistry.get(a)?.get(b) as ResolvedNodeType<any, any> ?? null;
+			return Node.typeRegistry.get(a)?.get(b) as NodeType<any, any> ?? null;
 		return null;
 	}
 
@@ -62,7 +62,22 @@ export abstract class Node<State extends {} = {}> {
 	public static readonly deserialize = <T extends NodeType<any, any>>(type: T, manager: GraphManager, data: ReturnType<InstanceType<T>["toJSON"]>["state"]): NodeConstructorState<InstanceType<T>> => (type as any).deserializer(manager, data);
 
 	public readonly id: number;
+
 	public readonly state: State;
+
+	private _position: NodePosition;
+
+	public readonly getRevision = () => this.emitCount;
+
+	public get position(): NodePosition { return [...this._position]; };
+
+	public set position(position: NodePosition) {
+		if (this.position[0] === position[0] && this.position[1] === position[1])
+			return;
+
+		this._position = position;
+		this.emit("position-changed", { node: this, position });
+	}
 
 	protected readonly manager: GraphManager;
 	public readonly graph: Graph;
@@ -71,9 +86,16 @@ export abstract class Node<State extends {} = {}> {
 		return (this.constructor as typeof Node).typeId;
 	}
 
+	public get category(): NodeCategory {
+		return assert.notNull(Node.categoryRegistry.get(this.type.split(".")[0] || ""));
+	}
+
+	public get name(): string {
+		return assert.notNull(this.type.split(".")[1]);
+	}
+
 	public get inputTypes(): GraphIOTypes { return {}; }
 	public get outputTypes(): GraphIOTypes { return {}; }
-
 	public get defaultState(): Partial<State> { return {}; }
 
 	public readonly outputs = new Proxy({}, {
@@ -106,15 +128,18 @@ export abstract class Node<State extends {} = {}> {
 		return this.outputs[name] as any;
 	}
 
-	public constructor(id: number, manager: GraphManager, graph: Graph, state: State) {
+	public constructor(id: number, manager: GraphManager, graph: Graph, state: State, [x, y]: NodePosition = [0, 0]) {
+		super();
 		this.id = id;
 		this.graph = graph;
 		this.manager = manager;
-		this.state = state;
+		this.state = { ...this.defaultState, ...state };
+		this._position = [x, y];
 	}
 
 	public remove() {
-		this.manager.removeNode(this);
+		if (this.graph.removeNode(this))
+			this.emit("removed", { node: this });
 	}
 
 	public toJSON(): SerializedNode {
@@ -122,9 +147,17 @@ export abstract class Node<State extends {} = {}> {
 			id: this.id,
 			type: this.type,
 			state: this.state,
-		}
+			position: this._position,
+		};
+	}
+
+	public update(state: Partial<State>) {
+		Object.assign(this.state, state);
+		this.emit("state-changed", { node: this, state: this.state });
 	}
 }
+
+export type NodePosition = [number, number];
 
 export type NodeDeserializer<T extends Node> = (manager: GraphManager, state: ReturnType<T["toJSON"]>["state"]) => T["state"];
 
@@ -132,6 +165,7 @@ export type SerializedNode = {
 	readonly id: number;
 	readonly type: string;
 	readonly state: object;
+	readonly position: NodePosition;
 };
 
 export type NodeOutputPorts<T extends Node> = {
@@ -147,9 +181,11 @@ export type NodeConstructorState<T extends Node<any>> =
 	& Pick<T["state"], Exclude<keyof T["state"], RequiredKeys<T["defaultState"]>>>;
 
 export type NodeType<T extends Node<S>, S extends {}> = {
-	new(id: number, manager: GraphManager, graph: Graph, state: any): T;
-}
+	new(id: number, manager: GraphManager, graph: Graph, state: any, position: NodePosition): T;
+};
 
-export type ResolvedNodeType<T extends Node<S>, S extends {}> = NodeType<T, S> & {
-	readonly deserialize: (manager: GraphManager, data: ReturnType<T["toJSON"]>["state"]) => NodeConstructorState<T>
+export type NodeEvents = {
+	"state-changed": { node: Node, state: object };
+	"position-changed": { node: Node, position: Readonly<NodePosition> };
+	"removed": { node: Node };
 };

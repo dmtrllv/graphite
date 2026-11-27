@@ -1,11 +1,12 @@
 import type { Graphite } from "@graphite";
 import { GraphEditor } from "./graph/editor";
 
+import "./styles/editor.scss";
+
 export const Editor = ({ app }: EditorProps) => {
 	return (
-		<div>
-			<h1>hi</h1>
-			<GraphEditor graph={app.world} />
+		<div className="editor">
+			<GraphEditor graph={app.getGraph("Mul Add")!} />
 		</div>
 	);
 };
