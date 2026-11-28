@@ -1,1 +1,0 @@
-export { MenuBarView } from "./menubar";

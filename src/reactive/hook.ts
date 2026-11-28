@@ -8,10 +8,10 @@ export interface ObservableOptions {
 }
 
 export const useObservable = <T extends object>(value: T | (() => T), options: ObservableOptions = {}): T => {
-	const target = useMemo(() => typeof value === "function" ? (value as () => T)() : value, [value]);
-
+	const target = useMemo(() => typeof value === "function" ? value() : value as T, [value]);
+	
 	const recursive = options.recursive ?? false;
-
+	
 	ensureState(target);
 
 	const subscribeStore = useCallback(
