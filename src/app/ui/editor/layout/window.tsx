@@ -2,6 +2,7 @@ import React, { createContext, useContext, useRef } from "react";
 import { Window } from "@editor";
 import { useObservable } from "@reactive";
 import { useEditor } from "../editor";
+import { clamp } from "@utils";
 
 type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -18,9 +19,21 @@ type ResizeRef = {
 	bounds: Window["bounds"];
 } | null;
 
+export const clampWindowPosition = (rect: DOMRect, x: number, y: number, width: number, height: number) => ({
+	x: clamp(x, rect.x, rect.x + rect.width - width),
+	y: clamp(y, 0, rect.height - height),
+	width,
+	height
+})
+
+export const clampWindowSize = (rect: DOMRect, x: number, y: number, width: number, height: number) => ({
+	width: clamp(width, 0, rect.width - x),
+	height: clamp(height, 0, rect.height - y),
+})
+
 export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: FloatingWindowProps) => {
 	const editor = useEditor();
-	
+
 	useObservable(floatingWindow);
 
 	const resizeRef = useRef<ResizeRef>(null);
@@ -44,6 +57,8 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 
 		if (!resize)
 			return;
+
+		const el = event.target as HTMLElement;
 
 		const { direction, bounds } = resize;
 		const deltaX = event.clientX - resize.startX;
@@ -69,7 +84,25 @@ export const FloatingWindowView = ({ floatingWindow, onWindowDrag, onClose }: Fl
 			y = bounds.y + bounds.height - height;
 		}
 
-		floatingWindow.bounds = { ...bounds, x, y, width, height };
+		const rect = el.parentElement!.parentElement!.getBoundingClientRect();
+
+		if (direction.includes("n") && y <= 0) {
+			y = 0;
+			height = bounds.y + bounds.height;
+		}
+
+		if (direction.includes("w") && x <= rect.x) {
+			x = rect.x;
+			width = bounds.x + bounds.width - rect.x;
+		}
+
+		const p = clampWindowPosition(rect, x, y, width, height);
+		const s = clampWindowSize(rect, p.x, p.y, width, height);
+
+		floatingWindow.bounds = {
+			...p,
+			...s,
+		};
 	};
 
 	const onResizeEnd = () => resizeRef.current = null;

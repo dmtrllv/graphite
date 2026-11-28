@@ -6,7 +6,7 @@ type MenuItemsProps = {
 	activePath: number[];
 	setActivePath: (path: number[]) => void;
 	execute: (item: MenuItem) => void;
-}
+};
 
 export const MenuItems = ({ children, parentPath, activePath, execute, setActivePath }: MenuItemsProps) => (
 	<div className={parentPath.length === 0 ? "menu-dropdown" : "menu-submenu"} role="menu">
@@ -20,7 +20,7 @@ export const MenuItems = ({ children, parentPath, activePath, execute, setActive
 				return null;
 
 			const selected = activePath.length >= path.length && path.every((value, i) => activePath[i] === value);
-			const hasChildren = child._children.some(item => item instanceof MenuItem);
+			const hasChildren = child.children.some(item => item instanceof MenuItem);
 
 			const onPointerEnter = (e: React.PointerEvent) => {
 				e.stopPropagation();
@@ -41,7 +41,7 @@ export const MenuItems = ({ children, parentPath, activePath, execute, setActive
 						{hasChildren && <span className="menu-submenu-indicator">&rsaquo;</span>}
 					</button>
 					{selected && hasChildren && (
-						<MenuItems execute={execute} setActivePath={setActivePath} children={child._children} parentPath={path} activePath={activePath} />
+						<MenuItems execute={execute} setActivePath={setActivePath} children={child.children} parentPath={path} activePath={activePath} />
 					)}
 				</div>
 			);

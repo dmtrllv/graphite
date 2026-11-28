@@ -1,1 +1,2 @@
 export const wrap = (value: number, length: number): number => ((value % length) + length) % length;
+export const clamp = (value: number, min: number = 0, max: number = 1): number => Math.max(Math.min(value, max), min);

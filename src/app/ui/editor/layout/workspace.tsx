@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import type { DockPosition, DropTarget, Editor, Window } from "@editor"
 import { useObservable } from "@reactive";
 import { LayoutView } from "./layout";
-import { FloatingWindowView } from "./window";
+import { clampWindowPosition, FloatingWindowView } from "./window";
 
 import "./styles/workspace.scss";
 
@@ -72,11 +72,9 @@ export const Workspace = ({ editor }: { editor: Editor }) => {
 					cancelAnimationFrame(moveFrameRef.current);
 
 				moveFrameRef.current = requestAnimationFrame(() => {
-					targetWindow.bounds = {
-						...drag.originBounds,
-						x: drag.originBounds.x + deltaX,
-						y: drag.originBounds.y + deltaY
-					};
+					const { width, height, x, y } = drag.originBounds;
+					const rect = workspaceRef.current!.getBoundingClientRect();
+					targetWindow.bounds = clampWindowPosition(rect, x + deltaX, y + deltaY, width, height);
 					moveFrameRef.current = null;
 				});
 			}
@@ -179,11 +177,11 @@ export const Workspace = ({ editor }: { editor: Editor }) => {
 			}
 
 			if (drag.sourceState === "floating" && drag.moved) {
-				targetWindow.bounds = {
-					...drag.originBounds,
-					x: drag.originBounds.x + pointerEvent.clientX - drag.startX,
-					y: drag.originBounds.y + pointerEvent.clientY - drag.startY
-				};
+				const { width, height } = drag.originBounds;
+				const rect = workspaceRef.current!.getBoundingClientRect();
+				const x = drag.originBounds.x + pointerEvent.clientX - drag.startX;
+				const y = drag.originBounds.y + pointerEvent.clientY - drag.startY;
+				targetWindow.bounds = clampWindowPosition(rect, x, y, width, height);
 			}
 
 			if (moveFrameRef.current !== null) {
