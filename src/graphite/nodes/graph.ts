@@ -13,12 +13,8 @@ export class GraphInputNode<T extends Graph, K extends GraphInputKey<T>> extends
 
 	public override get outputTypes(): MapGraphInputType<T, K> {
 		return {
-			value: null
+			value: this.graph.inputs[this.state.key]
 		} as any
-	}
-
-	public override get name(): string {
-		return `${this.state.graph.name} ${super.name} ${this.state.key}`;
 	}
 
 	public override toJSON() {
@@ -52,10 +48,6 @@ export class GraphOutputNode<T extends Graph> extends Node<{ graph: T }> {
 		throw new Error(`Cannot remove the graph output node!`);
 	}
 
-	public override get name(): string {
-		return `${this.state.graph.name} ${super.name}`;
-	}
-
 	public override toJSON() {
 		return {
 			id: this.id,
@@ -84,7 +76,7 @@ export class GraphNode<T extends Graph> extends Node<{ graph: T, inputs: GraphNo
 	}
 
 	public override get name(): string {
-		return this.state.graph.name;
+		return `${this.state.graph.name} ${this.state.graph.type}`;
 	}
 
 	public override toJSON() {

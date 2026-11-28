@@ -1,5 +1,5 @@
 import { Graphite } from "./graphite";
-import { BinOp, BinOpNode, ValueNode } from "./graphite/nodes";
+import { BinOp, BinOpNode, ValueNode, VectorCombine } from "./graphite/nodes";
 import { ValueType } from "./graphite/types";
 
 export const createTestApp = (app: Graphite) => {
@@ -17,13 +17,13 @@ export const createTestApp = (app: Graphite) => {
 	const mul = mulAddGraph.addNode(BinOpNode, { a: 0, b: 0, op: BinOp.mul });
 	const add = mulAddGraph.addNode(BinOpNode, { op: BinOp.add });
 
-	mul.outputs.value.connect(add.inputs.a);
+	mul.outputPorts.value.connect(add.inputPorts.a);
 
-	add.outputs.value.connect(mulAddGraph.outputNode.inputs.result);
+	add.outputPorts.value.connect(mulAddGraph.outputNode.inputPorts.result);
 
-	mulAddGraph.addInputNode("a").outputs.value.connect(mul.inputs.a);
-	mulAddGraph.addInputNode("b").outputs.value.connect(mul.inputs.b);
-	mulAddGraph.addInputNode("c").outputs.value.connect(add.inputs.b);
+	mulAddGraph.addInputNode("a").outputPorts.value.connect(mul.inputPorts.a);
+	mulAddGraph.addInputNode("b").outputPorts.value.connect(mul.inputPorts.b);
+	mulAddGraph.addInputNode("c").outputPorts.value.connect(add.inputPorts.b);
 
 	const mulAdd = app.world.addGraphNode(mulAddGraph, { a: 0, b: 0, c: 0 }, [350, 200]);
 
@@ -31,11 +31,16 @@ export const createTestApp = (app: Graphite) => {
 	const b = app.world.addNode(ValueNode, { value: 11 }, [120, 200]);
 	const c = app.world.addNode(ValueNode, { value: 29 }, [120, 300]);
 
-	a.outputs.value.connect(mulAdd.getInput("a", ValueType));
-	b.outputs.value.connect(mulAdd.getInput("b", ValueType));
-	c.outputs.value.connect(mulAdd.getInput("c", ValueType));
+	a.outputPorts.value.connect(mulAdd.getInputPort("a", ValueType));
+	b.outputPorts.value.connect(mulAdd.getInputPort("b", ValueType));
+	c.outputPorts.value.connect(mulAdd.getInputPort("c", ValueType));
 
-	mulAdd.getOutput("result", ValueType).connect(app.world.outputNode.inputs.elevation);
+	mulAdd.getOutputPort("result", ValueType).connect(app.world.outputNode.inputPorts.elevation);
 
-	app.world.outputNode.position = [500, 200]
+	app.world.outputNode.position = [500, 200];
+
+	app.world.addNode(VectorCombine, {});
+	app.world.addNode(BinOpNode, {
+		op: BinOp.add
+	});
 };

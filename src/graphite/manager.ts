@@ -1,9 +1,8 @@
-import { WorldGraph } from "../graphite copy/world";
 import { Allocator, assert } from "../utils";
 import { Edge } from "./edge";
 import { Graph, type GraphIOTypes, type GraphState, type GraphType, type SerializedGraph } from "./graph";
 import { parseGraphType } from "./graph-types";
-import { Node, type NodePosition, type NodeType } from "./node";
+import { Node, type NodeInputKeys, type NodeInputTypes, type NodeOutputKeys, type NodeOutputTypes, type NodePosition, type NodeType } from "./node";
 import { GraphNode, GraphOutputNode } from "./nodes/graph";
 import { InputPort, OutputPort } from "./port";
 import { SubGraph } from "./subgraph";
@@ -30,8 +29,8 @@ export class GraphManager {
 		return graph;
 	}
 
-	public addGraph<T extends SubGraph<I, O, S>, I extends GraphIOTypes, O extends GraphIOTypes, S extends {} = any>(type: Exclude<GraphType<T, I, O, S>, WorldGraph>, state: GraphState<S>): T {
-		assert(WorldGraph !== type as any);
+	public addGraph<T extends SubGraph<I, O, S>, I extends GraphIOTypes, O extends GraphIOTypes, S extends {} = any>(type: Exclude<GraphType<T, I, O, S>, World>, state: GraphState<S>): T {
+		assert(World as GraphType<any, any, any> !== type);
 		return this.allocGraph(type, state);
 	}
 
@@ -47,7 +46,7 @@ export class GraphManager {
 	public removeNode(node: Node): boolean {
 		const nodes = assert.notNull(this.nodes.get(node.graph));
 		const edges = assert.notNull(this.edges.get(node.graph));
-		
+
 		node.dispose();
 
 		for (const edge of edges.all().slice()) {
@@ -68,12 +67,12 @@ export class GraphManager {
 		edges.free(edge.id);
 	}
 
-	public getNodeInputEdge<T extends Node<{}>, K extends keyof T["inputTypes"]>(node: T, key: K): Edge<T["inputTypes"][K]> | null {
-		return this.edges.get(node.graph)?.all().find(e => e.target.node.id === node.id && key === e.target.key) as Edge<T["inputTypes"][K]> || null;
+	public getNodeInputEdge<T extends Node<{}>, K extends NodeInputKeys<T>>(node: T, key: K): Edge<NodeInputTypes<T>[K]> | null {
+		return this.edges.get(node.graph)?.all().find(e => e.target.node.id === node.id && key === e.target.key) as Edge<NodeInputTypes<T>[K]> || null;
 	}
 
-	public getNodeOutputEdges<T extends Node<{}>, K extends keyof T["outputTypes"]>(node: T, key: K): Edge<T["outputTypes"][K]>[] {
-		return this.edges.get(node.graph)?.all().filter(e => e.source.node.id === node.id && key === e.source.key) as Edge<T["outputTypes"][K]>[] || [];
+	public getNodeOutputEdges<T extends Node<{}>, K extends NodeOutputKeys<T>>(node: T, key: K): Edge<NodeOutputTypes<T>[K]>[] {
+		return this.edges.get(node.graph)?.all().filter(e => e.source.node.id === node.id && key === e.source.key) as Edge<NodeOutputTypes<T>[K]>[] || [];
 	}
 
 	public removeGraph(graph: Graph) {
@@ -91,7 +90,7 @@ export class GraphManager {
 
 		this.edges.delete(graph);
 		this.nodes.delete(graph);
-		
+
 		this.graphs.free(graph.id);
 	}
 

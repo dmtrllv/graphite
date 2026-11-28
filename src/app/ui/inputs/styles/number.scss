@@ -1,0 +1,22 @@
+.number-input {
+	opacity: 0.65;
+	transition: opacity 150ms;
+	vertical-align: top;
+	white-space: nowrap;
+
+	&.active {
+		opacity: 1;
+	}
+
+	label {
+		display: inline-block;
+		font-size: 14px;
+		text-transform: capitalize;
+		margin-bottom: 5px;
+		margin-right: 15px;
+	}
+
+	input {
+		display: inline-block;
+	}
+}

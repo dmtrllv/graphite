@@ -23,17 +23,17 @@
 			"@graphite/*": [
 				"./src/graphite/*"
 			],
+			"@editor": [
+				"./src/app/editor/index.ts"
+			],
+			"@editor/*": [
+				"./src/app/editor/*"
+			],
 			"@utils": [
 				"./src/utils/index.ts"
 			],
 			"@utils/*": [
 				"./src/utils/*"
-			],
-			"@hooks": [
-				"./src/hooks/index.ts"
-			],
-			"@hooks/*": [
-				"./src/hooks/*"
 			]
 		}
 	},

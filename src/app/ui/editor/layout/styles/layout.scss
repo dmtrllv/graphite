@@ -1,0 +1,37 @@
+.layout {
+	display: flex;
+	flex: 1 1 0;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+	background-color: var(--bg-1);
+
+	&.horizontal {
+		flex-direction: row;
+	}
+
+	&.vertical {
+		flex-direction: column;
+	}
+}
+
+.layout-splitter {
+	position: relative;
+	z-index: 2;
+	flex: 0 0 5px;
+	touch-action: none;
+	background: var(--bg-1);
+	transition: background-color 150ms;
+
+	&.horizontal {
+		cursor: col-resize;
+	}
+
+	&.vertical {
+		cursor: row-resize;
+	}
+
+	&:hover {
+		background: color-mix(in srgb, var(--accent-1) 30%, transparent);
+	}
+}

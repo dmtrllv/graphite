@@ -98,34 +98,40 @@ export abstract class Node<State extends {} = {}> extends EventEmitter<NodeEvent
 	public get outputTypes(): GraphIOTypes { return {}; }
 	public get defaultState(): Partial<State> { return {}; }
 
-	public readonly outputs = new Proxy({}, {
+	public readonly outputPorts = new Proxy({}, {
 		get: (_, p) => new OutputPort(this.manager, this, p.toString()),
 		set: () => false,
 		ownKeys: () => Array.from(Object.keys(this.outputTypes)),
-		getOwnPropertyDescriptor: (_, key) => ({ enumerable: true, configurable: true, value: this.outputs[key.toString()] })
+		getOwnPropertyDescriptor: (_, key) => ({ enumerable: true, configurable: true, value: this.outputPorts[key.toString()] })
 	}) as NodeOutputPorts<this>;
 
-	public readonly inputs = new Proxy({}, {
+	public readonly inputPorts = new Proxy({}, {
 		get: (_, p) => new InputPort(this.manager, this, p.toString()),
 		set: () => false,
 		ownKeys: () => Array.from(Object.keys(this.inputTypes)),
-		getOwnPropertyDescriptor: (_, key) => ({ enumerable: true, configurable: true, value: this.inputs[key.toString()] })
+		getOwnPropertyDescriptor: (_, key) => ({ enumerable: true, configurable: true, value: this.inputPorts[key.toString()] })
 	}) as NodeInputPorts<this>;
 
-	public getInput<T extends Type>(name: string, type: T): InputPort<any, any, T> {
+	public getInputPort(name: string): InputPort<any, any, any>;
+	public getInputPort<T extends Type>(name: string, type: T): InputPort<any, any, T>;
+	public getInputPort<T extends Type>(name: string, type?: T): InputPort<any, any, any> {
 		if (!(name in this.inputTypes))
 			throw new Error(`${this.type} has no input port "${name}"!`);
 		const t = this.inputTypes[name];
-		assert(t === type, `${this.type} input port "${name} is not a ${type.name}"!`);
-		return this.inputs[name] as any;
+		if (type)
+			assert(t === type, `${this.type} input port "${name} is not a ${type.name}"!`);
+		return this.inputPorts[name] as any;
 	}
 
-	public getOutput<T extends Type>(name: string, type: T): OutputPort<any, any, T> {
+	public getOutputPort(name: string): OutputPort<any, any, any>;
+	public getOutputPort<T extends Type>(name: string, type: T): OutputPort<any, any, T>;
+	public getOutputPort<T extends Type>(name: string, type?: T): OutputPort<any, any, any> {
 		if (!(name in this.outputTypes))
 			throw new Error(`${this.type} has no output port "${name}"!`);
 		const t = this.outputTypes[name];
-		assert(t === type, `${this.type} output port "${name} is not a ${type.name}"!`);
-		return this.outputs[name] as any;
+		if (type)
+			assert(!type || t === type, `${this.type} output port "${name} is not a ${type!.name}"!`);
+		return this.outputPorts[name] as any;
 	}
 
 	public constructor(id: number, manager: GraphManager, graph: Graph, state: State, [x, y]: NodePosition = [0, 0]) {
@@ -168,12 +174,21 @@ export type SerializedNode = {
 	readonly position: NodePosition;
 };
 
-export type NodeOutputPorts<T extends Node> = {
-	[K in keyof T["outputTypes"]]: OutputPort<T, K, T["outputTypes"][K]>;
-};
+export type NodeInputTypes<T extends Node> = T["inputTypes"];
+export type NodeInputKeys<T extends Node> = keyof NodeInputTypes<T>;
+export type InferNodeInputType<T extends Node, K extends NodeInputKeys<T>> = NodeInputTypes<T>[K];
+
+
+export type NodeOutputTypes<T extends Node> = T["outputTypes"];
+export type NodeOutputKeys<T extends Node> = keyof NodeOutputTypes<T>;
+export type InferNodeOutputType<T extends Node, K extends NodeOutputKeys<T>> = NodeOutputTypes<T>[K];
 
 export type NodeInputPorts<T extends Node> = {
-	[K in keyof T["inputTypes"]]: InputPort<T, K, T["inputTypes"][K]>;
+	[K in NodeInputKeys<T>]: InputPort<T, K, T["inputTypes"][K]>;
+};
+
+export type NodeOutputPorts<T extends Node> = {
+	[K in NodeOutputKeys<T>]: OutputPort<T, K, T["outputTypes"][K]>;
 };
 
 export type NodeConstructorState<T extends Node<any>> =

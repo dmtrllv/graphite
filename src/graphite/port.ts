@@ -1,8 +1,8 @@
 import type { Edge } from "./edge";
 import type { GraphManager } from "./manager";
-import type { Node } from "./node";
+import type { Node, NodeInputKeys, NodeInputTypes, NodeOutputKeys, NodeOutputTypes } from "./node";
 
-export class InputPort<T extends Node, K extends keyof T["inputTypes"], U extends T["inputTypes"][K]> {
+export class InputPort<T extends Node, K extends NodeInputKeys<T>, U extends NodeInputTypes<T>[K]> {
 	public readonly manager: GraphManager;
 	public readonly node: Node<{}>;
 	public readonly key: K;
@@ -28,7 +28,7 @@ export class InputPort<T extends Node, K extends keyof T["inputTypes"], U extend
 	}
 }
 
-export class OutputPort<T extends Node, K extends keyof T["outputTypes"], U extends T["outputTypes"][K]> {
+export class OutputPort<T extends Node, K extends NodeOutputKeys<T>, U extends NodeOutputTypes<T>[K]> {
 	public readonly manager: GraphManager;
 	public readonly node: Node<{}>;
 	public readonly key: K;
